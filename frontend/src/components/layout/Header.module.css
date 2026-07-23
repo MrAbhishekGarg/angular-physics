@@ -1,0 +1,23 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--ap-border);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ap-space-md);
+  padding-top: var(--ap-space-sm);
+  padding-bottom: var(--ap-space-sm);
+}
+
+.authArea {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}

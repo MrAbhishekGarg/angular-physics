@@ -1,0 +1,33 @@
+@import './tokens.css';
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--ap-font-body);
+  color: var(--ap-text);
+  background: var(--ap-bg);
+  line-height: 1.55;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--ap-font-heading);
+  line-height: 1.2;
+  margin: 0 0 var(--ap-space-sm);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+button {
+  font-family: inherit;
+}

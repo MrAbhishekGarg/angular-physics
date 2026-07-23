@@ -1,0 +1,30 @@
+:root {
+  /* Brand colors */
+  --ap-primary: #1e1b4b;       /* deep indigo — night-sky, "space for thinking" */
+  --ap-primary-light: #4338ca;
+  --ap-accent: #f59e0b;        /* electric amber — energy, angular motion */
+  --ap-accent-light: #fbbf24;
+  --ap-bg: #ffffff;
+  --ap-bg-muted: #f8f7ff;
+  --ap-text: #1a1a2e;
+  --ap-text-muted: #5b5b76;
+  --ap-border: #e5e3f5;
+  --ap-success: #16a34a;
+
+  /* Typography */
+  --ap-font-heading: 'Sora', system-ui, sans-serif;
+  --ap-font-body: 'Inter', system-ui, sans-serif;
+
+  /* Spacing scale */
+  --ap-space-xs: 0.5rem;
+  --ap-space-sm: 1rem;
+  --ap-space-md: 1.5rem;
+  --ap-space-lg: 2.5rem;
+  --ap-space-xl: 4rem;
+
+  /* Radii / shadow */
+  --ap-radius: 14px;
+  --ap-shadow: 0 8px 24px rgba(30, 27, 75, 0.08);
+
+  --ap-container-width: 1180px;
+}

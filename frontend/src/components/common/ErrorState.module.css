@@ -1,0 +1,8 @@
+.wrap {
+  text-align: center;
+  padding: var(--ap-space-lg);
+  color: var(--ap-text-muted);
+}
+.wrap p {
+  margin-bottom: var(--ap-space-sm);
+}

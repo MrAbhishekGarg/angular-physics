@@ -1,0 +1,29 @@
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--ap-space-xl) 0;
+}
+
+.title {
+  color: var(--ap-primary);
+}
+
+.role {
+  color: var(--ap-accent);
+  font-weight: 600;
+  margin-bottom: var(--ap-space-md);
+}
+
+.bio {
+  color: var(--ap-text);
+  margin-bottom: var(--ap-space-lg);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--ap-space-sm);
+  background: var(--ap-bg-muted);
+  border-radius: var(--ap-radius);
+  padding: var(--ap-space-md);
+}

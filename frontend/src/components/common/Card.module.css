@@ -1,0 +1,13 @@
+.card {
+  background: #fff;
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius);
+  box-shadow: var(--ap-shadow);
+  padding: var(--ap-space-md);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 32px rgba(30, 27, 75, 0.12);
+}

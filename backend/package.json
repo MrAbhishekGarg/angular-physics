@@ -1,0 +1,30 @@
+{
+  "name": "angular-physics-backend",
+  "version": "1.0.0",
+  "description": "Node.js/Express API for Angular Physics — physics learning platform mentored by Abhishek Kumar Garg",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "seed:mentor": "node src/scripts/seedMentor.js",
+    "seed:courses": "node src/scripts/seedCourseData.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "compression": "^1.7.4",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.2.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.4.0",
+    "morgan": "^1.10.0",
+    "multer": "^2.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

@@ -1,0 +1,15 @@
+.wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: var(--ap-space-xl) 0;
+}
+
+.wrap h1 {
+  color: var(--ap-primary);
+  margin-bottom: var(--ap-space-md);
+}
+
+.wrap p {
+  margin-bottom: var(--ap-space-sm);
+  color: var(--ap-text);
+}

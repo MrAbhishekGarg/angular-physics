@@ -1,0 +1,18 @@
+.logoLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wordmark {
+  font-family: var(--ap-font-heading);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+.dark { color: var(--ap-primary); }
+.light { color: #fff; }
+
+.accent {
+  color: var(--ap-accent);
+}

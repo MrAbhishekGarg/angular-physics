@@ -1,0 +1,13 @@
+.wrap {
+  padding: var(--ap-space-sm) var(--ap-space-md);
+  background: #fff;
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius);
+  box-shadow: var(--ap-shadow);
+}
+
+.title {
+  color: var(--ap-primary);
+  font-size: 1rem;
+  margin-bottom: var(--ap-space-sm);
+}

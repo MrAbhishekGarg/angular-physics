@@ -1,0 +1,10 @@
+.section {
+  padding: var(--ap-space-xl) 0;
+  background: var(--ap-bg-muted);
+}
+
+.viewAll {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--ap-space-lg);
+}

@@ -1,0 +1,10 @@
+.section {
+  padding: var(--ap-space-xl) 0;
+  background: var(--ap-bg-muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--ap-space-sm);
+}

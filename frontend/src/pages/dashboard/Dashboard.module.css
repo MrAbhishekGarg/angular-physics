@@ -1,0 +1,79 @@
+.wrap {
+  padding: var(--ap-space-xl) 0;
+}
+
+.statRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--ap-space-sm);
+  background: var(--ap-bg-muted);
+  border-radius: var(--ap-radius);
+  margin: var(--ap-space-lg) 0;
+}
+
+.sectionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--ap-space-sm);
+}
+
+.sectionTitle {
+  color: var(--ap-primary);
+  font-family: var(--ap-font-heading);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--ap-space-sm);
+  margin-bottom: var(--ap-space-lg);
+}
+
+.chartsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--ap-space-md);
+  margin-bottom: var(--ap-space-lg);
+}
+
+.chartCard {
+  padding: var(--ap-space-sm) var(--ap-space-md);
+}
+
+.chartTitle {
+  color: var(--ap-primary);
+  font-size: 1rem;
+  margin-bottom: var(--ap-space-sm);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--ap-border);
+}
+
+.table th {
+  color: var(--ap-text-muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  margin-bottom: var(--ap-space-lg);
+}
+
+.actionRow {
+  display: flex;
+  gap: 0.5rem;
+}

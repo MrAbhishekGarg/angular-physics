@@ -1,0 +1,22 @@
+.band {
+  background: var(--ap-primary);
+  padding: var(--ap-space-xl) 0;
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ap-space-md);
+  flex-wrap: wrap;
+}
+
+.title {
+  color: #fff;
+  font-size: 1.7rem;
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  color: #cfcdf0;
+}

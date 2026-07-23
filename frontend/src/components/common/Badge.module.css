@@ -1,0 +1,14 @@
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.default { background: var(--ap-bg-muted); color: var(--ap-primary); }
+.accent { background: #fff7e6; color: #b45309; }
+.success { background: #ecfdf3; color: var(--ap-success); }
+.launching { background: #eef2ff; color: var(--ap-primary-light); }

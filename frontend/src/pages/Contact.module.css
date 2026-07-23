@@ -1,0 +1,54 @@
+.wrap {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: var(--ap-space-xl) 0;
+}
+
+.wrap h1 {
+  color: var(--ap-primary);
+}
+
+.intro {
+  color: var(--ap-text-muted);
+  margin-bottom: var(--ap-space-lg);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ap-space-sm);
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ap-text);
+}
+
+.form input,
+.form textarea {
+  border: 1.5px solid var(--ap-border);
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.form input:focus,
+.form textarea:focus {
+  outline: 2px solid var(--ap-accent);
+  outline-offset: 1px;
+}
+
+.success {
+  color: var(--ap-success);
+  font-size: 0.9rem;
+}
+
+.errorMsg {
+  color: #dc2626;
+  font-size: 0.9rem;
+}

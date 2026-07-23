@@ -1,0 +1,5 @@
+.container {
+  max-width: var(--ap-container-width);
+  margin: 0 auto;
+  padding: 0 var(--ap-space-md);
+}

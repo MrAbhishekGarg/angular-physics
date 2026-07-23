@@ -1,0 +1,21 @@
+.section {
+  padding: var(--ap-space-xl) 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--ap-space-md);
+}
+
+.title {
+  font-size: 1.05rem;
+  color: var(--ap-primary);
+  margin-bottom: 0.4rem;
+}
+
+.desc {
+  color: var(--ap-text-muted);
+  font-size: 0.88rem;
+  margin-bottom: var(--ap-space-sm);
+}

@@ -1,0 +1,25 @@
+.wrap {
+  margin-bottom: var(--ap-space-lg);
+}
+.center { text-align: center; }
+.left { text-align: left; }
+
+.eyebrow {
+  color: var(--ap-accent);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin-bottom: var(--ap-space-xs);
+}
+
+.title {
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  color: var(--ap-primary);
+}
+
+.subtitle {
+  color: var(--ap-text-muted);
+  max-width: 620px;
+  margin: 0.5rem auto 0;
+}

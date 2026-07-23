@@ -1,0 +1,50 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.icon {
+  font-size: 1.5rem;
+}
+
+.title {
+  color: var(--ap-primary);
+  font-size: 1.05rem;
+}
+
+.meta {
+  color: var(--ap-text-muted);
+  font-size: 0.85rem;
+}
+
+.progress {
+  margin-top: 0.25rem;
+}
+
+.progressTrack {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ap-bg-muted);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--ap-accent);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.progressLabel {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--ap-text-muted);
+}
