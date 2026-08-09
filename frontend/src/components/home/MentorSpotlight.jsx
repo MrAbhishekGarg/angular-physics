@@ -1,6 +1,7 @@
 import Container from '../common/Container.jsx';
 import SectionHeading from '../common/SectionHeading.jsx';
 import Stat from '../common/Stat.jsx';
+import MentorPhoto from '../common/MentorPhoto.jsx';
 import styles from './MentorSpotlight.module.css';
 
 const MENTOR_STATS = [
@@ -14,15 +15,21 @@ export default function MentorSpotlight() {
   return (
     <section className={styles.section} aria-labelledby="mentor-heading">
       <Container>
-        <SectionHeading
-          eyebrow="Your Mentor"
-          title="Learn Physics from Abhishek Kumar Garg"
-          subtitle="Every single course on Angular Physics — JEE, NEET, or Olympiad — is designed and taught by one mentor, so the teaching philosophy never changes, only the syllabus does."
-        />
-        <div className={styles.grid}>
-          {MENTOR_STATS.map((s) => (
-            <Stat key={s.label} value={s.value} label={s.label} />
-          ))}
+        <div className={styles.layout}>
+          <MentorPhoto className={styles.photo} />
+          <div className={styles.copy}>
+            <SectionHeading
+              align="left"
+              eyebrow="Your Mentor"
+              title="Learn Physics from Abhishek Kumar Garg"
+              subtitle="Every single course on Angular Physics — JEE, NEET, or Olympiad — is designed and taught by one mentor, so the teaching philosophy never changes, only the syllabus does."
+            />
+            <div className={styles.grid}>
+              {MENTOR_STATS.map((s) => (
+                <Stat key={s.label} value={s.value} label={s.label} />
+              ))}
+            </div>
+          </div>
         </div>
       </Container>
     </section>

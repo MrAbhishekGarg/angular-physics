@@ -7,3 +7,8 @@ export const createLead = asyncHandler(async (req, res) => {
   const lead = await leadService.createLead({ name, email, phone, courseSlug, message });
   return ApiResponse(res, 201, lead);
 });
+
+export const listLeads = asyncHandler(async (req, res) => {
+  const leads = await leadService.getAllLeads();
+  return ApiResponse(res, 200, leads, { count: leads.length });
+});

@@ -8,23 +8,35 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed:mentor": "node src/scripts/seedMentor.js",
-    "seed:courses": "node src/scripts/seedCourseData.js"
+    "seed:courses": "node src/scripts/seedCourseData.js",
+    "generate:template": "node src/scripts/generateBulkQuestionsTemplate.js",
+    "generate:cc-template": "node src/scripts/generateConceptCodesExcelTemplate.js",
+    "generate:mapped-template": "node src/scripts/generateMappedBulkUploadTemplates.js",
+    "migrate:question-examtypes": "node src/scripts/migrateQuestionExamTypes.js"
   },
   "dependencies": {
+    "@xmldom/xmldom": "^0.9.10",
     "bcryptjs": "^3.0.3",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
     "express": "^4.19.2",
     "express-rate-limit": "^7.2.0",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.3",
+    "jszip": "^3.10.1",
     "mongoose": "^8.4.0",
     "morgan": "^1.10.0",
-    "multer": "^2.2.0"
+    "multer": "^2.2.0",
+    "pdfkit": "^0.19.1",
+    "razorpay": "^2.9.8",
+    "sharp": "^0.35.3",
+    "xpath": "^0.0.34"
   },
   "devDependencies": {
+    "docx": "^9.7.1",
     "nodemon": "^3.1.0"
   }
 }

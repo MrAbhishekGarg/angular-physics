@@ -8,3 +8,7 @@ export function useMyEnrollments() {
 export function useAllEnrollments(courseId) {
   return useFetch(() => enrollmentService.listAll(courseId), [courseId]);
 }
+
+export function useStudentStats() {
+  return useFetch(() => enrollmentService.studentStats(), []);
+}

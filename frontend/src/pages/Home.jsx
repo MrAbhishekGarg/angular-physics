@@ -4,6 +4,11 @@ import Hero from '../components/home/Hero.jsx';
 import MentorSpotlight from '../components/home/MentorSpotlight.jsx';
 import FeaturedCourses from '../components/home/FeaturedCourses.jsx';
 import Testimonials from '../components/home/Testimonials.jsx';
+import Toppers from '../components/home/Toppers.jsx';
+import QuestionOfDay from '../components/home/QuestionOfDay.jsx';
+import LatestVideos from '../components/home/LatestVideos.jsx';
+import VideoHighlights from '../components/home/VideoHighlights.jsx';
+import BlogPreview from '../components/home/BlogPreview.jsx';
 import FreeResources from '../components/home/FreeResources.jsx';
 import CTABand from '../components/home/CTABand.jsx';
 
@@ -22,6 +27,11 @@ export default function Home() {
         <MentorSpotlight />
         <FeaturedCourses />
         <Testimonials />
+        <Toppers />
+        <QuestionOfDay />
+        <LatestVideos />
+        <VideoHighlights />
+        <BlogPreview />
         <FreeResources />
         <CTABand />
       </main>

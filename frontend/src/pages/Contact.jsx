@@ -13,6 +13,11 @@ export default function Contact() {
 
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
+  const handlePhoneChange = (e) => {
+    const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setForm((f) => ({ ...f, phone: digitsOnly }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus('submitting');
@@ -51,12 +56,22 @@ export default function Contact() {
                 <input type="email" name="email" required value={form.email} onChange={handleChange} />
               </label>
               <label>
-                Phone (optional)
-                <input name="phone" value={form.phone} onChange={handleChange} />
+                Phone
+                <input
+                  type="tel"
+                  name="phone"
+                  required
+                  inputMode="numeric"
+                  maxLength={10}
+                  pattern="[6-9][0-9]{9}"
+                  title="Enter a valid 10-digit mobile number"
+                  value={form.phone}
+                  onChange={handlePhoneChange}
+                />
               </label>
               <label>
                 Message
-                <textarea name="message" rows="4" value={form.message} onChange={handleChange} />
+                <textarea name="message" rows="4" required minLength={10} value={form.message} onChange={handleChange} />
               </label>
 
               <Button type="submit" disabled={status === 'submitting'}>

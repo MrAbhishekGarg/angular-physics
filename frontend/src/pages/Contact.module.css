@@ -49,6 +49,6 @@
 }
 
 .errorMsg {
-  color: #dc2626;
+  color: var(--ap-danger);
   font-size: 0.9rem;
 }

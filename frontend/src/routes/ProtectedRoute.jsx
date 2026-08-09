@@ -7,7 +7,9 @@ export default function ProtectedRoute({ role, children }) {
 
   if (loading) return <Spinner label="Checking session…" />;
   if (!user) return <Navigate to="/login" replace />;
-  if (role && user.role !== role) return <Navigate to="/" replace />;
+  // Admin can do anything — reaches every mentor/student route through the
+  // exact same pages, no separate admin-only route tree needed.
+  if (role && user.role !== role && user.role !== 'admin') return <Navigate to="/" replace />;
 
   return children;
 }

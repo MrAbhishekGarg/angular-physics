@@ -20,7 +20,7 @@ export const organizationSchema = {
   name: 'Angular Physics',
   slogan: 'Find Your Angle to Every Answer',
   url: 'https://www.angularphysics.com',
-  logo: 'https://www.angularphysics.com/favicon.svg',
+  logo: 'https://www.angularphysics.com/logo-social.png',
   sameAs: [],
   founder: {
     '@type': 'Person',

@@ -4,15 +4,42 @@
   gap: 0.5rem;
 }
 
-.wordmark {
-  font-family: var(--ap-font-heading);
-  font-weight: 700;
-  font-size: 1.15rem;
+.logoImg {
+  height: 40px;
+  width: auto;
+  display: block;
 }
 
-.dark { color: var(--ap-primary); }
-.light { color: #fff; }
-
-.accent {
+.mark {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ap-primary-surface);
   color: var(--ap-accent);
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--ap-font-heading);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+}
+
+/* On a dark surface (the footer) a navy-on-navy mark would disappear —
+   invert so it still reads as a distinct chip. */
+.markOnDark {
+  background: var(--ap-accent);
+  color: var(--ap-primary-surface);
+}
+
+@media (max-width: 480px) {
+  .logoImg {
+    height: 32px;
+  }
+
+  .mark {
+    width: 24px;
+    height: 24px;
+    font-size: 0.9rem;
+  }
 }

@@ -1,19 +1,33 @@
 :root {
-  /* Brand colors */
-  --ap-primary: #1e1b4b;       /* deep indigo — night-sky, "space for thinking" */
-  --ap-primary-light: #4338ca;
-  --ap-accent: #f59e0b;        /* electric amber — energy, angular motion */
-  --ap-accent-light: #fbbf24;
-  --ap-bg: #ffffff;
-  --ap-bg-muted: #f8f7ff;
-  --ap-text: #1a1a2e;
-  --ap-text-muted: #5b5b76;
-  --ap-border: #e5e3f5;
-  --ap-success: #16a34a;
+  /* Brand colors — "Velocity": deep navy + electric cyan + coral.
+     Physics/motion-themed: navy for focus, cyan for precision/energy,
+     coral for urgency (deadlines, streaks, "new"). */
+  --ap-primary: #14284a;       /* deep navy — headings, links (text role) */
+  --ap-primary-light: #1b3a6b;
+  /* Fixed brand-surface navy — used for things that are ALWAYS a dark
+     filled surface (header, footer, primary buttons, active tabs/pills)
+     regardless of site theme. Kept separate from --ap-primary, which is
+     also used as accent TEXT color and needs to get lighter in dark mode
+     for contrast — the same value can't serve both roles at once. */
+  --ap-primary-surface: #14284a;
+  --ap-accent: #17b8cf;        /* electric cyan — primary CTA color, links, focus */
+  --ap-accent-light: #3fd1e6;
+  --ap-secondary-accent: #ff6b4a; /* coral — urgency/highlight: deadlines, "new", streaks */
+  --ap-bg: #f5f8fb;
+  --ap-bg-muted: #e9eff5;
+  --ap-text: #0b1220;
+  --ap-text-muted: #48566e;
+  --ap-border: #d7e0ea;
+  --ap-success: #1fa971;
+  --ap-danger: #dc2626;
+  --ap-warning: #d98c0f;
 
-  /* Typography */
-  --ap-font-heading: 'Sora', system-ui, sans-serif;
-  --ap-font-body: 'Inter', system-ui, sans-serif;
+  /* Typography — loaded via index.html's Google Fonts link (previously
+     declared here but never actually loaded anywhere, so the whole site
+     rendered in plain system-font fallbacks). Hanken Grotesk: bold, tight,
+     slightly technical display face. Plus Jakarta Sans: warm, readable body. */
+  --ap-font-heading: 'Hanken Grotesk', system-ui, sans-serif;
+  --ap-font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
 
   /* Spacing scale */
   --ap-space-xs: 0.5rem;
@@ -24,7 +38,44 @@
 
   /* Radii / shadow */
   --ap-radius: 14px;
-  --ap-shadow: 0 8px 24px rgba(30, 27, 75, 0.08);
+  --ap-shadow: 0 8px 24px rgba(11, 18, 32, 0.1);
+  --ap-shadow-sm: 0 2px 8px rgba(11, 18, 32, 0.08);
 
-  --ap-container-width: 1180px;
+  /* Chamfer (corner-cut) sizes — the literal "angular" shape language that
+     replaces the old fully-rounded/pill look site-wide: buttons, cards,
+     the dashboard shell, badges. Applied via clip-path polygon() in each
+     component rather than border-radius. */
+  --ap-chamfer-sm: 8px;
+  --ap-chamfer-md: 14px;
+  --ap-chamfer-lg: 24px;
+
+  --ap-container-width: 1320px;
+
+  /* Breakpoints (reference only — CSS custom properties can't be used in
+     @media queries, these document the two values already in use so new
+     CSS stays consistent instead of inventing new arbitrary widths):
+     860px = dashboard sidebar collapses to a horizontal tab bar
+     640px = forms/cards go single-column */
+}
+
+/* Dark theme — see ThemeContext.jsx, which stamps data-theme on <html>.
+   Defaults to `prefers-color-scheme` on first visit, then persists the
+   user's explicit choice via the header toggle. Accent/secondary stay the
+   same cyan/coral in both themes — both already read well on dark. */
+[data-theme='dark'] {
+  --ap-primary: #9fd4e0;
+  --ap-primary-light: #c3e6ee;
+  --ap-accent: #22d3ee;
+  --ap-accent-light: #67e2f2;
+  --ap-secondary-accent: #ff8163;
+  --ap-bg: #0c1420;
+  --ap-bg-muted: #101c2c;
+  --ap-text: #e7edf5;
+  --ap-text-muted: #93a2ba;
+  --ap-border: #24354c;
+  --ap-success: #34d399;
+  --ap-danger: #f87171;
+  --ap-warning: #fbbf24;
+  --ap-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --ap-shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.4);
 }

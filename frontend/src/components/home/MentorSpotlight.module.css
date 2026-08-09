@@ -3,8 +3,35 @@
   background: var(--ap-bg-muted);
 }
 
+.layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 1fr;
+  gap: clamp(var(--ap-space-lg), 5vw, var(--ap-space-xl));
+  align-items: center;
+}
+
+.photo {
+  max-width: 320px;
+  justify-self: center;
+}
+
+.copy {
+  min-width: 0;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--ap-space-sm);
+}
+
+@media (max-width: 760px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .photo {
+    max-width: 220px;
+    margin: 0 auto;
+  }
 }

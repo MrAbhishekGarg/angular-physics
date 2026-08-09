@@ -13,6 +13,7 @@ router.post(
   enrollmentController.enroll
 );
 router.get('/me', authenticate, authorize('student'), enrollmentController.listMyEnrollments);
+router.get('/student-stats', authenticate, authorize('mentor'), enrollmentController.listStudentStats);
 router.get('/', authenticate, authorize('mentor'), enrollmentController.listAllEnrollments);
 router.patch('/:id', authenticate, authorize('mentor'), enrollmentController.update);
 

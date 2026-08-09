@@ -1,0 +1,51 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ap-space-sm) var(--ap-space-md);
+  margin-bottom: var(--ap-space-sm);
+}
+
+.playlistFilterWrap {
+  flex: 1;
+  min-width: 220px;
+}
+
+.searchWrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 260px;
+  max-width: 100%;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ap-text-muted);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.55rem 0.8rem 0.55rem 2.15rem;
+  border: 1.5px solid var(--ap-border);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  background: var(--ap-bg);
+  color: var(--ap-text);
+}
+
+.searchInput:focus {
+  outline: 2px solid var(--ap-accent);
+  outline-offset: 1px;
+}
+
+.resultCount {
+  font-size: 0.8rem;
+  color: var(--ap-text-muted);
+  margin-bottom: var(--ap-space-sm);
+}

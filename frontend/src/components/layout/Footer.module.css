@@ -1,6 +1,6 @@
 .footer {
-  background: var(--ap-primary);
-  color: #cfcdf0;
+  background: var(--ap-primary-surface);
+  color: #c9d6e8;
   padding: var(--ap-space-xl) 0 var(--ap-space-lg);
   margin-top: var(--ap-space-xl);
 }
@@ -15,7 +15,7 @@
 
 .tagline {
   font-size: 0.9rem;
-  color: #a5a2d6;
+  color: #8fb8c9;
 }
 
 .links {
@@ -32,6 +32,6 @@
 
 .copy {
   font-size: 0.8rem;
-  color: #7a77ad;
+  color: #5f7996;
   margin-top: var(--ap-space-sm);
 }

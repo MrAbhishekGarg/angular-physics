@@ -14,15 +14,13 @@ export default function CourseCard({ course }) {
 
   return (
     <Card className={styles.card}>
+      <span className={`${styles.trackTag} ${isLaunchingSoon ? styles.trackTagLaunching : ''}`}>
+        <span aria-hidden="true">{track?.icon}</span> {isLaunchingSoon ? 'Launching Soon' : track?.shortLabel}
+      </span>
+
       {course.imageUrl && (
         <img src={assetUrl(course.imageUrl)} alt="" className={styles.image} />
       )}
-      <div className={styles.top}>
-        <span className={styles.trackIcon} aria-hidden="true">{track?.icon}</span>
-        <Badge tone={isLaunchingSoon ? 'launching' : 'default'}>
-          {isLaunchingSoon ? 'Launching Soon' : track?.shortLabel}
-        </Badge>
-      </div>
 
       <h3 className={styles.title}>{course.title}</h3>
       <p className={styles.tagline}>{course.tagline}</p>

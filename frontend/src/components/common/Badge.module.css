@@ -1,14 +1,25 @@
 .badge {
   display: inline-block;
   padding: 0.25rem 0.7rem;
-  border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  /* A lighter touch than Button/Card's chamfer — badges sit densely packed
+     in tables, so a smaller cut on just two corners carries the shape
+     language without eating into a tight label at this size. */
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
 }
 
 .default { background: var(--ap-bg-muted); color: var(--ap-primary); }
-.accent { background: #fff7e6; color: #b45309; }
-.success { background: #ecfdf3; color: var(--ap-success); }
-.launching { background: #eef2ff; color: var(--ap-primary-light); }
+
+.accent { background: #fdf1e2; color: var(--ap-warning); }
+[data-theme='dark'] .accent { background: rgba(217, 140, 15, 0.18); }
+
+.success { background: #e3f7ef; color: var(--ap-success); }
+[data-theme='dark'] .success { background: rgba(52, 211, 153, 0.16); }
+
+.launching { background: #e6eef7; color: var(--ap-primary-light); }
+[data-theme='dark'] .launching { background: rgba(159, 212, 224, 0.16); }
+
+.highlight { background: var(--ap-secondary-accent); color: #ffffff; }

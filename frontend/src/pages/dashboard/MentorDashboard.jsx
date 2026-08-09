@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../../components/seo/SEO.jsx';
-import Container from '../../components/common/Container.jsx';
+import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
 import SectionHeading from '../../components/common/SectionHeading.jsx';
 import Stat from '../../components/common/Stat.jsx';
 import Button from '../../components/common/Button.jsx';
@@ -53,10 +53,9 @@ export default function MentorDashboard() {
   return (
     <>
       <SEO title="Mentor Dashboard" description="Manage courses and view analytics." path="/dashboard/mentor" />
-      <main>
-        <Container>
-          <div className={styles.wrap}>
-            <SectionHeading align="left" eyebrow="Mentor Dashboard" title="Your business at a glance" />
+      <DashboardLayout role="mentor">
+        <div className={styles.wrap}>
+          <SectionHeading align="left" eyebrow="Mentor Dashboard" title="Your business at a glance" />
 
             {loading && <Spinner label="Loading analytics…" />}
             {error && <ErrorState message={error} onRetry={refetchAnalytics} />}
@@ -79,7 +78,7 @@ export default function MentorDashboard() {
                     data={analytics.enrollmentsByTrack}
                     xKey="track"
                     yKey="count"
-                    color="#4338ca"
+                    color="#1b3a6b"
                     emptyMessage="No enrollments yet."
                   />
                   <AnalyticsChart
@@ -88,14 +87,14 @@ export default function MentorDashboard() {
                     data={analytics.leadsOverTime}
                     xKey="date"
                     yKey="count"
-                    color="#f59e0b"
+                    color="#17b8cf"
                     emptyMessage="No leads in the last 30 days."
                   />
                 </div>
               </>
             )}
 
-            {actionError && <p style={{ color: '#dc2626', marginBottom: '1rem' }}>{actionError}</p>}
+            {actionError && <p style={{ color: 'var(--ap-danger)', marginBottom: '1rem' }}>{actionError}</p>}
 
             <div className={styles.sectionRow}>
               <h2 className={styles.sectionTitle}>Pending Enrollment Requests</h2>
@@ -187,9 +186,16 @@ export default function MentorDashboard() {
 
             <div className={styles.sectionRow}>
               <h2 className={styles.sectionTitle}>Manage Courses</h2>
-              <Button as={Link} to="/dashboard/mentor/courses/new" size="sm">
-                + Add New Course
-              </Button>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {analytics?.openDoubtsCount > 0 && (
+                  <Button as={Link} to="/dashboard/mentor/doubts" variant="ghost" size="sm">
+                    {analytics.openDoubtsCount} Open Doubt{analytics.openDoubtsCount === 1 ? '' : 's'}
+                  </Button>
+                )}
+                <Button as={Link} to="/dashboard/mentor/courses/new" size="sm">
+                  + Add New Course
+                </Button>
+              </div>
             </div>
             {!courses ? (
               <Spinner label="Loading courses…" />
@@ -215,9 +221,8 @@ export default function MentorDashboard() {
                 </table>
               </div>
             )}
-          </div>
-        </Container>
-      </main>
+        </div>
+      </DashboardLayout>
     </>
   );
 }

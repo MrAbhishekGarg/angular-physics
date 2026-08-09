@@ -28,6 +28,7 @@ async function main() {
     email,
     passwordHash,
     role: 'mentor',
+    phone: process.env.MENTOR_SEED_PHONE || '9999999999',
   });
 
   console.log('[seed:mentor] Mentor account created:');

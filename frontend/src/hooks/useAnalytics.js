@@ -8,3 +8,7 @@ export function useMentorAnalytics() {
 export function useStudentAnalytics() {
   return useFetch(() => analyticsService.student(), []);
 }
+
+export function useStudentDetailAnalytics(studentId) {
+  return useFetch(() => analyticsService.studentDetail(studentId), [studentId]);
+}

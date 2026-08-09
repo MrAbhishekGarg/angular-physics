@@ -51,10 +51,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--ap-space-md);
   background: var(--ap-bg-muted);
-  border-radius: var(--ap-radius);
   padding: var(--ap-space-md);
+  clip-path: polygon(
+    var(--ap-chamfer-md) 0, 100% 0,
+    100% calc(100% - var(--ap-chamfer-md)), calc(100% - var(--ap-chamfer-md)) 100%,
+    0 100%, 0 var(--ap-chamfer-md)
+  );
 }
 
 .price {
@@ -64,7 +69,7 @@
 }
 
 .errorMsg {
-  color: #dc2626;
+  color: var(--ap-danger);
   font-size: 0.9rem;
   margin-top: var(--ap-space-sm);
 }

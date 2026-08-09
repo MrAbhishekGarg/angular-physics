@@ -7,7 +7,26 @@
   border-bottom: 1px solid var(--ap-border);
 }
 
+[data-theme='dark'] .header {
+  background: rgba(19, 17, 31, 0.92);
+}
+
+.themeToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ap-border);
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
 .inner {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -16,8 +35,103 @@
   padding-bottom: var(--ap-space-sm);
 }
 
+.collapsible {
+  display: flex;
+  align-items: center;
+  gap: var(--ap-space-md);
+}
+
 .authArea {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+}
+
+.menuToggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.menuIcon,
+.menuIcon::before,
+.menuIcon::after {
+  position: absolute;
+  width: 22px;
+  height: 2px;
+  background: var(--ap-primary);
+  border-radius: 2px;
+  transition: transform 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+}
+
+.menuIcon {
+  display: block;
+}
+
+.menuIcon::before,
+.menuIcon::after {
+  content: '';
+  left: 0;
+}
+
+.menuIcon::before {
+  top: -7px;
+}
+
+.menuIcon::after {
+  top: 7px;
+}
+
+.menuIcon[data-open='true'] {
+  background: transparent;
+}
+
+.menuIcon[data-open='true']::before {
+  top: 0;
+  transform: rotate(45deg);
+}
+
+.menuIcon[data-open='true']::after {
+  top: 0;
+  transform: rotate(-45deg);
+}
+
+@media (max-width: 768px) {
+  .menuToggle {
+    display: inline-flex;
+  }
+
+  .collapsible {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    background: var(--ap-bg);
+    border-bottom: 1px solid var(--ap-border);
+    box-shadow: var(--ap-shadow);
+    padding: 0 var(--ap-space-md);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+  }
+
+  .collapsibleOpen {
+    max-height: 480px;
+    padding-bottom: var(--ap-space-md);
+  }
+
+  .authArea {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    padding-top: var(--ap-space-sm);
+  }
 }

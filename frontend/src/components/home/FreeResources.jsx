@@ -2,27 +2,22 @@ import Container from '../common/Container.jsx';
 import SectionHeading from '../common/SectionHeading.jsx';
 import Card from '../common/Card.jsx';
 import Button from '../common/Button.jsx';
+import { useFetch } from '../../hooks/useFetch.js';
+import { noteService } from '../../services/noteService.js';
 import styles from './FreeResources.module.css';
 
-const RESOURCES = [
-  {
-    title: 'JEE Main Chapter-wise Physics Questions',
-    description: 'Download a free chapter-wise question bank from JEE Main previous year papers.',
-    href: '/resources/jee-main-chapter-wise-physics',
-  },
-  {
-    title: 'NEET Physics Previous Year Papers',
-    description: 'Free NEET Physics PYQs with detailed, step-by-step solutions.',
-    href: '/resources/neet-physics-pyqs',
-  },
-  {
-    title: 'Physics Formula Handbook',
-    description: 'One PDF covering every formula from Class 11 & 12 Physics.',
-    href: '/resources/physics-formula-handbook',
-  },
-];
+function formatFileSize(bytes) {
+  if (!bytes) return '';
+  const mb = bytes / (1024 * 1024);
+  return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+}
 
+/** Real free notes pulled from the Note collection — no login required to download. */
 export default function FreeResources() {
+  const { data: notes } = useFetch(() => noteService.getPublicFree(), []);
+
+  if (!notes || notes.length === 0) return null;
+
   return (
     <section className={styles.section} aria-labelledby="resources-heading">
       <Container>
@@ -32,13 +27,16 @@ export default function FreeResources() {
           subtitle="No login required — start with these before enrolling in a full course."
         />
         <div className={styles.grid}>
-          {RESOURCES.map((r) => (
-            <Card key={r.title} className={styles.card}>
-              <h3 className={styles.title}>{r.title}</h3>
-              <p className={styles.desc}>{r.description}</p>
-              <Button as="a" href={r.href} variant="ghost" size="sm">
-                Download
-              </Button>
+          {notes.map((note) => (
+            <Card key={note._id} className={styles.card}>
+              <h3 className={styles.title}>{note.title}</h3>
+              <p className={styles.desc}>{note.description}</p>
+              <div className={styles.cardFooter}>
+                <span className={styles.meta}>{formatFileSize(note.fileSizeBytes)}</span>
+                <Button as="a" href={noteService.publicDownloadUrl(note._id)} target="_blank" rel="noopener noreferrer" variant="ghost" size="sm">
+                  Download
+                </Button>
+              </div>
             </Card>
           ))}
         </div>

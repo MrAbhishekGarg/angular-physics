@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { COOKIE_NAME, verifyToken } from '../utils/token.js';
+import { ADMIN_ID, adminSafeUser, isAdminConfigured } from '../utils/adminUser.js';
 
 export const authenticate = asyncHandler(async (req, res, next) => {
   const token = req.cookies?.[COOKIE_NAME];
@@ -14,6 +15,13 @@ export const authenticate = asyncHandler(async (req, res, next) => {
     throw new ApiError(401, 'Session expired — please log in again');
   }
 
+  // The env admin has no database row — resolve it from config instead.
+  if (decoded.sub === ADMIN_ID) {
+    if (!isAdminConfigured()) throw new ApiError(401, 'Not authenticated');
+    req.user = adminSafeUser();
+    return next();
+  }
+
   const user = await User.findById(decoded.sub).lean();
   if (!user) throw new ApiError(401, 'Not authenticated');
 
@@ -23,6 +31,9 @@ export const authenticate = asyncHandler(async (req, res, next) => {
 
 export function authorize(...roles) {
   return (req, res, next) => {
+    // Admin can do anything — a real, enforced bypass here rather than
+    // something every route has to remember to add 'admin' to.
+    if (req.user?.role === 'admin') return next();
     if (!roles.includes(req.user?.role)) {
       return next(new ApiError(403, 'Not authorized'));
     }

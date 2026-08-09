@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import SEO from '../../components/seo/SEO.jsx';
-import Container from '../../components/common/Container.jsx';
+import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
 import Button from '../../components/common/Button.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import { courseService } from '../../services/courseService.js';
 import { EXAM_TRACKS } from '../../data/examTracks.js';
 import { assetUrl } from '../../data/assetUrl.js';
+import formStyles from './DashboardForm.module.css';
 import styles from './CourseEditor.module.css';
+import VideoManager from '../../components/dashboard/VideoManager.jsx';
 
 const emptyForm = {
   slug: '',
@@ -128,21 +130,26 @@ export default function CourseEditor() {
   return (
     <>
       <SEO title={isEdit ? 'Edit Course' : 'New Course'} description="Manage course details." path="/dashboard/mentor" />
-      <main>
-        <Container>
-          <div className={styles.wrap}>
-            <Link to="/dashboard/mentor">← Back to dashboard</Link>
-            <h1>{isEdit ? 'Edit Course' : 'Add New Course'}</h1>
+      <DashboardLayout role="mentor">
+        <div className={formStyles.wrap}>
+          <h1>{isEdit ? 'Edit Course' : 'Add New Course'}</h1>
 
-            <form className={styles.form} onSubmit={handleSubmit}>
-              <div className={styles.row}>
+            <form className={formStyles.form} onSubmit={handleSubmit}>
+              <div className={formStyles.row}>
                 <label>
                   Title
                   <input name="title" required value={form.title} onChange={handleChange} />
                 </label>
                 <label>
                   Slug
-                  <input name="slug" required value={form.slug} onChange={handleChange} />
+                  <input
+                    name="slug"
+                    required
+                    pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                    title="Lowercase letters, numbers, and hyphens only (e.g. neet-physics-2027)"
+                    value={form.slug}
+                    onChange={handleChange}
+                  />
                 </label>
               </div>
 
@@ -156,7 +163,7 @@ export default function CourseEditor() {
                 <textarea name="description" rows="4" required value={form.description} onChange={handleChange} />
               </label>
 
-              <div className={styles.row}>
+              <div className={formStyles.row}>
                 <label>
                   Track
                   <select name="track" value={form.track} onChange={handleChange}>
@@ -177,7 +184,7 @@ export default function CourseEditor() {
                 </label>
               </div>
 
-              <div className={styles.row}>
+              <div className={formStyles.row}>
                 <label>
                   Price (₹)
                   <input type="number" name="price" required min="0" value={form.price} onChange={handleChange} />
@@ -188,7 +195,7 @@ export default function CourseEditor() {
                 </label>
               </div>
 
-              <div className={styles.row}>
+              <div className={formStyles.row}>
                 <label>
                   Duration (weeks)
                   <input
@@ -215,7 +222,7 @@ export default function CourseEditor() {
                 <textarea name="highlightsText" rows="4" value={form.highlightsText} onChange={handleChange} />
               </label>
 
-              <label className={styles.checkboxLabel}>
+              <label className={formStyles.checkboxLabel}>
                 <input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} />
                 Feature on homepage
               </label>
@@ -228,7 +235,7 @@ export default function CourseEditor() {
                 <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setImageFile(e.target.files[0])} />
               </label>
 
-              <div className={styles.actions}>
+              <div className={formStyles.actions}>
                 <Button type="submit" disabled={status === 'submitting'}>
                   {status === 'submitting' ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Course'}
                 </Button>
@@ -237,11 +244,16 @@ export default function CourseEditor() {
                 </Button>
               </div>
 
-              {status === 'error' && <p className={styles.errorMsg}>{error}</p>}
+              {status === 'error' && <p className={formStyles.errorMsg}>{error}</p>}
             </form>
-          </div>
-        </Container>
-      </main>
+
+            {isEdit && (
+              <div style={{ marginTop: 'var(--ap-space-lg)' }}>
+                <VideoManager courseId={id} />
+              </div>
+            )}
+        </div>
+      </DashboardLayout>
     </>
   );
 }

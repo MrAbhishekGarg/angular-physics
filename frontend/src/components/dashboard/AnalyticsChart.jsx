@@ -13,15 +13,16 @@ import ErrorState from '../common/ErrorState.jsx';
 import styles from './AnalyticsChart.module.css';
 
 // Brand hex values (not CSS vars) — recharts renders raw SVG attributes and
-// var() resolution inside those is inconsistent across browsers.
-const BORDER = '#e5e3f5';
-const TEXT_MUTED = '#5b5b76';
+// var() resolution inside those is inconsistent across browsers. Kept in
+// sync with tokens.css's --ap-border / --ap-text-muted by hand.
+const BORDER = '#d7e0ea';
+const TEXT_MUTED = '#48566e';
 const TOOLTIP_STYLE = {
   background: '#fff',
   border: `1px solid ${BORDER}`,
   borderRadius: 10,
   fontSize: 13,
-  boxShadow: '0 8px 24px rgba(30, 27, 75, 0.12)',
+  boxShadow: '0 8px 24px rgba(11, 18, 32, 0.14)',
 };
 const AXIS_TICK = { fill: TEXT_MUTED, fontSize: 12 };
 

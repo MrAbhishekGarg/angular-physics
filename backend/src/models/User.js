@@ -5,8 +5,11 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     passwordHash: { type: String, required: true, select: false },
-    role: { type: String, enum: ['student', 'mentor'], default: 'student' },
-    phone: { type: String },
+    // 'admin' is never actually stored here today — the sole admin account
+    // is env-configured (see utils/adminUser.js) and never gets a DB row.
+    // Included in the enum for schema consistency / future-proofing only.
+    role: { type: String, enum: ['student', 'mentor', 'admin'], default: 'student' },
+    phone: { type: String, required: true, match: [/^[6-9]\d{9}$/, 'Please enter a valid 10-digit mobile number'] },
   },
   { timestamps: true }
 );

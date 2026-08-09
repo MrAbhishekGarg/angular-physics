@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import SEO from '../components/seo/SEO.jsx';
 import Container from '../components/common/Container.jsx';
 import Button from '../components/common/Button.jsx';
-import { useAuth } from '../hooks/useAuth.js';
+import { useAuth, isMentorRole } from '../hooks/useAuth.js';
 import styles from './Auth.module.css';
 
 const initialForm = { email: '', password: '' };
@@ -22,7 +22,7 @@ export default function Login() {
     setStatus('submitting');
     try {
       const user = await login(form);
-      navigate(user.role === 'mentor' ? '/dashboard/mentor' : '/dashboard/student');
+      navigate(isMentorRole(user.role) ? '/dashboard/mentor' : '/dashboard/student');
     } catch (err) {
       setError(err.message);
       setStatus('error');

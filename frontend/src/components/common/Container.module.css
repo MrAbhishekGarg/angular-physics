@@ -1,5 +1,10 @@
 .container {
+  width: 100%;
   max-width: var(--ap-container-width);
   margin: 0 auto;
-  padding: 0 var(--ap-space-md);
+  /* Fluid gutter instead of one fixed value — grows with the viewport up to
+     a cap, so the container never reads as "a narrow column stranded in a
+     sea of margin" on wide monitors, but doesn't get silly on ultra-wide. */
+  padding: 0 clamp(1.1rem, 4vw, 3rem);
+  box-sizing: border-box;
 }

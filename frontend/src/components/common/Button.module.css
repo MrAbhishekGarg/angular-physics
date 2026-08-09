@@ -1,29 +1,45 @@
+/* "Angular" shape language: filled buttons (primary/secondary) get their
+   corners chamfered via clip-path instead of the old fully-rounded pill —
+   a literal, ownable link to the brand name instead of a generic rounded
+   button. Outlined buttons (ghost/ghostInverse) stay plain rectangles:
+   clip-path clips the border stroke unevenly at a cut corner, which reads
+   as broken rather than deliberate on a bordered shape. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   border: none;
-  border-radius: 999px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
 
 .btn:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+}
+
+.chamfer {
+  clip-path: polygon(
+    var(--ap-chamfer-sm) 0, 100% 0,
+    100% calc(100% - var(--ap-chamfer-sm)), calc(100% - var(--ap-chamfer-sm)) 100%,
+    0 100%, 0 var(--ap-chamfer-sm)
+  );
 }
 
 .primary {
+  /* Fixed navy text, not the theme-flipping --ap-primary — the accent
+     (cyan) stays bright in both themes, so the button needs a text color
+     that stays dark in both themes too, or dark-mode contrast collapses. */
   background: var(--ap-accent);
-  color: var(--ap-primary);
+  color: var(--ap-primary-surface);
 }
 .primary:hover {
   background: var(--ap-accent-light);
 }
 
 .secondary {
-  background: var(--ap-primary);
+  background: var(--ap-primary-surface);
   color: #fff;
 }
 .secondary:hover {
@@ -34,6 +50,20 @@
   background: transparent;
   color: var(--ap-primary);
   border: 1.5px solid var(--ap-border);
+}
+
+/* For a ghost button placed on a fixed-dark surface (the navy hero band,
+   footer CTAs) — var(--ap-primary)/var(--ap-text) flip to a LIGHT color in
+   dark theme but stay DARK in light theme, so on a surface that is always
+   dark regardless of theme, the light-theme value is nearly invisible.
+   ghostInverse uses fixed light values instead of theme-flipping tokens. */
+.ghostInverse {
+  background: transparent;
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+}
+.ghostInverse:hover {
+  border-color: rgba(255, 255, 255, 0.65);
 }
 
 .sm { padding: 0.5rem 1rem; font-size: 0.85rem; }

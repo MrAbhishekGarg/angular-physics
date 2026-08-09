@@ -1,9 +1,13 @@
 .wrap {
   padding: var(--ap-space-sm) var(--ap-space-md);
-  background: #fff;
+  background: var(--ap-bg);
   border: 1px solid var(--ap-border);
-  border-radius: var(--ap-radius);
   box-shadow: var(--ap-shadow);
+  clip-path: polygon(
+    var(--ap-chamfer-md) 0, 100% 0,
+    100% calc(100% - var(--ap-chamfer-md)), calc(100% - var(--ap-chamfer-md)) 100%,
+    0 100%, 0 var(--ap-chamfer-md)
+  );
 }
 
 .title {

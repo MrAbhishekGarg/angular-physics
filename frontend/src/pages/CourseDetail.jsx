@@ -8,7 +8,7 @@ import Button from '../components/common/Button.jsx';
 import Spinner from '../components/common/Spinner.jsx';
 import ErrorState from '../components/common/ErrorState.jsx';
 import { useCourse } from '../hooks/useCourses.js';
-import { useAuth } from '../hooks/useAuth.js';
+import { useAuth, isMentorRole } from '../hooks/useAuth.js';
 import { enrollmentService } from '../services/enrollmentService.js';
 import { formatPrice, formatDuration } from '../data/courseFormat.js';
 import { getTrackMeta } from '../data/examTracks.js';
@@ -73,7 +73,7 @@ export default function CourseDetail() {
 
             <div className={styles.enroll}>
               <span className={styles.price}>{formatPrice(course.price, course.currency)}</span>
-              {user?.role === 'mentor' ? (
+              {isMentorRole(user?.role) ? (
                 <Button
                   size="lg"
                   onClick={() => navigate(`/dashboard/mentor/courses/${course._id}/edit`, { state: { course } })}

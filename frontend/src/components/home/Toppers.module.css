@@ -1,0 +1,55 @@
+.section {
+  padding: var(--ap-space-xl) 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--ap-space-md);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.25rem;
+  padding: var(--ap-space-md);
+}
+
+.photo {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 0.4rem;
+}
+
+.photoPlaceholder {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--ap-primary-surface);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.name {
+  color: var(--ap-primary);
+  font-size: 1rem;
+}
+
+.achievement {
+  font-size: 0.85rem;
+  color: var(--ap-text);
+}
+
+.batch {
+  font-size: 0.78rem;
+  color: var(--ap-text-muted);
+}

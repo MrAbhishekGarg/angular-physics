@@ -4,7 +4,9 @@ import styles from './Navbar.module.css';
 const NAV_LINKS = [
   { to: '/', label: 'Home' },
   { to: '/courses', label: 'Courses' },
+  { to: '/videos', label: 'Videos' },
   { to: '/mentor', label: 'Mentor' },
+  { to: '/blog', label: 'Blog' },
   { to: '/about', label: 'About' },
   { to: '/contact', label: 'Contact' },
 ];

@@ -4,5 +4,6 @@ export const enrollmentService = {
   enroll: (courseId) => api.post('/enrollments', { courseId }),
   myEnrollments: () => api.get('/enrollments/me'),
   listAll: (courseId) => api.get('/enrollments', { params: courseId ? { courseId } : {} }),
+  studentStats: () => api.get('/enrollments/student-stats'),
   update: (id, payload) => api.patch(`/enrollments/${id}`, payload),
 };

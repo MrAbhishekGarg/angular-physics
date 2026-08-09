@@ -1,5 +1,5 @@
 .band {
-  background: var(--ap-primary);
+  background: var(--ap-primary-surface);
   padding: var(--ap-space-xl) 0;
 }
 
@@ -18,5 +18,5 @@
 }
 
 .subtitle {
-  color: #cfcdf0;
+  color: #c9d6e8;
 }

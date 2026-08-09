@@ -1,0 +1,12 @@
+.photo {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  display: block;
+  box-shadow: var(--ap-shadow);
+  clip-path: polygon(
+    var(--ap-chamfer-lg) 0, 100% 0,
+    100% calc(100% - var(--ap-chamfer-lg)), calc(100% - var(--ap-chamfer-lg)) 100%,
+    0 100%, 0 var(--ap-chamfer-lg)
+  );
+}

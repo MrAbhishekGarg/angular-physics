@@ -1,0 +1,101 @@
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--ap-space-xl) 0;
+}
+
+.wrap h1 {
+  color: var(--ap-primary);
+  margin-bottom: var(--ap-space-md);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ap-space-sm);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ap-space-sm);
+}
+
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ap-text);
+}
+
+.form input,
+.form select,
+.form textarea {
+  border: 1.5px solid var(--ap-border);
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.form input:focus,
+.form select:focus,
+.form textarea:focus {
+  outline: 2px solid var(--ap-accent);
+  outline-offset: 1px;
+}
+
+/* Two labels sharing a .row can wrap to a different number of lines
+   (e.g. a long "fallback" hint vs a short one) — the grid row still
+   stretches both label columns to equal height, so pushing just the
+   field down with an auto margin keeps every field in a row level
+   regardless of how much its own label text wrapped. */
+.row > label:not(.checkboxLabel) > input,
+.row > label:not(.checkboxLabel) > select,
+.row > label:not(.checkboxLabel) > textarea {
+  margin-top: auto;
+}
+
+.checkboxLabel {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem !important;
+}
+
+.errorMsg {
+  color: var(--ap-danger);
+  font-size: 0.9rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.card {
+  border: 1px solid var(--ap-border);
+  padding: var(--ap-space-md);
+  margin-bottom: var(--ap-space-sm);
+  clip-path: polygon(
+    var(--ap-chamfer-md) 0, 100% 0,
+    100% calc(100% - var(--ap-chamfer-md)), calc(100% - var(--ap-chamfer-md)) 100%,
+    0 100%, 0 var(--ap-chamfer-md)
+  );
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: var(--ap-space-sm);
+}

@@ -8,13 +8,13 @@
 .tab {
   background: var(--ap-bg-muted);
   border: 1.5px solid transparent;
-  border-radius: 999px;
   padding: 0.5rem 1.1rem;
   font-weight: 600;
   font-size: 0.88rem;
   color: var(--ap-text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
 }
 
 .tab:hover {
@@ -22,6 +22,6 @@
 }
 
 .active {
-  background: var(--ap-primary);
+  background: var(--ap-primary-surface);
   color: #fff;
 }

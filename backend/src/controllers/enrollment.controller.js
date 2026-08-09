@@ -1,4 +1,5 @@
 import * as enrollmentService from '../services/enrollment.service.js';
+import { getStudentTestStats } from '../services/test.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -20,6 +21,11 @@ export const listAllEnrollments = asyncHandler(async (req, res) => {
   const { courseId } = req.query;
   const enrollments = await enrollmentService.getAllEnrollments({ courseId });
   return ApiResponse(res, 200, enrollments);
+});
+
+export const listStudentStats = asyncHandler(async (req, res) => {
+  const stats = await getStudentTestStats();
+  return ApiResponse(res, 200, stats);
 });
 
 export const update = asyncHandler(async (req, res) => {

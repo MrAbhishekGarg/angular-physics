@@ -2,10 +2,26 @@
   padding: var(--ap-space-xl) 0;
 }
 
+.viewAll {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--ap-space-lg);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--ap-space-md);
+}
+
+/* Grid items already stretch to the row's tallest card — this makes each
+   card's own content fill that height too, so a short description doesn't
+   leave the download button stranded mid-card while its neighbor's sits
+   at the bottom. */
+.card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .title {
@@ -18,4 +34,18 @@
   color: var(--ap-text-muted);
   font-size: 0.88rem;
   margin-bottom: var(--ap-space-sm);
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ap-space-sm);
+  margin-top: auto;
+  padding-top: var(--ap-space-sm);
+}
+
+.meta {
+  font-size: 0.78rem;
+  color: var(--ap-text-muted);
 }

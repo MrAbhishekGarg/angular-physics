@@ -2,6 +2,7 @@ import SEO from '../components/seo/SEO.jsx';
 import JsonLd from '../components/seo/JsonLd.jsx';
 import Container from '../components/common/Container.jsx';
 import Stat from '../components/common/Stat.jsx';
+import MentorPhoto from '../components/common/MentorPhoto.jsx';
 import styles from './Mentor.module.css';
 
 const mentorSchema = {
@@ -12,6 +13,7 @@ const mentorSchema = {
   description:
     'Physics educator specializing in IIT-JEE, NEET and Physics Olympiad preparation, with over a decade of experience producing double-digit All India Ranks.',
   worksFor: { '@type': 'EducationalOrganization', name: 'Angular Physics' },
+  image: 'https://www.angularphysics.com/mentor-photo.jpg',
 };
 
 export default function Mentor() {
@@ -27,8 +29,13 @@ export default function Mentor() {
       <main>
         <Container>
           <div className={styles.wrap}>
-            <h1 className={styles.title}>Abhishek Kumar Garg</h1>
-            <p className={styles.role}>Founder &amp; Lead Physics Mentor, Angular Physics</p>
+            <div className={styles.header}>
+              <MentorPhoto className={styles.photo} />
+              <div className={styles.headerCopy}>
+                <h1 className={styles.title}>Abhishek Kumar Garg</h1>
+                <p className={styles.role}>Founder &amp; Lead Physics Mentor, Angular Physics</p>
+              </div>
+            </div>
 
             <p className={styles.bio}>
               Abhishek Kumar Garg has spent over 14 years teaching Physics to IIT-JEE and NEET

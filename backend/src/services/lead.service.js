@@ -14,3 +14,8 @@ export async function createLead(payload) {
   console.log('[lead:seed-mode] Would save lead:', payload);
   return { ...payload, id: `seed-${Date.now()}` };
 }
+
+/** Newest first — the mentor's own review queue for follow-up calls. */
+export async function getAllLeads() {
+  return Lead.find().sort({ createdAt: -1 }).lean();
+}

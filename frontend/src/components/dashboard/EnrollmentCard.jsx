@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import Card from '../common/Card.jsx';
 import Badge from '../common/Badge.jsx';
 import { formatPrice, formatDuration } from '../../data/courseFormat.js';
@@ -29,6 +30,12 @@ export default function EnrollmentCard({ enrollment }) {
           <span className={styles.progressLabel}>{enrollment.progressPercent}% complete</span>
         </div>
       )}
+      {(enrollment.status === 'active' || enrollment.status === 'completed') && (
+        <Link to={`/dashboard/student/courses/${course?._id}/learn`} style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+          Watch Lectures →
+        </Link>
+      )}
     </Card>
+
   );
 }

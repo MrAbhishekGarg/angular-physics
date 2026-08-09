@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { TRACKS } from '../constants/tracks.js';
 
 /**
  * A single course/batch offered on Angular Physics.
@@ -13,7 +14,7 @@ const courseSchema = new mongoose.Schema(
     track: {
       type: String,
       required: true,
-      enum: ['iit-jee', 'neet', 'olympiad', 'foundation', 'crash-course'],
+      enum: TRACKS,
       index: true,
     },
     tagline: { type: String, required: true },

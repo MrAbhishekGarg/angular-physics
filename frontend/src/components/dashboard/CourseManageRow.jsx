@@ -25,7 +25,7 @@ export default function CourseManageRow({ course, onDelete, deleting }) {
             type="button"
             onClick={() => onDelete(course)}
             disabled={deleting}
-            style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            style={{ color: 'var(--ap-danger)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
             Delete
           </button>

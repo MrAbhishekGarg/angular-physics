@@ -10,7 +10,7 @@ export const seedCourses = [
   {
     slug: 'jee-main-advanced-2027-crash-course',
     title: 'JEE Main + Advanced 2027 Crash Course',
-    track: 'iit-jee',
+    track: 'jee-main',
     tagline: 'Master rotational mechanics to modern physics — angle by angle.',
     description:
       'A concept-first crash course covering the full JEE Physics syllabus with problem-solving frameworks Abhishek Kumar Garg has refined across a decade of double-digit AIR results.',
@@ -114,7 +114,7 @@ export const seedTestimonials = [
   {
     studentName: 'Ritika Sharma',
     result: 'AIR 63, JEE Advanced',
-    track: 'iit-jee',
+    track: 'jee-main',
     quote:
       'Abhishek sir\'s way of connecting rotational mechanics to real intuition is the reason Physics went from my weakest to my strongest subject.',
   },
@@ -128,7 +128,7 @@ export const seedTestimonials = [
   {
     studentName: 'Ayaan Mehta',
     result: 'AIR 88, JEE Main',
-    track: 'iit-jee',
+    track: 'jee-main',
     quote: 'The error-log system alone fixed six months of repeated silly mistakes.',
   },
 ];

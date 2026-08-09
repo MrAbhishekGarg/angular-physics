@@ -2,19 +2,35 @@
   padding: var(--ap-space-xl) 0;
 }
 
+/* Individual elevated cards with a cycling accent rail, not one fused
+   gray bar — a row of undifferentiated numbers reads as a single blob at
+   a glance; separate cards scan as distinct, comparable metrics instead. */
 .statRow {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: var(--ap-space-sm);
-  background: var(--ap-bg-muted);
-  border-radius: var(--ap-radius);
   margin: var(--ap-space-lg) 0;
 }
+
+.statRow > * {
+  background: var(--ap-bg);
+  border: 1px solid var(--ap-border);
+  border-left: 3px solid var(--ap-accent);
+  border-radius: 10px;
+  box-shadow: var(--ap-shadow-sm);
+}
+
+.statRow > *:nth-child(5n+2) { border-left-color: var(--ap-secondary-accent); }
+.statRow > *:nth-child(5n+3) { border-left-color: var(--ap-success); }
+.statRow > *:nth-child(5n+4) { border-left-color: var(--ap-warning); }
+.statRow > *:nth-child(5n+5) { border-left-color: var(--ap-primary-light); }
 
 .sectionRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   margin-bottom: var(--ap-space-sm);
 }
 

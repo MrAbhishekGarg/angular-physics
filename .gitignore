@@ -5,3 +5,6 @@ dist/
 .DS_Store
 backend/uploads/*
 !backend/uploads/.gitkeep
+backend/secure-uploads/*
+!backend/secure-uploads/notes/.gitkeep
+!backend/secure-uploads/videos/.gitkeep

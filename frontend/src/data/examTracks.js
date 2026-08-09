@@ -4,7 +4,8 @@
  * Navbar dropdown, etc.) imports from here — never re-declares the list.
  */
 export const EXAM_TRACKS = [
-  { key: 'iit-jee', label: 'IIT-JEE', shortLabel: 'JEE', icon: '📐' },
+  { key: 'jee-main', label: 'JEE Main', shortLabel: 'JEE Main', icon: '📐' },
+  { key: 'jee-advanced', label: 'JEE Advanced', shortLabel: 'JEE Adv.', icon: '🎯' },
   { key: 'neet', label: 'NEET', shortLabel: 'NEET', icon: '🧬' },
   { key: 'olympiad', label: 'Physics Olympiad', shortLabel: 'Olympiad', icon: '🏆' },
   { key: 'foundation', label: 'Foundation (Class 9-11)', shortLabel: 'Foundation', icon: '🧱' },
