@@ -14,6 +14,14 @@ export async function connectDB() {
     return false;
   }
 
+  // Mongoose queues ("buffers") operations issued before the connection is
+  // fully ready and gives up after this long — default is 10s. On a cold
+  // Render start, the connection can resolve while Atlas's replica-set
+  // topology is still settling, so a burst of requests right at boot (like
+  // the dashboard's parallel widget fetches) can outlast that 10s window
+  // even though the connection is genuinely fine moments later.
+  mongoose.set('bufferTimeoutMS', 30000);
+
   try {
     await mongoose.connect(env.mongoUri);
     isConnected = true;
