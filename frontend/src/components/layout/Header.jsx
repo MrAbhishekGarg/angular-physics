@@ -21,16 +21,7 @@ export default function Header() {
   return (
     <header className={styles.header}>
       <Container className={styles.inner}>
-        <Logo />
-
-        <button
-          type="button"
-          className={styles.themeToggle}
-          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          onClick={toggleTheme}
-        >
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
+        <Logo variant={theme === 'dark' ? 'light' : 'dark'} />
 
         <button
           type="button"
@@ -46,6 +37,14 @@ export default function Header() {
           <Navbar />
           {loading ? null : user ? (
             <div className={styles.authArea}>
+              <button
+                type="button"
+                className={styles.themeToggle}
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                onClick={toggleTheme}
+              >
+                {theme === 'dark' ? '☀️' : '🌙'}
+              </button>
               <Button as={Link} to={dashboardPath} variant="ghost" size="sm" onClick={() => setMenuOpen(false)}>
                 {user.name.split(' ')[0]}'s Dashboard
               </Button>
@@ -62,6 +61,14 @@ export default function Header() {
             </div>
           ) : (
             <div className={styles.authArea}>
+              <button
+                type="button"
+                className={styles.themeToggle}
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                onClick={toggleTheme}
+              >
+                {theme === 'dark' ? '☀️' : '🌙'}
+              </button>
               <Button as={Link} to="/login" variant="ghost" size="sm" onClick={() => setMenuOpen(false)}>
                 Login
               </Button>
