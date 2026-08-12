@@ -87,7 +87,7 @@ export default function TestimonialManager() {
                       <Button size="sm" variant="ghost" onClick={() => startEdit(t)}>
                         Edit
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => handleDelete(t)}>
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(t)}>
                         Delete
                       </Button>
                     </div>

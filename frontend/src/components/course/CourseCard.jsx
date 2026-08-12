@@ -43,7 +43,7 @@ export default function CourseCard({ course }) {
           {course.strikePrice && <s className={styles.strike}>{formatPrice(course.strikePrice, course.currency)}</s>}
           {discount && <Badge tone="accent">{discount}% off</Badge>}
         </div>
-        <Button as={Link} to={`/courses/${course.slug}`} size="sm">
+        <Button as={Link} to={`/courses/${course.slug}`} size="sm" variant={isLaunchingSoon ? 'highlight' : 'primary'}>
           {isLaunchingSoon ? 'Notify Me' : 'View Course'}
         </Button>
       </div>

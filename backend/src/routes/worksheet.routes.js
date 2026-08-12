@@ -12,7 +12,7 @@ import {
   completeWorksheet,
   getWorksheetProgress,
 } from '../controllers/worksheet.controller.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate, authorize, requireSection } from '../middleware/auth.js';
 import { uploadWorksheetFile as uploadMiddleware } from '../middleware/upload.js';
 import { validateBody } from '../middleware/validate.js';
 
@@ -22,13 +22,13 @@ router.get('/available', authenticate, listAvailableWorksheets);
 router.get('/:id/download', authenticate, downloadWorksheet);
 router.post('/:id/complete', authenticate, completeWorksheet);
 
-router.get('/', authenticate, authorize('mentor'), listWorksheets);
-router.get('/:id/progress', authenticate, authorize('mentor'), getWorksheetProgress);
-router.get('/:id', authenticate, authorize('mentor'), getWorksheet);
-router.post('/', authenticate, authorize('mentor'), validateBody(['title', 'type']), createWorksheet);
-router.put('/:id', authenticate, authorize('mentor'), updateWorksheet);
-router.delete('/:id', authenticate, authorize('mentor'), deleteWorksheet);
-router.post('/:id/file', authenticate, authorize('mentor'), uploadMiddleware, uploadWorksheetFile);
-router.post('/:id/assign', authenticate, authorize('mentor'), assignWorksheet);
+router.get('/', authenticate, authorize('mentor'), requireSection('worksheets'), listWorksheets);
+router.get('/:id/progress', authenticate, authorize('mentor'), requireSection('worksheets'), getWorksheetProgress);
+router.get('/:id', authenticate, authorize('mentor'), requireSection('worksheets'), getWorksheet);
+router.post('/', authenticate, authorize('mentor'), requireSection('worksheets'), validateBody(['title', 'type']), createWorksheet);
+router.put('/:id', authenticate, authorize('mentor'), requireSection('worksheets'), updateWorksheet);
+router.delete('/:id', authenticate, authorize('mentor'), requireSection('worksheets'), deleteWorksheet);
+router.post('/:id/file', authenticate, authorize('mentor'), requireSection('worksheets'), uploadMiddleware, uploadWorksheetFile);
+router.post('/:id/assign', authenticate, authorize('mentor'), requireSection('worksheets'), assignWorksheet);
 
 export default router;

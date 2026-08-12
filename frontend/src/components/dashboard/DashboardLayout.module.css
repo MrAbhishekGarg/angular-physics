@@ -74,6 +74,42 @@
   color: #fff;
 }
 
+/* Admin's shell reuses the site's own "always-dark-regardless-of-theme"
+   token (already load-bearing for header/footer chrome) rather than
+   inventing a new color — the point is "unmistakably different from a
+   mentor login," not a whole second brand. Text uses fixed rgba values
+   instead of --ap-text/--ap-text-muted, since those flip to a LIGHT color
+   in dark theme and would go invisible against a panel that's dark in
+   both themes (same reasoning Button.module.css's ghostInverse documents). */
+.shell[data-admin='true'] .sidebar {
+  background: var(--ap-primary-surface);
+  border-color: var(--ap-primary-surface);
+}
+
+.shell[data-admin='true'] .navGroupLabel {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.shell[data-admin='true'] .navItem {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.shell[data-admin='true'] .navItem:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* The sidebar itself is now the same navy .navItemActive used to sit on
+   top of, so the active indicator needs a genuinely different color here
+   or it disappears into its own background — coral is otherwise the most
+   under-used accent in the palette, reserved for exactly this kind of
+   "make this one thing unmistakable" moment. */
+.shell[data-admin='true'] .navItemActive,
+.shell[data-admin='true'] .navItemActive:hover {
+  background: var(--ap-secondary-accent);
+  color: #fff;
+}
+
 .content {
   flex: 1;
   min-width: 0;

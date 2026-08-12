@@ -91,7 +91,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/notes"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="notes">
             <NotesManager />
           </ProtectedRoute>
         }
@@ -99,7 +99,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/tests"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="tests">
             <TestManager />
           </ProtectedRoute>
         }
@@ -107,7 +107,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/tests/new"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="tests">
             <TestEditor />
           </ProtectedRoute>
         }
@@ -115,7 +115,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/tests/:id/edit"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="tests">
             <TestEditor />
           </ProtectedRoute>
         }
@@ -123,7 +123,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/tests/:id/results"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="tests">
             <TestResults />
           </ProtectedRoute>
         }
@@ -131,7 +131,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/tests/attempts/:attemptId/result"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="tests">
             <TestResult />
           </ProtectedRoute>
         }
@@ -139,7 +139,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/questions"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="questions">
             <QuestionBank />
           </ProtectedRoute>
         }
@@ -147,7 +147,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/concept-codes"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="concept-codes">
             <ConceptCodes />
           </ProtectedRoute>
         }
@@ -155,7 +155,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/worksheets"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="worksheets">
             <WorksheetManager />
           </ProtectedRoute>
         }
@@ -163,7 +163,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/articles"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="articles">
             <ArticleManager />
           </ProtectedRoute>
         }
@@ -171,7 +171,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/toppers"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="toppers">
             <ToppersManager />
           </ProtectedRoute>
         }
@@ -179,7 +179,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/testimonials"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="testimonials">
             <TestimonialManager />
           </ProtectedRoute>
         }
@@ -187,7 +187,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/videos"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="videos">
             <VideoLibraryManager />
           </ProtectedRoute>
         }
@@ -211,7 +211,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/enquiries"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="enquiries">
             <Enquiries />
           </ProtectedRoute>
         }
@@ -219,7 +219,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/students"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="students">
             <AllStudents />
           </ProtectedRoute>
         }
@@ -227,7 +227,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/students/:studentId"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="students">
             <StudentDetail />
           </ProtectedRoute>
         }
@@ -235,7 +235,7 @@ export default function AppRoutes() {
       <Route
         path="/dashboard/mentor/doubts"
         element={
-          <ProtectedRoute role="mentor">
+          <ProtectedRoute role="mentor" section="doubts">
             <DoubtsManager />
           </ProtectedRoute>
         }

@@ -8,6 +8,7 @@ import Stat from '../../components/common/Stat.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { useStudentDetailAnalytics } from '../../hooks/useAnalytics.js';
+import { useAuth } from '../../hooks/useAuth.js';
 import { testService } from '../../services/testService.js';
 import { authService } from '../../services/authService.js';
 import { formatPrice } from '../../data/courseFormat.js';
@@ -66,8 +67,10 @@ function ResetPasswordForm({ studentId, onDone }) {
 
 export default function StudentDetail() {
   const { studentId } = useParams();
+  const { user } = useAuth();
   const { data, loading, error, refetch } = useStudentDetailAnalytics(studentId);
   const [resetOpen, setResetOpen] = useState(false);
+  const canResetAttempts = !user?.restrictedSections?.includes('tests');
 
   const handleReset = async (attempt) => {
     if (!window.confirm(`Let this student retake "${attempt.testId?.title}"? Their current attempt will be archived, not deleted.`)) return;
@@ -171,7 +174,7 @@ export default function StudentDetail() {
                             </td>
                             <td>{a.status === 'submitted' ? `${a.score} / ${a.maxScore}` : '—'}</td>
                             <td>
-                              {a.status === 'submitted' && (
+                              {a.status === 'submitted' && canResetAttempts && (
                                 <Button size="sm" variant="ghost" onClick={() => handleReset(a)}>
                                   Reset Attempt
                                 </Button>

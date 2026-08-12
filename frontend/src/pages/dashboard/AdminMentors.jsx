@@ -6,6 +6,7 @@ import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { useMentors } from '../../hooks/useAdmin.js';
 import { authService } from '../../services/authService.js';
+import { MENTOR_SECTIONS } from '../../data/mentorSections.js';
 import formStyles from './DashboardForm.module.css';
 
 const emptyForm = { name: '', email: '', password: '', phone: '' };
@@ -58,12 +59,80 @@ function ResetPasswordForm({ mentor, onDone, onCancel }) {
   );
 }
 
+/**
+ * Checked = this mentor CAN see that section. Saves the inverse
+ * (restrictedSections) since that's what the backend actually stores —
+ * a denylist, so an admin doing nothing to a new mentor leaves them with
+ * full access by default.
+ */
+function PermissionsForm({ mentor, onDone, refetch }) {
+  const [checked, setChecked] = useState(
+    () => new Set(MENTOR_SECTIONS.filter((s) => !mentor.restrictedSections?.includes(s.key)).map((s) => s.key))
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const toggle = (key) => {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+    setSuccess(false);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      const restrictedSections = MENTOR_SECTIONS.filter((s) => !checked.has(s.key)).map((s) => s.key);
+      await authService.updateMentorPermissions(mentor._id, restrictedSections);
+      await refetch();
+      setSuccess(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{ marginTop: '0.5rem' }}>
+      <p style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)', marginBottom: '0.4rem' }}>
+        Uncheck a section to hide it from {mentor.name}'s dashboard entirely.
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.4rem 0.8rem', marginBottom: '0.6rem' }}>
+        {MENTOR_SECTIONS.map((s) => (
+          <label key={s.key} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 400, fontSize: '0.85rem' }}>
+            <input type="checkbox" checked={checked.has(s.key)} onChange={() => toggle(s.key)} />
+            {s.label}
+          </label>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+        <Button type="submit" size="sm" disabled={busy}>
+          {busy ? 'Saving…' : 'Save Permissions'}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={onDone}>
+          Close
+        </Button>
+        {success && <span style={{ color: 'var(--ap-success)', fontSize: '0.82rem' }}>Saved.</span>}
+      </div>
+      {error && <p className={formStyles.errorMsg} style={{ marginTop: '0.4rem' }}>{error}</p>}
+    </form>
+  );
+}
+
 export default function AdminMentors() {
   const { data: mentors, loading, error, refetch } = useMentors();
   const [form, setForm] = useState(emptyForm);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState('');
   const [resetOpenId, setResetOpenId] = useState(null);
+  const [permOpenId, setPermOpenId] = useState(null);
 
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
@@ -127,12 +196,18 @@ export default function AdminMentors() {
                       <Button size="sm" variant="ghost" onClick={() => setResetOpenId((id) => (id === m._id ? null : m._id))}>
                         {resetOpenId === m._id ? 'Close' : 'Reset Password'}
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => handleDelete(m)}>
+                      <Button size="sm" variant="ghost" onClick={() => setPermOpenId((id) => (id === m._id ? null : m._id))}>
+                        {permOpenId === m._id ? 'Close' : 'Permissions'}
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(m)}>
                         Remove
                       </Button>
                     </div>
                     {resetOpenId === m._id && (
                       <ResetPasswordForm mentor={m} onDone={() => setResetOpenId(null)} />
+                    )}
+                    {permOpenId === m._id && (
+                      <PermissionsForm mentor={m} onDone={() => setPermOpenId(null)} refetch={refetch} />
                     )}
                   </div>
                 ))

@@ -11,6 +11,7 @@ export const authService = {
   createMentor: (payload) => api.post('/auth/mentors', payload),
   resetMentorPassword: (id, newPassword) => api.post(`/auth/mentors/${id}/reset-password`, { newPassword }),
   removeMentor: (id) => api.delete(`/auth/mentors/${id}`),
+  updateMentorPermissions: (id, restrictedSections) => api.patch(`/auth/mentors/${id}/permissions`, { restrictedSections }),
 
   // Mentor (or admin) resetting a student's password
   resetStudentPassword: (id, newPassword) => api.post(`/auth/students/${id}/reset-password`, { newPassword }),

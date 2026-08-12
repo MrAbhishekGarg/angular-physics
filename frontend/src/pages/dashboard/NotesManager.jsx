@@ -88,7 +88,7 @@ export default function NotesManager() {
                       <p style={{ fontSize: '0.8rem' }}>
                         {note.track} · {note.fileName || 'no file uploaded yet'}
                       </p>
-                      <Button size="sm" variant="ghost" onClick={() => handleDelete(note)}>
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(note)}>
                         Delete
                       </Button>
                     </div>

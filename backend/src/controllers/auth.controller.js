@@ -49,6 +49,11 @@ export const removeMentor = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, { deleted: true });
 });
 
+export const updateMentorPermissions = asyncHandler(async (req, res) => {
+  const mentor = await authService.updateMentorPermissions(req.params.id, req.body.restrictedSections);
+  return ApiResponse(res, 200, mentor);
+});
+
 export const resetStudentPassword = asyncHandler(async (req, res) => {
   const user = await authService.resetPassword(req.params.id, req.body.newPassword, 'student');
   return ApiResponse(res, 200, user);

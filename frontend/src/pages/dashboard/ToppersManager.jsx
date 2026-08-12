@@ -69,7 +69,7 @@ export default function ToppersManager() {
                       </div>
                       <p style={{ fontSize: '0.85rem' }}>{t.achievement}</p>
                       {t.courseId?.title && <p style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}>{t.courseId.title}</p>}
-                      <Button size="sm" variant="ghost" onClick={() => handleDelete(t)}>
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(t)}>
                         Delete
                       </Button>
                     </div>

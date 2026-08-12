@@ -19,38 +19,42 @@ const STUDENT_NAV = [
 // Grouped so an 11-item list scans instead of reading as a wall of links —
 // each group is a distinct part of running the business (who you teach,
 // what you teach them, how you test them, how you're perceived).
+// Every item except the Dashboard overview itself carries a sectionKey
+// (matching frontend/src/data/mentorSections.js and the backend's
+// requireSection() gate) — a mentor with that key in restrictedSections
+// has both the nav item AND the underlying route/API blocked.
 const MENTOR_NAV = [
   {
     section: 'Overview',
     items: [
       { to: '/dashboard/mentor', label: 'Dashboard', end: true },
-      { to: '/dashboard/mentor/students', label: 'All Students' },
-      { to: '/dashboard/mentor/enquiries', label: 'Enquiries' },
+      { to: '/dashboard/mentor/students', label: 'All Students', sectionKey: 'students' },
+      { to: '/dashboard/mentor/enquiries', label: 'Enquiries', sectionKey: 'enquiries' },
     ],
   },
   {
     section: 'Content',
     items: [
-      { to: '/dashboard/mentor/notes', label: 'Notes' },
-      { to: '/dashboard/mentor/questions', label: 'Question Bank' },
-      { to: '/dashboard/mentor/concept-codes', label: 'Concept Codes' },
-      { to: '/dashboard/mentor/articles', label: 'Articles' },
-      { to: '/dashboard/mentor/videos', label: 'Videos & Playlists' },
+      { to: '/dashboard/mentor/notes', label: 'Notes', sectionKey: 'notes' },
+      { to: '/dashboard/mentor/questions', label: 'Question Bank', sectionKey: 'questions' },
+      { to: '/dashboard/mentor/concept-codes', label: 'Concept Codes', sectionKey: 'concept-codes' },
+      { to: '/dashboard/mentor/articles', label: 'Articles', sectionKey: 'articles' },
+      { to: '/dashboard/mentor/videos', label: 'Videos & Playlists', sectionKey: 'videos' },
     ],
   },
   {
     section: 'Tests & Practice',
     items: [
-      { to: '/dashboard/mentor/tests', label: 'Tests' },
-      { to: '/dashboard/mentor/worksheets', label: 'Worksheets' },
+      { to: '/dashboard/mentor/tests', label: 'Tests', sectionKey: 'tests' },
+      { to: '/dashboard/mentor/worksheets', label: 'Worksheets', sectionKey: 'worksheets' },
     ],
   },
   {
     section: 'Community',
     items: [
-      { to: '/dashboard/mentor/toppers', label: 'Toppers' },
-      { to: '/dashboard/mentor/testimonials', label: 'Testimonials' },
-      { to: '/dashboard/mentor/doubts', label: 'Doubts' },
+      { to: '/dashboard/mentor/toppers', label: 'Toppers', sectionKey: 'toppers' },
+      { to: '/dashboard/mentor/testimonials', label: 'Testimonials', sectionKey: 'testimonials' },
+      { to: '/dashboard/mentor/doubts', label: 'Doubts', sectionKey: 'doubts' },
     ],
   },
 ];
@@ -80,11 +84,20 @@ export default function DashboardLayout({ role, children }) {
   // Admin sees everything a mentor does (same pages, same DashboardLayout
   // calls) plus this one extra group — real role, not the `role` prop,
   // since every mentor page still passes role="mentor" unchanged.
-  const nav = user?.role === 'admin' ? [...baseNav, ADMIN_NAV_GROUP] : baseNav;
+  const withAdminGroup = user?.role === 'admin' ? [...baseNav, ADMIN_NAV_GROUP] : baseNav;
+  // Drop any item the admin has restricted this mentor from, then drop any
+  // group that's now empty — admin never carries restrictedSections, so
+  // this is a no-op for them regardless of which nav they're looking at.
+  const nav = withAdminGroup
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.sectionKey || !user?.restrictedSections?.includes(item.sectionKey)),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <main>
-      <div className={styles.shell}>
+      <div className={styles.shell} data-admin={user?.role === 'admin' ? 'true' : undefined}>
         <div className={styles.layout}>
           <nav className={styles.sidebar} aria-label="Dashboard sections">
             {nav.map((group) => (

@@ -141,7 +141,7 @@ export default function QuestionEditor({ initialQuestion, examType: defaultExamT
       <div className={formStyles.cardHeader}>
         <strong>{isEdit ? 'Edit Question' : 'New Question'}</strong>
         {isEdit && (
-          <Button type="button" size="sm" variant="ghost" onClick={handleDelete}>
+          <Button type="button" size="sm" variant="danger" onClick={handleDelete}>
             Delete
           </Button>
         )}

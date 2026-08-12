@@ -69,7 +69,7 @@ function PlaylistRow({ playlist, onSaved, onDeleted }) {
             <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
               Rename
             </Button>
-            <Button size="sm" variant="ghost" onClick={handleDelete}>
+            <Button size="sm" variant="danger" onClick={handleDelete}>
               Delete
             </Button>
           </>

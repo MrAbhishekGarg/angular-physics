@@ -202,7 +202,7 @@ export default function WorksheetManager() {
                         <Button size="sm" variant="ghost" onClick={() => setStatusOpenId((id) => (id === w._id ? null : w._id))}>
                           {statusOpenId === w._id ? 'Close' : 'Student Status'}
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDelete(w)}>
+                        <Button size="sm" variant="danger" onClick={() => handleDelete(w)}>
                           Delete
                         </Button>
                       </div>

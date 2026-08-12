@@ -3,11 +3,18 @@ import User from '../models/User.js';
 import { ApiError } from '../utils/ApiError.js';
 import { isDbConnected } from '../config/db.js';
 import { adminSafeUser, matchesAdminCredentials } from '../utils/adminUser.js';
+import { MENTOR_SECTIONS } from '../constants/mentorSections.js';
 
 const SALT_ROUNDS = 10;
 
 function toSafeUser(user) {
-  return { id: user._id.toString(), name: user.name, email: user.email, role: user.role };
+  return {
+    id: user._id.toString(),
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    restrictedSections: user.restrictedSections || [],
+  };
 }
 
 export async function registerStudent({ name, email, password, phone }) {
@@ -89,6 +96,21 @@ export async function removeMentor(id) {
   const user = await User.findOneAndDelete({ _id: id, role: 'mentor' }).lean();
   if (!user) throw new ApiError(404, 'Mentor not found');
   return user;
+}
+
+/** Admin-only: sets which dashboard sections a mentor can't see/use. */
+export async function updateMentorPermissions(id, restrictedSections) {
+  const keys = Array.isArray(restrictedSections) ? restrictedSections : [];
+  const unknown = keys.filter((k) => !MENTOR_SECTIONS.includes(k));
+  if (unknown.length > 0) throw new ApiError(400, `Unknown section(s): ${unknown.join(', ')}`);
+
+  const user = await User.findOneAndUpdate(
+    { _id: id, role: 'mentor' },
+    { restrictedSections: keys },
+    { new: true }
+  ).lean();
+  if (!user) throw new ApiError(404, 'Mentor not found');
+  return toSafeUser(user);
 }
 
 export { toSafeUser };

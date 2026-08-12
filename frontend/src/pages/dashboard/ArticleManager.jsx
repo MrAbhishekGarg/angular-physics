@@ -92,7 +92,7 @@ export default function ArticleManager() {
                         <Button size="sm" variant="ghost" onClick={() => startEdit(a)}>
                           Edit
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDelete(a)}>
+                        <Button size="sm" variant="danger" onClick={() => handleDelete(a)}>
                           Delete
                         </Button>
                       </div>

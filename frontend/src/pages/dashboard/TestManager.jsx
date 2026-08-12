@@ -78,7 +78,7 @@ export default function TestManager() {
                         </Button>
                       </>
                     )}
-                    <Button size="sm" variant="ghost" onClick={() => handleDelete(test)}>
+                    <Button size="sm" variant="danger" onClick={() => handleDelete(test)}>
                       Delete
                     </Button>
                   </div>

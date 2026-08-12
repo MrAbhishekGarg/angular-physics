@@ -25,7 +25,13 @@ export const authenticate = asyncHandler(async (req, res, next) => {
   const user = await User.findById(decoded.sub).lean();
   if (!user) throw new ApiError(401, 'Not authenticated');
 
-  req.user = { id: user._id.toString(), name: user.name, email: user.email, role: user.role };
+  req.user = {
+    id: user._id.toString(),
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    restrictedSections: user.restrictedSections || [],
+  };
   next();
 });
 
@@ -36,6 +42,23 @@ export function authorize(...roles) {
     if (req.user?.role === 'admin') return next();
     if (!roles.includes(req.user?.role)) {
       return next(new ApiError(403, 'Not authorized'));
+    }
+    next();
+  };
+}
+
+/**
+ * Per-mentor section gate, composed after authorize('mentor') on a route
+ * (e.g. `authorize('mentor'), requireSection('questions')`). A no-op for
+ * anyone who isn't a plain mentor — admin already bypassed authorize()
+ * above and never carries restrictedSections, and a student would already
+ * have been rejected by authorize('mentor') before this ever runs.
+ */
+export function requireSection(sectionKey) {
+  return (req, res, next) => {
+    if (req.user?.role !== 'mentor') return next();
+    if (req.user.restrictedSections?.includes(sectionKey)) {
+      return next(new ApiError(403, 'Not authorized for this section'));
     }
     next();
   };

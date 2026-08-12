@@ -164,7 +164,7 @@ export default function DoubtsPanel() {
                       </Button>
                     )}
                     {d.status === 'open' && (
-                      <Button size="sm" variant="ghost" disabled={actionId === d._id} onClick={() => handleDeleteDoubt(d)}>
+                      <Button size="sm" variant="danger" disabled={actionId === d._id} onClick={() => handleDeleteDoubt(d)}>
                         Delete
                       </Button>
                     )}

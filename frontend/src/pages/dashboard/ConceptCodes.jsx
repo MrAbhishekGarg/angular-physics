@@ -166,7 +166,7 @@ export default function ConceptCodes() {
                         <Button size="sm" variant="ghost" onClick={() => startEdit(c)}>
                           Edit
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDelete(c)}>
+                        <Button size="sm" variant="danger" onClick={() => handleDelete(c)}>
                           Delete
                         </Button>
                       </div>

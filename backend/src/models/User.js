@@ -10,6 +10,11 @@ const userSchema = new mongoose.Schema(
     // Included in the enum for schema consistency / future-proofing only.
     role: { type: String, enum: ['student', 'mentor', 'admin'], default: 'student' },
     phone: { type: String, required: true, match: [/^[6-9]\d{9}$/, 'Please enter a valid 10-digit mobile number'] },
+    // Only meaningful for role: 'mentor'. A denylist, not an allowlist —
+    // empty (the default) means full access, so every mentor created
+    // before this field existed keeps working exactly as before with no
+    // migration. Keys come from constants/mentorSections.js.
+    restrictedSections: { type: [String], default: [] },
   },
   { timestamps: true }
 );
