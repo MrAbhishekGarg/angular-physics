@@ -71,6 +71,7 @@ export default function StudentDetail() {
   const { data, loading, error, refetch } = useStudentDetailAnalytics(studentId);
   const [resetOpen, setResetOpen] = useState(false);
   const canResetAttempts = !user?.restrictedSections?.includes('tests');
+  const canResetPassword = user?.canResetPasswords !== false;
 
   const handleReset = async (attempt) => {
     if (!window.confirm(`Let this student retake "${attempt.testId?.title}"? Their current attempt will be archived, not deleted.`)) return;
@@ -85,11 +86,13 @@ export default function StudentDetail() {
         <div className={formStyles.wrap} style={{ maxWidth: 900 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
             <h1>Student Detail</h1>
-            <Button size="sm" variant="ghost" onClick={() => setResetOpen((v) => !v)}>
-              {resetOpen ? 'Close' : 'Reset Password'}
-            </Button>
+            {canResetPassword && (
+              <Button size="sm" variant="ghost" onClick={() => setResetOpen((v) => !v)}>
+                {resetOpen ? 'Close' : 'Reset Password'}
+              </Button>
+            )}
           </div>
-          {resetOpen && <ResetPasswordForm studentId={studentId} onDone={() => setResetOpen(false)} />}
+          {resetOpen && canResetPassword && <ResetPasswordForm studentId={studentId} onDone={() => setResetOpen(false)} />}
 
             {loading && <Spinner label="Loading…" />}
             {error && <ErrorState message={error} onRetry={refetch} />}

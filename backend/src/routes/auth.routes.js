@@ -13,7 +13,7 @@ import {
   resetStudentPassword,
   listStudents,
 } from '../controllers/auth.controller.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate, authorize, requirePasswordResetPermission } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 
 const router = Router();
@@ -36,7 +36,14 @@ router.patch('/mentors/:id/permissions', authenticate, authorize('admin'), updat
 
 // Mentor (or admin, via the authorize() bypass) can reset a student's
 // password directly — no email infra exists, so this is relayed out of band.
-router.post('/students/:id/reset-password', authenticate, authorize('mentor'), validateBody(['newPassword']), resetStudentPassword);
+router.post(
+  '/students/:id/reset-password',
+  authenticate,
+  authorize('mentor'),
+  requirePasswordResetPermission,
+  validateBody(['newPassword']),
+  resetStudentPassword
+);
 
 // Admin-only: every student's login details in one place, mirroring the
 // mentor directory above — a raw account list, distinct from AllStudents.jsx

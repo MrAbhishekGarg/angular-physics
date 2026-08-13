@@ -15,6 +15,15 @@ const userSchema = new mongoose.Schema(
     // before this field existed keeps working exactly as before with no
     // migration. Keys come from constants/mentorSections.js.
     restrictedSections: { type: [String], default: [] },
+    // 'all' (default) preserves today's behavior for every mentor with zero
+    // migration. 'selected' scopes the mentor to assignedStudentIds only —
+    // an explicit mode, not "empty array = all", since that would be
+    // ambiguous with "admin explicitly assigned zero students."
+    studentAccessMode: { type: String, enum: ['all', 'selected'], default: 'all' },
+    assignedStudentIds: { type: [mongoose.Schema.Types.ObjectId], ref: 'User', default: [] },
+    // Only meaningful for role: 'mentor'. Default true preserves today's
+    // behavior — any mentor can reset any student's password.
+    canResetPasswords: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

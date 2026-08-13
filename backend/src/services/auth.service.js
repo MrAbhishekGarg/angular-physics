@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import { ApiError } from '../utils/ApiError.js';
 import { isDbConnected } from '../config/db.js';
@@ -14,6 +15,9 @@ function toSafeUser(user) {
     email: user.email,
     role: user.role,
     restrictedSections: user.restrictedSections || [],
+    studentAccessMode: user.studentAccessMode || 'all',
+    assignedStudentIds: (user.assignedStudentIds || []).map((sid) => sid.toString()),
+    canResetPasswords: user.canResetPasswords !== false,
   };
 }
 
@@ -98,17 +102,32 @@ export async function removeMentor(id) {
   return user;
 }
 
-/** Admin-only: sets which dashboard sections a mentor can't see/use. */
-export async function updateMentorPermissions(id, restrictedSections) {
+/**
+ * Admin-only: sets everything about what a mentor can see/use in one call —
+ * sections, student scope, and password-reset ability. Always a full
+ * replace (matches how the admin form always sends its complete current
+ * state), not a partial merge.
+ */
+export async function updateMentorPermissions(id, { restrictedSections, studentAccessMode, assignedStudentIds, canResetPasswords }) {
   const keys = Array.isArray(restrictedSections) ? restrictedSections : [];
   const unknown = keys.filter((k) => !MENTOR_SECTIONS.includes(k));
   if (unknown.length > 0) throw new ApiError(400, `Unknown section(s): ${unknown.join(', ')}`);
 
-  const user = await User.findOneAndUpdate(
-    { _id: id, role: 'mentor' },
-    { restrictedSections: keys },
-    { new: true }
-  ).lean();
+  const mode = studentAccessMode === 'selected' ? 'selected' : 'all';
+  const ids = Array.isArray(assignedStudentIds) ? assignedStudentIds : [];
+  const invalidIds = ids.filter((sid) => !mongoose.Types.ObjectId.isValid(sid));
+  if (invalidIds.length > 0) throw new ApiError(400, `Invalid student id(s): ${invalidIds.join(', ')}`);
+
+  const update = {
+    restrictedSections: keys,
+    studentAccessMode: mode,
+    // Switching back to 'all' clears the list server-side — no stale
+    // hidden selection surviving a mode switch.
+    assignedStudentIds: mode === 'selected' ? ids : [],
+    canResetPasswords: canResetPasswords !== false,
+  };
+
+  const user = await User.findOneAndUpdate({ _id: id, role: 'mentor' }, update, { new: true }).lean();
   if (!user) throw new ApiError(404, 'Mentor not found');
   return toSafeUser(user);
 }

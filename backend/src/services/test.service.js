@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Test from '../models/Test.js';
 import TestAttempt from '../models/TestAttempt.js';
 import Question from '../models/Question.js';
@@ -386,9 +387,16 @@ export async function getAttendanceForTest(testId) {
  * submitted, non-archived, non-preview attempt, then ranked by avg score
  * (1-based; only students with at least one submitted test get a rank).
  */
-export async function getStudentTestStats() {
+export async function getStudentTestStats({ studentIds } = {}) {
+  const match = { status: 'submitted', archived: { $ne: true }, isPreview: { $ne: true } };
+  // Unlike a plain Mongoose .find(), .aggregate() pipelines go to the driver
+  // raw and don't auto-cast string ids — this cast is required or the
+  // filter silently matches nothing.
+  if (studentIds) {
+    match.studentId = { $in: studentIds.map((id) => new mongoose.Types.ObjectId(id)) };
+  }
   const rows = await TestAttempt.aggregate([
-    { $match: { status: 'submitted', archived: { $ne: true }, isPreview: { $ne: true } } },
+    { $match: match },
     {
       $group: {
         _id: '$studentId',

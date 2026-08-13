@@ -31,6 +31,12 @@ export const authenticate = asyncHandler(async (req, res, next) => {
     email: user.email,
     role: user.role,
     restrictedSections: user.restrictedSections || [],
+    studentAccessMode: user.studentAccessMode || 'all',
+    // Converted to strings once, here — every downstream check
+    // (assertStudentAssigned, etc.) is then plain string comparison and
+    // never has to think about ObjectId identity.
+    assignedStudentIds: (user.assignedStudentIds || []).map((sid) => sid.toString()),
+    canResetPasswords: user.canResetPasswords !== false,
   };
   next();
 });
@@ -62,4 +68,16 @@ export function requireSection(sectionKey) {
     }
     next();
   };
+}
+
+/**
+ * Gate on the one existing password-reset route. A no-op for anyone who
+ * isn't a plain mentor, mirroring requireSection exactly.
+ */
+export function requirePasswordResetPermission(req, res, next) {
+  if (req.user?.role !== 'mentor') return next();
+  if (req.user.canResetPasswords === false) {
+    return next(new ApiError(403, 'Not authorized to reset student passwords'));
+  }
+  next();
 }

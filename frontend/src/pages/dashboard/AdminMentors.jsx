@@ -4,7 +4,7 @@ import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
 import Button from '../../components/common/Button.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
-import { useMentors } from '../../hooks/useAdmin.js';
+import { useMentors, useAdminStudents } from '../../hooks/useAdmin.js';
 import { authService } from '../../services/authService.js';
 import { MENTOR_SECTIONS } from '../../data/mentorSections.js';
 import formStyles from './DashboardForm.module.css';
@@ -63,12 +63,19 @@ function ResetPasswordForm({ mentor, onDone, onCancel }) {
  * Checked = this mentor CAN see that section. Saves the inverse
  * (restrictedSections) since that's what the backend actually stores —
  * a denylist, so an admin doing nothing to a new mentor leaves them with
- * full access by default.
+ * full access by default. Also covers student access scope (all vs.
+ * selected) and whether this mentor can reset student passwords — one
+ * form, one Save button, one PATCH with the full current state.
  */
 function PermissionsForm({ mentor, onDone, refetch }) {
   const [checked, setChecked] = useState(
     () => new Set(MENTOR_SECTIONS.filter((s) => !mentor.restrictedSections?.includes(s.key)).map((s) => s.key))
   );
+  const [accessMode, setAccessMode] = useState(mentor.studentAccessMode || 'all');
+  const [assignedIds, setAssignedIds] = useState(() => new Set(mentor.assignedStudentIds || []));
+  const [canReset, setCanReset] = useState(mentor.canResetPasswords !== false);
+  const [studentQuery, setStudentQuery] = useState('');
+  const { data: students, loading: studentsLoading } = useAdminStudents();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -83,13 +90,34 @@ function PermissionsForm({ mentor, onDone, refetch }) {
     setSuccess(false);
   };
 
+  const toggleStudent = (id) => {
+    setAssignedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setSuccess(false);
+  };
+
+  const filteredStudents = (students || []).filter((s) => {
+    const q = studentQuery.trim().toLowerCase();
+    if (!q) return true;
+    return s.name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setBusy(true);
     setError('');
     try {
       const restrictedSections = MENTOR_SECTIONS.filter((s) => !checked.has(s.key)).map((s) => s.key);
-      await authService.updateMentorPermissions(mentor._id, restrictedSections);
+      await authService.updateMentorPermissions(mentor._id, {
+        restrictedSections,
+        studentAccessMode: accessMode,
+        assignedStudentIds: accessMode === 'selected' ? [...assignedIds] : [],
+        canResetPasswords: canReset,
+      });
       await refetch();
       setSuccess(true);
     } catch (err) {
@@ -112,6 +140,61 @@ function PermissionsForm({ mentor, onDone, refetch }) {
           </label>
         ))}
       </div>
+
+      <h3 style={{ fontSize: '0.85rem', color: 'var(--ap-primary)', margin: '0.6rem 0 0.3rem' }}>Student Access</h3>
+      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 400, fontSize: '0.85rem' }}>
+          <input type="radio" name={`access-${mentor._id}`} checked={accessMode === 'all'} onChange={() => setAccessMode('all')} />
+          All students
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 400, fontSize: '0.85rem' }}>
+          <input
+            type="radio"
+            name={`access-${mentor._id}`}
+            checked={accessMode === 'selected'}
+            onChange={() => setAccessMode('selected')}
+          />
+          Selected students only
+        </label>
+      </div>
+
+      {accessMode === 'selected' && (
+        <div style={{ border: '1px solid var(--ap-border)', padding: '0.5rem', marginBottom: '0.6rem' }}>
+          <input
+            value={studentQuery}
+            onChange={(e) => setStudentQuery(e.target.value)}
+            placeholder="Search by name or email"
+            style={{ marginBottom: '0.4rem', width: '100%' }}
+          />
+          {studentsLoading ? (
+            <Spinner label="Loading students…" />
+          ) : (
+            <>
+              <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                {filteredStudents.length === 0 ? (
+                  <p style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}>No students match.</p>
+                ) : (
+                  filteredStudents.map((s) => (
+                    <label key={s._id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 400, fontSize: '0.85rem' }}>
+                      <input type="checkbox" checked={assignedIds.has(s._id)} onChange={() => toggleStudent(s._id)} />
+                      {s.name} — {s.email}
+                    </label>
+                  ))
+                )}
+              </div>
+              <p style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)', marginTop: '0.4rem', marginBottom: 0 }}>
+                {assignedIds.size} selected
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 400, fontSize: '0.85rem', marginBottom: '0.6rem' }}>
+        <input type="checkbox" checked={canReset} onChange={() => setCanReset((v) => !v)} />
+        Can reset student passwords
+      </label>
+
       <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <Button type="submit" size="sm" disabled={busy}>
           {busy ? 'Saving…' : 'Save Permissions'}

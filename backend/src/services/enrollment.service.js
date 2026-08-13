@@ -22,13 +22,26 @@ export async function getStudentEnrollments(studentId) {
   return Enrollment.find({ studentId }).populate('courseId', COURSE_FIELDS).sort({ createdAt: -1 }).lean();
 }
 
-export async function getAllEnrollments({ courseId } = {}) {
-  const filter = courseId ? { courseId } : {};
+export async function getAllEnrollments({ courseId, studentIds } = {}) {
+  const filter = {};
+  if (courseId) filter.courseId = courseId;
+  // studentIds undefined -> no filter (mentor sees everyone, or admin).
+  // studentIds: [] -> $in: [] matches nothing, which is correct: a mentor
+  // scoped to 'selected' students with none assigned yet should see none,
+  // not fall back to "all".
+  if (studentIds) filter.studentId = { $in: studentIds };
   return Enrollment.find(filter)
     .populate('courseId', COURSE_FIELDS)
     .populate('studentId', 'name email')
     .sort({ createdAt: -1 })
     .lean();
+}
+
+/** Used only to check a mentor's student-assignment before an update. */
+export async function getEnrollmentById(id) {
+  const enrollment = await Enrollment.findById(id).select('studentId').lean();
+  if (!enrollment) throw new ApiError(404, 'Enrollment not found');
+  return enrollment;
 }
 
 export async function updateEnrollment(id, { status, progressPercent }) {
