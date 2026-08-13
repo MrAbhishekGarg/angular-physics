@@ -522,7 +522,7 @@ export default function QuestionBank() {
                         ))}
                       </div>
                     )}
-                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
                       <Button size="sm" variant="ghost" onClick={() => setEditingQuestion(q)}>
                         Edit
                       </Button>

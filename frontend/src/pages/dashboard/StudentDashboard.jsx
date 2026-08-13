@@ -79,7 +79,7 @@ export default function StudentDashboard() {
 
                 <div className={styles.sectionRow}>
                   <h2 className={styles.sectionTitle}>Your Courses</h2>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <Button as={Link} to="/courses" variant="ghost" size="sm">
                       Browse More Courses
                     </Button>

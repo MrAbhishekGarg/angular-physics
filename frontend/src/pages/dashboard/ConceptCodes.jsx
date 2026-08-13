@@ -162,7 +162,7 @@ export default function ConceptCodes() {
                       <p style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}>
                         {c.chapter || '—'} {c.topic ? `· ${c.topic}` : ''}
                       </p>
-                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                         <Button size="sm" variant="ghost" onClick={() => startEdit(c)}>
                           Edit
                         </Button>

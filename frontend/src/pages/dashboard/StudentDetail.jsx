@@ -51,7 +51,7 @@ function ResetPasswordForm({ studentId, onDone }) {
           placeholder="At least 8 characters"
         />
       </label>
-      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '1.4rem' }}>
+      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '1.4rem', flexWrap: 'wrap' }}>
         <Button type="submit" size="sm" disabled={busy}>
           {busy ? 'Saving…' : 'Set Password'}
         </Button>

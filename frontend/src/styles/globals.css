@@ -4,8 +4,19 @@
   box-sizing: border-box;
 }
 
+/* Belt-and-suspenders against any one page's content (a wide table, a
+   fixed-width flex child, an oversized image) forcing the whole viewport
+   to scroll sideways or shrink-to-fit on a phone. Anything that genuinely
+   needs to scroll horizontally (a data table, a code block) should do so
+   inside its own overflow-x: auto container, which this doesn't affect —
+   it only clips overflow at the page level. */
+html {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
+  overflow-x: hidden;
   font-family: var(--ap-font-body);
   color: var(--ap-text);
   background: var(--ap-bg);

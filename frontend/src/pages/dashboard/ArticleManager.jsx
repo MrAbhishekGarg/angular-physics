@@ -88,7 +88,7 @@ export default function ArticleManager() {
                       </div>
                       <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)' }}>{a.excerpt}</p>
                       <p style={{ fontSize: '0.8rem' }}>/{a.slug}</p>
-                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                         <Button size="sm" variant="ghost" onClick={() => startEdit(a)}>
                           Edit
                         </Button>

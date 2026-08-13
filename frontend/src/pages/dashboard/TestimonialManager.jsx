@@ -83,7 +83,7 @@ export default function TestimonialManager() {
                     </div>
                     <p style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}>{t.result}</p>
                     <p style={{ fontSize: '0.85rem' }}>&ldquo;{t.quote}&rdquo;</p>
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <Button size="sm" variant="ghost" onClick={() => startEdit(t)}>
                         Edit
                       </Button>

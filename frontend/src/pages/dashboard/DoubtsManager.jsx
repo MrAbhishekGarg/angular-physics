@@ -25,7 +25,7 @@ export default function DoubtsManager() {
         <div className={formStyles.wrap} style={{ maxWidth: 900 }}>
           <h1>Doubts</h1>
 
-            <div style={{ display: 'flex', gap: '0.4rem', marginBottom: 'var(--ap-space-sm)' }}>
+            <div style={{ display: 'flex', gap: '0.4rem', marginBottom: 'var(--ap-space-sm)', flexWrap: 'wrap' }}>
               {STATUS_FILTERS.map((s) => (
                 <button
                   key={s}
@@ -72,7 +72,7 @@ export default function DoubtsManager() {
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                   {d.status !== 'closed' && (
                     <Button size="sm" variant="ghost" onClick={() => setRespondingId(respondingId === d._id ? null : d._id)}>
                       {d.status === 'answered' ? 'Update answer' : 'Answer'}

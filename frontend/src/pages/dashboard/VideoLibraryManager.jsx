@@ -47,14 +47,14 @@ function PlaylistRow({ playlist, onSaved, onDeleted }) {
         ) : (
           <strong>{playlist.title}</strong>
         )}
-        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <Badge tone={playlist.youtubePlaylistId ? 'success' : 'default'}>
             {playlist.youtubePlaylistId ? 'Synced from YouTube' : 'Custom'}
           </Badge>
           <Badge tone="launching">{playlist.videoCount} video{playlist.videoCount === 1 ? '' : 's'}</Badge>
         </div>
       </div>
-      <div style={{ display: 'flex', gap: '0.4rem' }}>
+      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
         {editing ? (
           <>
             <Button size="sm" disabled={busy} onClick={handleSave}>

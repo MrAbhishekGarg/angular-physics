@@ -73,6 +73,7 @@
 .main {
   flex: 1;
   min-width: 280px;
+  max-width: 100%;
   background: var(--ap-bg);
   padding: 1.1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -206,6 +207,7 @@
 
 .optionImage {
   height: 26px;
+  max-width: 100%;
   display: block;
 }
 
@@ -238,6 +240,7 @@
 
 .sidebar {
   width: 270px;
+  max-width: 100%;
   flex-shrink: 0;
   background: var(--ap-bg);
   padding: 1rem;
@@ -247,6 +250,17 @@
     100% calc(100% - var(--ap-chamfer-md)), calc(100% - var(--ap-chamfer-md)) 100%,
     0 100%, 0 var(--ap-chamfer-md)
   );
+}
+
+/* .body's flex-wrap already stacks .sidebar under .main once the row runs
+   out of room for both — this just lets the palette panel go full-width
+   once stacked, instead of staying pinned to a fixed 270px that would be
+   the only thing on very narrow phones (<300px) forcing horizontal
+   scroll. Same 860px cutoff DashboardLayout's own sidebar-collapse uses. */
+@media (max-width: 860px) {
+  .sidebar {
+    width: 100%;
+  }
 }
 
 .candidateName {

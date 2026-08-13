@@ -45,7 +45,7 @@ function ResetPasswordForm({ mentor, onDone, onCancel }) {
           placeholder="At least 8 characters"
         />
       </label>
-      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '1.4rem' }}>
+      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '1.4rem', flexWrap: 'wrap' }}>
         <Button type="submit" size="sm" disabled={busy}>
           {busy ? 'Saving…' : 'Set Password'}
         </Button>
@@ -112,7 +112,7 @@ function PermissionsForm({ mentor, onDone, refetch }) {
           </label>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <Button type="submit" size="sm" disabled={busy}>
           {busy ? 'Saving…' : 'Save Permissions'}
         </Button>
@@ -192,7 +192,7 @@ export default function AdminMentors() {
                     <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)' }}>
                       {m.email} · {m.phone}
                     </p>
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <Button size="sm" variant="ghost" onClick={() => setResetOpenId((id) => (id === m._id ? null : m._id))}>
                         {resetOpenId === m._id ? 'Close' : 'Reset Password'}
                       </Button>
