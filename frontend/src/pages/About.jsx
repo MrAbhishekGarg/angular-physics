@@ -7,7 +7,7 @@ export default function About() {
     <>
       <SEO
         title="About Angular Physics"
-        description="Angular Physics is a physics-only learning platform for IIT-JEE, NEET and Olympiad aspirants, built around a single mentor: Abhishek Kumar Garg."
+        description="Angular Physics is a physics-only learning platform for IIT-JEE, NEET and Olympiad aspirants, built around a single mentor: Abhishek Garg."
         path="/about"
       />
       <main>
@@ -17,7 +17,7 @@ export default function About() {
             <p>
               Angular Physics exists for one reason: Physics is a subject of angles, vectors and
               intuition — and most students never get taught it that way. We built a platform
-              entirely around Physics, and entirely around one mentor, Abhishek Kumar Garg, so
+              entirely around Physics, and entirely around one mentor, Abhishek Garg, so
               every student gets the same depth of teaching whether they're preparing for JEE
               Main, JEE Advanced, NEET, or a Physics Olympiad.
             </p>

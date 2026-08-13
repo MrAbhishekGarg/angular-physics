@@ -3,7 +3,7 @@
 **Find Your Angle to Every Answer** · `#PhysicsBoleTohAngularPhysics`
 
 A physics-only learning platform (JEE, NEET, Olympiads & more), mentored entirely by
-**Abhishek Kumar Garg** — producer of double-digit All India Ranks in IIT-JEE & NEET.
+**Abhishek Garg** — producer of double-digit All India Ranks in IIT-JEE & NEET.
 
 This repo is a from-scratch build inspired by the *layout patterns* of sites like MathonGo
 (hero → mentor spotlight → results → course grid → test series → free resources → login),

@@ -24,7 +24,7 @@ export const organizationSchema = {
   sameAs: [],
   founder: {
     '@type': 'Person',
-    name: 'Abhishek Kumar Garg',
+    name: 'Abhishek Garg',
     jobTitle: 'Founder & Lead Physics Mentor',
   },
 };
@@ -42,7 +42,7 @@ export function courseSchema(course) {
     },
     instructor: {
       '@type': 'Person',
-      name: course.mentor || 'Abhishek Kumar Garg',
+      name: course.mentor || 'Abhishek Garg',
     },
     offers: {
       '@type': 'Offer',

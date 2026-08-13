@@ -24,7 +24,7 @@ async function main() {
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
   await User.create({
-    name: 'Abhishek Kumar Garg',
+    name: 'Abhishek Garg',
     email,
     passwordHash,
     role: 'mentor',

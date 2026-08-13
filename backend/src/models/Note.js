@@ -19,7 +19,7 @@ const noteSchema = new mongoose.Schema(
     fileName: { type: String },
     fileType: { type: String },
     fileSizeBytes: { type: Number },
-    mentor: { type: String, default: 'Abhishek Kumar Garg' },
+    mentor: { type: String, default: 'Abhishek Garg' },
   },
   { timestamps: true }
 );

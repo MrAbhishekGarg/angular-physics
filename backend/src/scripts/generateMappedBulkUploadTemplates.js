@@ -81,7 +81,7 @@ sheet.columns = [
 sheet.getRow(1).font = { bold: true };
 
 sheet.addRows([
-  { number: 1, type: 'mcq-single', conceptCodes: 'PHY-MECH-012, PHY-KIN-003', examTypes: 'jee-main, neet', subject: 'Physics', chapter: '', topic: '', answer: 'B', marks: 4, negative: 1, tolerance: '', author: 'Abhishek Kumar Garg', tags: 'Must Do', pyq: '', pyqYear: '', difficulty: 'easy' },
+  { number: 1, type: 'mcq-single', conceptCodes: 'PHY-MECH-012, PHY-KIN-003', examTypes: 'jee-main, neet', subject: 'Physics', chapter: '', topic: '', answer: 'B', marks: 4, negative: 1, tolerance: '', author: 'Abhishek Garg', tags: 'Must Do', pyq: '', pyqYear: '', difficulty: 'easy' },
   { number: 2, type: 'mcq-multiple', conceptCodes: '', examTypes: 'jee-advanced', subject: 'Physics', chapter: 'Kinematics', topic: 'Vectors', answer: 'B, C', marks: 4, negative: 1, tolerance: '', author: 'NCERT', tags: 'Tricky, Revision', pyq: 'yes', pyqYear: 2023, difficulty: 'medium' },
   { number: 3, type: 'numerical', conceptCodes: '', examTypes: 'none', subject: 'Physics', chapter: 'Kinematics', topic: 'Free Fall', answer: 20, marks: 4, negative: 0, tolerance: 0.5, author: '', tags: '', pyq: '', pyqYear: '', difficulty: 'medium' },
 ]);

@@ -1,7 +1,7 @@
 {
   "name": "angular-physics-backend",
   "version": "1.0.0",
-  "description": "Node.js/Express API for Angular Physics — physics learning platform mentored by Abhishek Kumar Garg",
+  "description": "Node.js/Express API for Angular Physics — physics learning platform mentored by Abhishek Garg",
   "main": "src/server.js",
   "type": "module",
   "scripts": {

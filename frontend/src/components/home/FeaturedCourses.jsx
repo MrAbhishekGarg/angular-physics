@@ -15,7 +15,7 @@ export default function FeaturedCourses() {
         <SectionHeading
           eyebrow="Courses for 2027"
           title="Physics courses for every Physics exam"
-          subtitle="IIT-JEE, NEET, Olympiads and foundation programs — every batch mentored by Abhishek Kumar Garg."
+          subtitle="IIT-JEE, NEET, Olympiads and foundation programs — every batch mentored by Abhishek Garg."
         />
         <CourseGrid courses={courses} loading={loading} error={error} onRetry={refetch} />
         <div className={styles.viewAll}>

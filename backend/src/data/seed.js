@@ -13,8 +13,8 @@ export const seedCourses = [
     track: 'jee-main',
     tagline: 'Master rotational mechanics to modern physics — angle by angle.',
     description:
-      'A concept-first crash course covering the full JEE Physics syllabus with problem-solving frameworks Abhishek Kumar Garg has refined across a decade of double-digit AIR results.',
-    mentor: 'Abhishek Kumar Garg',
+      'A concept-first crash course covering the full JEE Physics syllabus with problem-solving frameworks Abhishek Garg has refined across a decade of double-digit AIR results.',
+    mentor: 'Abhishek Garg',
     price: 10999,
     strikePrice: 15999,
     currency: 'INR',
@@ -36,8 +36,8 @@ export const seedCourses = [
     track: 'neet',
     tagline: 'NCERT-anchored Physics built for 180/180.',
     description:
-      'A NEET-specific Physics program focused entirely on NCERT-aligned conceptual clarity and speed, mentored end-to-end by Abhishek Kumar Garg.',
-    mentor: 'Abhishek Kumar Garg',
+      'A NEET-specific Physics program focused entirely on NCERT-aligned conceptual clarity and speed, mentored end-to-end by Abhishek Garg.',
+    mentor: 'Abhishek Garg',
     price: 8999,
     strikePrice: 12999,
     currency: 'INR',
@@ -60,7 +60,7 @@ export const seedCourses = [
     tagline: 'From NSEP to INPhO — Olympiad-grade problem solving.',
     description:
       'For students aiming beyond JEE/NEET syllabus depth — Olympiad-style problem sets, past papers, and mentorship on advanced mechanics, EM theory and modern physics.',
-    mentor: 'Abhishek Kumar Garg',
+    mentor: 'Abhishek Garg',
     price: 12999,
     currency: 'INR',
     durationWeeks: 16,
@@ -81,7 +81,7 @@ export const seedCourses = [
     tagline: 'Build the base every rank depends on.',
     description:
       'Get your fundamentals — kinematics, laws of motion, work-energy-power — rock solid before the syllabus accelerates in Class 12.',
-    mentor: 'Abhishek Kumar Garg',
+    mentor: 'Abhishek Garg',
     price: 6999,
     currency: 'INR',
     durationWeeks: 30,
@@ -98,7 +98,7 @@ export const seedCourses = [
     tagline: 'Speed-focused Physics for BITSAT\'s unique pattern.',
     description:
       'BITSAT rewards speed and accuracy — this crash course drills exactly that with timed sectional tests.',
-    mentor: 'Abhishek Kumar Garg',
+    mentor: 'Abhishek Garg',
     price: 5999,
     currency: 'INR',
     durationWeeks: 8,

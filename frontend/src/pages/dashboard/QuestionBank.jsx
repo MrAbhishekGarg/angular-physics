@@ -258,7 +258,7 @@ export default function QuestionBank() {
                     <input
                       value={bulkForm.author}
                       onChange={(e) => setBulkForm((f) => ({ ...f, author: e.target.value }))}
-                      placeholder="e.g. Abhishek Kumar Garg, NCERT, Allen DPP"
+                      placeholder="e.g. Abhishek Garg, NCERT, Allen DPP"
                     />
                   </label>
                   <label>

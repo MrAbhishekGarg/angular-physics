@@ -26,9 +26,13 @@ export default function Hero() {
             <h1 className={styles.headline}>
               Find your <span className={styles.accent}>angle</span> to every Physics answer.
             </h1>
+            <p className={styles.tagline}>
+              Where <strong className={styles.taglineAccent}>Concepts</strong> Meet{' '}
+              <strong className={styles.taglineAccent}>Clarity</strong>
+            </p>
             <p className={styles.subhead}>
               Physics-only courses for JEE Main &amp; Advanced, NEET, and Physics Olympiads —
-              mentored entirely by <strong>Abhishek Kumar Garg</strong>, producer of double-digit
+              mentored entirely by <strong>Abhishek Garg</strong>, producer of double-digit
               All India Ranks.
             </p>
             <div className={styles.ctas}>

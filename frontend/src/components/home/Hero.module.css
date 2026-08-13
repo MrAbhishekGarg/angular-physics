@@ -51,6 +51,20 @@
   color: var(--ap-accent);
 }
 
+.tagline {
+  font-family: var(--ap-font-heading);
+  font-size: clamp(1.05rem, 2vw, 1.3rem);
+  font-weight: 600;
+  color: #c9d6e8;
+  letter-spacing: 0.01em;
+  margin-bottom: var(--ap-space-sm);
+}
+
+.taglineAccent {
+  color: var(--ap-accent);
+  font-weight: 800;
+}
+
 .subhead {
   color: #c9d6e8;
   font-size: 1.05rem;

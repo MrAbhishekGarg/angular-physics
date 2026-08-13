@@ -258,7 +258,7 @@ export default function QuestionEditor({ initialQuestion, examType: defaultExamT
             <input
               value={question.author}
               onChange={(e) => update({ author: e.target.value })}
-              placeholder="e.g. Abhishek Kumar Garg, NCERT, Allen DPP"
+              placeholder="e.g. Abhishek Garg, NCERT, Allen DPP"
             />
           </label>
           <label>

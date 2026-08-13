@@ -3,7 +3,7 @@ import { TRACKS } from '../constants/tracks.js';
 
 /**
  * A single course/batch offered on Angular Physics.
- * Every course is mentored by Abhishek Kumar Garg — `mentor` defaults accordingly
+ * Every course is mentored by Abhishek Garg — `mentor` defaults accordingly
  * but is kept as a field (not hardcoded) so guest faculty can be added later
  * without a schema change.
  */
@@ -19,7 +19,7 @@ const courseSchema = new mongoose.Schema(
     },
     tagline: { type: String, required: true },
     description: { type: String, required: true },
-    mentor: { type: String, default: 'Abhishek Kumar Garg' },
+    mentor: { type: String, default: 'Abhishek Garg' },
     price: { type: Number, required: true },
     strikePrice: { type: Number },
     currency: { type: String, default: 'INR' },

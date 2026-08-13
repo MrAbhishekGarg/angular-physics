@@ -14,7 +14,7 @@ export default function Courses() {
     <>
       <SEO
         title="All Physics Courses"
-        description="Browse every Angular Physics course — IIT-JEE, NEET, Physics Olympiads, foundation & crash courses — all mentored by Abhishek Kumar Garg."
+        description="Browse every Angular Physics course — IIT-JEE, NEET, Physics Olympiads, foundation & crash courses — all mentored by Abhishek Garg."
         path="/courses"
       />
       <main>

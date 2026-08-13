@@ -5,7 +5,7 @@ import { env } from '../config/env.js';
 import { UPLOADS_ROOT } from '../middleware/upload.js';
 
 const BRAND = 'Angular Physics';
-const TAGLINE = 'Mentored by Abhishek Kumar Garg';
+const TAGLINE = 'Mentored by Abhishek Garg';
 const MARGIN_TOP = 150;
 const MARGIN_SIDE = 40;
 const ANSWER_COLOR = '#0d9488';

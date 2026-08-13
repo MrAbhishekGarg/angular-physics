@@ -21,7 +21,7 @@ export default function MentorSpotlight() {
             <SectionHeading
               align="left"
               eyebrow="Your Mentor"
-              title="Learn Physics from Abhishek Kumar Garg"
+              title="Learn Physics from Abhishek Garg"
               subtitle="Every single course on Angular Physics — JEE, NEET, or Olympiad — is designed and taught by one mentor, so the teaching philosophy never changes, only the syllabus does."
             />
             <div className={styles.grid}>

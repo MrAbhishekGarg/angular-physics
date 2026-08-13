@@ -14,7 +14,7 @@ export default function MentorPhoto({ className = '' }) {
   return (
     <img
       src="/mentor-photo.jpg"
-      alt="Abhishek Kumar Garg, founder and lead Physics mentor at Angular Physics"
+      alt="Abhishek Garg, founder and lead Physics mentor at Angular Physics"
       className={`${styles.photo} ${className}`}
       onError={() => setFailed(true)}
       loading="lazy"

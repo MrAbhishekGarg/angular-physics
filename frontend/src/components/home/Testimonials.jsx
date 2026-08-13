@@ -15,7 +15,7 @@ export default function Testimonials() {
         <SectionHeading
           eyebrow="Our Shining Stars"
           title="Students who found their angle"
-          subtitle="Real results from students mentored by Abhishek Kumar Garg."
+          subtitle="Real results from students mentored by Abhishek Garg."
         />
 
         {loading && <Spinner label="Loading student stories…" />}
