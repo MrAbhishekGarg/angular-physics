@@ -1,4 +1,5 @@
 import Doubt from '../models/Doubt.js';
+import Worksheet from '../models/Worksheet.js';
 import WorksheetProgress from '../models/WorksheetProgress.js';
 import { ApiError } from '../utils/ApiError.js';
 
@@ -29,8 +30,19 @@ export async function getMyDoubts(studentId) {
   return Doubt.find({ studentId }).sort({ createdAt: -1 }).lean();
 }
 
-export async function getAllDoubts({ status } = {}) {
-  const filter = status ? { status } : {};
+/**
+ * `courseIds` scopes the listing for a course-restricted mentor — a doubt
+ * counts as "from" a course either directly (courseId) or via a worksheet
+ * assigned to that course (worksheetId), since a worksheet-tied doubt has
+ * no courseId of its own.
+ */
+export async function getAllDoubts({ status, courseIds } = {}) {
+  const filter = {};
+  if (status) filter.status = status;
+  if (courseIds) {
+    const worksheets = await Worksheet.find({ courseIds: { $in: courseIds } }).select('_id').lean();
+    filter.$or = [{ courseId: { $in: courseIds } }, { worksheetId: { $in: worksheets.map((w) => w._id) } }];
+  }
   return Doubt.find(filter)
     .populate('studentId', 'name email')
     .populate('courseId', 'title')
@@ -39,22 +51,47 @@ export async function getAllDoubts({ status } = {}) {
     .lean();
 }
 
-export async function answerDoubt(id, { answerText, answerImageUrl }) {
+/** Resolves the course(s) a doubt belongs to — direct courseId, or (for a
+ *  worksheet-tied doubt with no courseId of its own) the worksheet's courseIds. */
+async function resolveDoubtCourseIds(doubt) {
+  const ids = new Set();
+  if (doubt.courseId) ids.add(doubt.courseId.toString());
+  if (doubt.worksheetId) {
+    const worksheet = await Worksheet.findById(doubt.worksheetId).select('courseIds').lean();
+    (worksheet?.courseIds || []).forEach((cid) => ids.add(cid.toString()));
+  }
+  return [...ids];
+}
+
+/** Mirrors assertCourseAssigned, resolved async since a worksheet-tied
+ *  doubt's course comes from the Worksheet, not the Doubt itself. */
+async function assertMentorCanAccessDoubt(user, doubt) {
+  if (user?.role !== 'mentor' || user.courseAccessMode !== 'selected') return;
+  const doubtCourseIds = await resolveDoubtCourseIds(doubt);
+  const allowed = doubtCourseIds.some((cid) => user.assignedCourseIds?.includes(cid));
+  if (!allowed) throw new ApiError(403, 'Not authorized for this doubt');
+}
+
+export async function answerDoubt(id, { answerText, answerImageUrl }, user) {
   if (!answerText && !answerImageUrl) {
     throw new ApiError(400, 'An answer needs text, an image, or both');
   }
+  const existing = await Doubt.findById(id).lean();
+  if (!existing) throw new ApiError(404, 'Doubt not found');
+  await assertMentorCanAccessDoubt(user, existing);
   const doubt = await Doubt.findByIdAndUpdate(
     id,
     { answerText, answerImageUrl, status: 'answered', answeredAt: new Date() },
     { new: true }
   ).lean();
-  if (!doubt) throw new ApiError(404, 'Doubt not found');
   return doubt;
 }
 
-export async function closeDoubt(id) {
+export async function closeDoubt(id, user) {
+  const existing = await Doubt.findById(id).lean();
+  if (!existing) throw new ApiError(404, 'Doubt not found');
+  await assertMentorCanAccessDoubt(user, existing);
   const doubt = await Doubt.findByIdAndUpdate(id, { status: 'closed' }, { new: true }).lean();
-  if (!doubt) throw new ApiError(404, 'Doubt not found');
   return doubt;
 }
 

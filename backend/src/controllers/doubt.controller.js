@@ -14,17 +14,18 @@ export const listMyDoubts = asyncHandler(async (req, res) => {
 });
 
 export const listAllDoubts = asyncHandler(async (req, res) => {
-  const doubts = await doubtService.getAllDoubts({ status: req.query.status });
+  const courseIds = req.user.courseAccessMode === 'selected' ? req.user.assignedCourseIds : undefined;
+  const doubts = await doubtService.getAllDoubts({ status: req.query.status, courseIds });
   return ApiResponse(res, 200, doubts, { count: doubts.length });
 });
 
 export const answerDoubt = asyncHandler(async (req, res) => {
-  const doubt = await doubtService.answerDoubt(req.params.id, req.body);
+  const doubt = await doubtService.answerDoubt(req.params.id, req.body, req.user);
   return ApiResponse(res, 200, doubt);
 });
 
 export const closeDoubt = asyncHandler(async (req, res) => {
-  const doubt = await doubtService.closeDoubt(req.params.id);
+  const doubt = await doubtService.closeDoubt(req.params.id, req.user);
   return ApiResponse(res, 200, doubt);
 });
 

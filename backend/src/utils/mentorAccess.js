@@ -23,6 +23,20 @@ export function assertCourseAssigned(user, courseId) {
 }
 
 /**
+ * Throws 403 if any of courseIds falls outside a 'selected'-mode mentor's
+ * assignedCourseIds — stops a course-scoped mentor from assigning a test or
+ * worksheet to a course they don't own. No-op for admins and 'all'-mode
+ * mentors.
+ */
+export function assertCoursesAssigned(user, courseIds = []) {
+  if (user?.role !== 'mentor' || user.courseAccessMode !== 'selected') return;
+  const invalid = courseIds.filter((cid) => !user.assignedCourseIds?.includes(String(cid)));
+  if (invalid.length > 0) {
+    throw new ApiError(403, 'Not authorized for one or more of these courses');
+  }
+}
+
+/**
  * Throws 403 if this mentor lacks canManagePaidContent. Caller decides
  * WHETHER the content in question is paid/premium and only calls this
  * when it is.

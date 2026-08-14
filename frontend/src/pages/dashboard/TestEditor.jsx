@@ -7,7 +7,7 @@ import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import QuestionEditor from '../../components/dashboard/QuestionEditor.jsx';
-import { useCourses } from '../../hooks/useCourses.js';
+import { useMentorCourses } from '../../hooks/useCourses.js';
 import { useQuestions } from '../../hooks/useQuestions.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { testService } from '../../services/testService.js';
@@ -221,7 +221,7 @@ export default function TestEditor() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
-  const { data: courses } = useCourses();
+  const { data: courses } = useMentorCourses();
   const { user } = useAuth();
   const canManagePaid = user?.canManagePaidContent !== false;
 

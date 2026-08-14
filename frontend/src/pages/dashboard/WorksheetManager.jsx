@@ -6,7 +6,7 @@ import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { useWorksheets } from '../../hooks/useWorksheets.js';
-import { useCourses } from '../../hooks/useCourses.js';
+import { useMentorCourses } from '../../hooks/useCourses.js';
 import { useWorksheetProgress } from '../../hooks/useWorksheetProgress.js';
 import { worksheetService } from '../../services/worksheetService.js';
 import { EXAM_TRACKS } from '../../data/examTracks.js';
@@ -103,7 +103,7 @@ function StatusPanel({ worksheetId }) {
 
 export default function WorksheetManager() {
   const { data: worksheets, loading, error, refetch } = useWorksheets();
-  const { data: courses } = useCourses();
+  const { data: courses } = useMentorCourses();
   const [form, setForm] = useState(emptyForm);
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);

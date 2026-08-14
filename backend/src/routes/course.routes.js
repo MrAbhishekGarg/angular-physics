@@ -22,7 +22,13 @@ router.get('/', listCourses);
 router.get('/featured', getFeaturedCourses);
 router.get('/testimonials', listTestimonials);
 // Static path before /:slug, matching the article.routes.js public/mentor split.
-router.get('/mentor', authenticate, authorize('mentor'), requireSection('courses'), listCoursesForMentor);
+// Deliberately NOT gated by requireSection('courses') — that section governs
+// whether a mentor can *manage* courses (the Manage Courses admin block).
+// This route answers a different question ("which courses can I see/pick
+// from at all"), needed by course-scoped mentors everywhere a course picker
+// appears (Manage Courses, Test/Worksheet course assignment), independent
+// of whether they can also administer courses themselves.
+router.get('/mentor', authenticate, authorize('mentor'), listCoursesForMentor);
 router.get('/:slug', getCourseBySlug);
 
 router.post(

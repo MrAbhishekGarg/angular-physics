@@ -3,6 +3,7 @@ import * as worksheetService from '../services/worksheet.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
+import { assertCoursesAssigned } from '../utils/mentorAccess.js';
 
 export const listWorksheets = asyncHandler(async (req, res) => {
   const { type, examType } = req.query;
@@ -16,11 +17,13 @@ export const getWorksheet = asyncHandler(async (req, res) => {
 });
 
 export const createWorksheet = asyncHandler(async (req, res) => {
+  if (req.body.courseIds) assertCoursesAssigned(req.user, req.body.courseIds);
   const worksheet = await worksheetService.createWorksheet(req.body);
   return ApiResponse(res, 201, worksheet);
 });
 
 export const updateWorksheet = asyncHandler(async (req, res) => {
+  if (req.body.courseIds) assertCoursesAssigned(req.user, req.body.courseIds);
   const worksheet = await worksheetService.updateWorksheet(req.params.id, req.body);
   return ApiResponse(res, 200, worksheet);
 });
@@ -41,6 +44,7 @@ export const uploadWorksheetFile = asyncHandler(async (req, res) => {
 });
 
 export const assignWorksheet = asyncHandler(async (req, res) => {
+  assertCoursesAssigned(req.user, req.body.courseIds || []);
   const worksheet = await worksheetService.assignWorksheetToCourses(req.params.id, req.body.courseIds || []);
   return ApiResponse(res, 200, worksheet);
 });
