@@ -12,3 +12,7 @@ export function useAllEnrollments(courseId) {
 export function useStudentStats() {
   return useFetch(() => enrollmentService.studentStats(), []);
 }
+
+export function useStudentsOverview() {
+  return useFetch(() => enrollmentService.studentsOverview(), []);
+}

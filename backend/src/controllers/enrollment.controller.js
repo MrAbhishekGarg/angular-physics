@@ -31,6 +31,18 @@ export const listStudentStats = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, stats);
 });
 
+export const listAllStudentsOverview = asyncHandler(async (req, res) => {
+  const studentIds = req.user.studentAccessMode === 'selected' ? req.user.assignedStudentIds : undefined;
+  const students = await enrollmentService.getAllStudentsOverview({ studentIds });
+  return ApiResponse(res, 200, students, { count: students.length });
+});
+
+export const grantAccess = asyncHandler(async (req, res) => {
+  const { studentId, courseId } = req.body;
+  const enrollment = await enrollmentService.grantCourseAccess(studentId, courseId);
+  return ApiResponse(res, 200, enrollment);
+});
+
 export const update = asyncHandler(async (req, res) => {
   const { status, progressPercent } = req.body;
   if (status !== undefined && !VALID_STATUSES.includes(status)) {

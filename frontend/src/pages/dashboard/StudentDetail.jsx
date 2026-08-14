@@ -8,9 +8,11 @@ import Stat from '../../components/common/Stat.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { useStudentDetailAnalytics } from '../../hooks/useAnalytics.js';
+import { useCourses } from '../../hooks/useCourses.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { testService } from '../../services/testService.js';
 import { authService } from '../../services/authService.js';
+import { enrollmentService } from '../../services/enrollmentService.js';
 import { formatPrice } from '../../data/courseFormat.js';
 import formStyles from './DashboardForm.module.css';
 import dashboardStyles from './Dashboard.module.css';
@@ -65,13 +67,80 @@ function ResetPasswordForm({ studentId, onDone }) {
   );
 }
 
+/**
+ * Admin-only: directly grants access to any course, skipping the normal
+ * request -> mentor-approval flow — see enrollment.service.js#grantCourseAccess.
+ * Uses the public (unfiltered) course list since this must work for "any
+ * course," independent of the acting admin's own course-visibility scope
+ * (admin never carries one anyway, but this keeps the picker's intent explicit).
+ */
+function GrantAccessForm({ studentId, onDone, onGranted }) {
+  const { data: courses, loading: coursesLoading } = useCourses();
+  const [courseId, setCourseId] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!courseId) return;
+    setBusy(true);
+    setError('');
+    try {
+      await enrollmentService.grantAccess(studentId, courseId);
+      setSuccess(true);
+      await onGranted();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{ marginTop: '0.6rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <label style={{ flex: 1, minWidth: 220 }}>
+        Course
+        {coursesLoading ? (
+          <Spinner label="Loading courses…" />
+        ) : (
+          <select value={courseId} onChange={(e) => setCourseId(e.target.value)} required>
+            <option value="">Select a course…</option>
+            {(courses || []).map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.title}
+              </option>
+            ))}
+          </select>
+        )}
+      </label>
+      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '1.4rem', flexWrap: 'wrap' }}>
+        <Button type="submit" size="sm" disabled={busy || !courseId}>
+          {busy ? 'Granting…' : 'Grant Access'}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={onDone}>
+          Close
+        </Button>
+      </div>
+      {success && (
+        <p style={{ color: 'var(--ap-success)', fontSize: '0.82rem', width: '100%' }}>
+          Access granted — the course now shows as active for this student.
+        </p>
+      )}
+      {error && <p className={formStyles.errorMsg} style={{ width: '100%' }}>{error}</p>}
+    </form>
+  );
+}
+
 export default function StudentDetail() {
   const { studentId } = useParams();
   const { user } = useAuth();
   const { data, loading, error, refetch } = useStudentDetailAnalytics(studentId);
   const [resetOpen, setResetOpen] = useState(false);
+  const [grantOpen, setGrantOpen] = useState(false);
   const canResetAttempts = !user?.restrictedSections?.includes('tests');
   const canResetPassword = user?.canResetPasswords !== false;
+  const isAdmin = user?.role === 'admin';
 
   const handleReset = async (attempt) => {
     if (!window.confirm(`Let this student retake "${attempt.testId?.title}"? Their current attempt will be archived, not deleted.`)) return;
@@ -86,12 +155,22 @@ export default function StudentDetail() {
         <div className={formStyles.wrap} style={{ maxWidth: 900 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
             <h1>Student Detail</h1>
-            {canResetPassword && (
-              <Button size="sm" variant="ghost" onClick={() => setResetOpen((v) => !v)}>
-                {resetOpen ? 'Close' : 'Reset Password'}
-              </Button>
-            )}
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+              {isAdmin && (
+                <Button size="sm" variant="ghost" onClick={() => setGrantOpen((v) => !v)}>
+                  {grantOpen ? 'Close' : 'Grant Course Access'}
+                </Button>
+              )}
+              {canResetPassword && (
+                <Button size="sm" variant="ghost" onClick={() => setResetOpen((v) => !v)}>
+                  {resetOpen ? 'Close' : 'Reset Password'}
+                </Button>
+              )}
+            </div>
           </div>
+          {grantOpen && isAdmin && (
+            <GrantAccessForm studentId={studentId} onDone={() => setGrantOpen(false)} onGranted={refetch} />
+          )}
           {resetOpen && canResetPassword && <ResetPasswordForm studentId={studentId} onDone={() => setResetOpen(false)} />}
 
             {loading && <Spinner label="Loading…" />}
