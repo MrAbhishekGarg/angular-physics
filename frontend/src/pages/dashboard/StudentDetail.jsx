@@ -98,13 +98,20 @@ function GrantAccessForm({ studentId, onDone, onGranted }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginTop: '0.6rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-      <label style={{ flex: 1, minWidth: 220 }}>
+    <form className={formStyles.form} onSubmit={handleSubmit} style={{ marginTop: '0.6rem', maxWidth: 420 }}>
+      <label>
         Course
         {coursesLoading ? (
           <Spinner label="Loading courses…" />
         ) : (
-          <select value={courseId} onChange={(e) => setCourseId(e.target.value)} required>
+          <select
+            value={courseId}
+            onChange={(e) => {
+              setCourseId(e.target.value);
+              setSuccess(false);
+            }}
+            required
+          >
             <option value="">Select a course…</option>
             {(courses || []).map((c) => (
               <option key={c._id} value={c._id}>
@@ -114,7 +121,7 @@ function GrantAccessForm({ studentId, onDone, onGranted }) {
           </select>
         )}
       </label>
-      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '1.4rem', flexWrap: 'wrap' }}>
+      <div className={formStyles.actions}>
         <Button type="submit" size="sm" disabled={busy || !courseId}>
           {busy ? 'Granting…' : 'Grant Access'}
         </Button>
@@ -123,11 +130,11 @@ function GrantAccessForm({ studentId, onDone, onGranted }) {
         </Button>
       </div>
       {success && (
-        <p style={{ color: 'var(--ap-success)', fontSize: '0.82rem', width: '100%' }}>
+        <p style={{ color: 'var(--ap-success)', fontSize: '0.82rem' }}>
           Access granted — the course now shows as active for this student.
         </p>
       )}
-      {error && <p className={formStyles.errorMsg} style={{ width: '100%' }}>{error}</p>}
+      {error && <p className={formStyles.errorMsg}>{error}</p>}
     </form>
   );
 }
