@@ -7,6 +7,7 @@ import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { useNotes } from '../../hooks/useNotes.js';
 import { noteService } from '../../services/noteService.js';
+import { useAuth } from '../../hooks/useAuth.js';
 import { EXAM_TRACKS } from '../../data/examTracks.js';
 import { formatPrice } from '../../data/courseFormat.js';
 import formStyles from './DashboardForm.module.css';
@@ -20,6 +21,8 @@ const emptyForm = {
 };
 
 export default function NotesManager() {
+  const { user } = useAuth();
+  const canManagePaid = user?.canManagePaidContent !== false;
   const { data: notes, loading, error, refetch } = useNotes();
   const [form, setForm] = useState(emptyForm);
   const [file, setFile] = useState(null);
@@ -88,9 +91,11 @@ export default function NotesManager() {
                       <p style={{ fontSize: '0.8rem' }}>
                         {note.track} · {note.fileName || 'no file uploaded yet'}
                       </p>
-                      <Button size="sm" variant="danger" onClick={() => handleDelete(note)}>
-                        Delete
-                      </Button>
+                      {(note.category !== 'premium' || canManagePaid) && (
+                        <Button size="sm" variant="danger" onClick={() => handleDelete(note)}>
+                          Delete
+                        </Button>
+                      )}
                     </div>
                   ))
                 )}
@@ -123,10 +128,17 @@ export default function NotesManager() {
                   Category
                   <select name="category" value={form.category} onChange={handleChange}>
                     <option value="free">Free</option>
-                    <option value="premium">Premium (paid)</option>
+                    <option value="premium" disabled={!canManagePaid}>
+                      Premium (paid)
+                    </option>
                   </select>
                 </label>
               </div>
+              {!canManagePaid && (
+                <p style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)', marginTop: '-0.5rem' }}>
+                  You don't have permission to manage paid content — ask an admin for access.
+                </p>
+              )}
 
               {form.category === 'premium' && (
                 <label>

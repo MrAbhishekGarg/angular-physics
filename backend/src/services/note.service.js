@@ -23,6 +23,13 @@ export async function getNoteById(id) {
   return note;
 }
 
+/** Cheap lookup for the paid-content permission gate. */
+export async function getNotePaidStatus(id) {
+  const note = await Note.findById(id).select('category').lean();
+  if (!note) throw new ApiError(404, 'Note not found');
+  return note;
+}
+
 export async function createNote(payload) {
   if (payload.category === 'premium' && !(payload.price > 0)) {
     throw new ApiError(400, 'Premium notes require a price greater than 0');

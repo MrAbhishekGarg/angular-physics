@@ -11,16 +11,20 @@ import AnalyticsChart from '../../components/dashboard/AnalyticsChart.jsx';
 import CourseManageRow from '../../components/dashboard/CourseManageRow.jsx';
 import { useMentorAnalytics } from '../../hooks/useAnalytics.js';
 import { useAllEnrollments } from '../../hooks/useEnrollments.js';
-import { useCourses } from '../../hooks/useCourses.js';
+import { useMentorCourses } from '../../hooks/useCourses.js';
+import { useAuth } from '../../hooks/useAuth.js';
 import { enrollmentService } from '../../services/enrollmentService.js';
 import { courseService } from '../../services/courseService.js';
 import { formatPrice } from '../../data/courseFormat.js';
 import styles from './Dashboard.module.css';
 
 export default function MentorDashboard() {
+  const { user } = useAuth();
+  const canSeeCourses = !user?.restrictedSections?.includes('courses');
+  const canEditCourses = !user?.restrictedActions?.includes('courses-edit');
   const { data: analytics, loading, error, refetch: refetchAnalytics } = useMentorAnalytics();
   const { data: enrollments, refetch: refetchEnrollments } = useAllEnrollments();
-  const { data: courses, refetch: refetchCourses } = useCourses();
+  const { data: courses, refetch: refetchCourses } = useMentorCourses();
   const [busyId, setBusyId] = useState(null);
   const [actionError, setActionError] = useState('');
 
@@ -184,42 +188,48 @@ export default function MentorDashboard() {
               </>
             )}
 
-            <div className={styles.sectionRow}>
-              <h2 className={styles.sectionTitle}>Manage Courses</h2>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {analytics?.openDoubtsCount > 0 && (
-                  <Button as={Link} to="/dashboard/mentor/doubts" variant="ghost" size="sm">
-                    {analytics.openDoubtsCount} Open Doubt{analytics.openDoubtsCount === 1 ? '' : 's'}
-                  </Button>
+            {canSeeCourses && (
+              <>
+                <div className={styles.sectionRow}>
+                  <h2 className={styles.sectionTitle}>Manage Courses</h2>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {analytics?.openDoubtsCount > 0 && (
+                      <Button as={Link} to="/dashboard/mentor/doubts" variant="ghost" size="sm">
+                        {analytics.openDoubtsCount} Open Doubt{analytics.openDoubtsCount === 1 ? '' : 's'}
+                      </Button>
+                    )}
+                    {canEditCourses && (
+                      <Button as={Link} to="/dashboard/mentor/courses/new" size="sm">
+                        + Add New Course
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {!courses ? (
+                  <Spinner label="Loading courses…" />
+                ) : courses.length === 0 ? (
+                  <ErrorState message="No courses yet — add your first one." />
+                ) : (
+                  <div className={styles.tableWrap}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr>
+                          <th>Title</th>
+                          <th>Track</th>
+                          <th>Price</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {courses.map((course) => (
+                          <CourseManageRow key={course._id} course={course} onDelete={handleDeleteCourse} canEdit={canEditCourses} />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
-                <Button as={Link} to="/dashboard/mentor/courses/new" size="sm">
-                  + Add New Course
-                </Button>
-              </div>
-            </div>
-            {!courses ? (
-              <Spinner label="Loading courses…" />
-            ) : courses.length === 0 ? (
-              <ErrorState message="No courses yet — add your first one." />
-            ) : (
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Title</th>
-                      <th>Track</th>
-                      <th>Price</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {courses.map((course) => (
-                      <CourseManageRow key={course._id} course={course} onDelete={handleDeleteCourse} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              </>
             )}
         </div>
       </DashboardLayout>

@@ -6,12 +6,16 @@ import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { useConceptCodes } from '../../hooks/useConceptCodes.js';
 import { conceptCodeService } from '../../services/conceptCodeService.js';
+import { useAuth } from '../../hooks/useAuth.js';
 import Badge from '../../components/common/Badge.jsx';
 import formStyles from './DashboardForm.module.css';
 
 const emptyForm = { code: '', label: '', chapter: '', topic: '' };
 
 export default function ConceptCodes() {
+  const { user } = useAuth();
+  const canUpload = !user?.restrictedActions?.includes('concept-codes-upload');
+  const canEdit = !user?.restrictedActions?.includes('concept-codes-edit');
   const { data: codes, loading, error, refetch } = useConceptCodes();
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
@@ -109,6 +113,7 @@ export default function ConceptCodes() {
               </label>
             </div>
 
+            {canUpload && (
             <div className={formStyles.card}>
               <strong>Bulk Upload Concept Codes</strong>
               <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
@@ -142,6 +147,7 @@ export default function ConceptCodes() {
                 </ul>
               )}
             </div>
+            )}
 
             {loading && <Spinner label="Loading concept codes…" />}
             {error && <ErrorState message={error} onRetry={refetch} />}
@@ -162,58 +168,64 @@ export default function ConceptCodes() {
                       <p style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}>
                         {c.chapter || '—'} {c.topic ? `· ${c.topic}` : ''}
                       </p>
-                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                        <Button size="sm" variant="ghost" onClick={() => startEdit(c)}>
-                          Edit
-                        </Button>
-                        <Button size="sm" variant="danger" onClick={() => handleDelete(c)}>
-                          Delete
-                        </Button>
-                      </div>
+                      {canEdit && (
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <Button size="sm" variant="ghost" onClick={() => startEdit(c)}>
+                            Edit
+                          </Button>
+                          <Button size="sm" variant="danger" onClick={() => handleDelete(c)}>
+                            Delete
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
               </div>
             )}
 
-            <h2 style={{ color: 'var(--ap-primary)', marginBottom: 'var(--ap-space-sm)' }}>
-              {editingId ? 'Edit Concept Code' : 'Add a Concept Code'}
-            </h2>
-            <form className={formStyles.form} onSubmit={handleSubmit}>
-              <div className={formStyles.row}>
-                <label>
-                  Code
-                  <input name="code" required value={form.code} onChange={handleChange} placeholder="PHY-ELEC-045" />
-                </label>
-                <label>
-                  Label
-                  <input name="label" required value={form.label} onChange={handleChange} placeholder="Current Electricity — Ohm's Law" />
-                </label>
-              </div>
-              <div className={formStyles.row}>
-                <label>
-                  Chapter
-                  <input name="chapter" value={form.chapter} onChange={handleChange} />
-                </label>
-                <label>
-                  Topic
-                  <input name="topic" value={form.topic} onChange={handleChange} />
-                </label>
-              </div>
+            {((!editingId && canUpload) || (editingId && canEdit)) && (
+              <>
+                <h2 style={{ color: 'var(--ap-primary)', marginBottom: 'var(--ap-space-sm)' }}>
+                  {editingId ? 'Edit Concept Code' : 'Add a Concept Code'}
+                </h2>
+                <form className={formStyles.form} onSubmit={handleSubmit}>
+                  <div className={formStyles.row}>
+                    <label>
+                      Code
+                      <input name="code" required value={form.code} onChange={handleChange} placeholder="PHY-ELEC-045" />
+                    </label>
+                    <label>
+                      Label
+                      <input name="label" required value={form.label} onChange={handleChange} placeholder="Current Electricity — Ohm's Law" />
+                    </label>
+                  </div>
+                  <div className={formStyles.row}>
+                    <label>
+                      Chapter
+                      <input name="chapter" value={form.chapter} onChange={handleChange} />
+                    </label>
+                    <label>
+                      Topic
+                      <input name="topic" value={form.topic} onChange={handleChange} />
+                    </label>
+                  </div>
 
-              <div className={formStyles.actions}>
-                <Button type="submit" disabled={busy}>
-                  {busy ? 'Saving…' : editingId ? 'Save Changes' : 'Add Concept Code'}
-                </Button>
-                {editingId && (
-                  <Button type="button" variant="ghost" onClick={cancelEdit}>
-                    Cancel
-                  </Button>
-                )}
-              </div>
+                  <div className={formStyles.actions}>
+                    <Button type="submit" disabled={busy}>
+                      {busy ? 'Saving…' : editingId ? 'Save Changes' : 'Add Concept Code'}
+                    </Button>
+                    {editingId && (
+                      <Button type="button" variant="ghost" onClick={cancelEdit}>
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
 
-              {formError && <p className={formStyles.errorMsg}>{formError}</p>}
-            </form>
+                  {formError && <p className={formStyles.errorMsg}>{formError}</p>}
+                </form>
+              </>
+            )}
         </div>
       </DashboardLayout>
     </>

@@ -5,9 +5,11 @@ import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
 import Button from '../../components/common/Button.jsx';
 import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
+import ErrorState from '../../components/common/ErrorState.jsx';
 import QuestionEditor from '../../components/dashboard/QuestionEditor.jsx';
 import { useCourses } from '../../hooks/useCourses.js';
 import { useQuestions } from '../../hooks/useQuestions.js';
+import { useAuth } from '../../hooks/useAuth.js';
 import { testService } from '../../services/testService.js';
 import { EXAM_TRACKS } from '../../data/examTracks.js';
 import formStyles from './DashboardForm.module.css';
@@ -220,17 +222,25 @@ export default function TestEditor() {
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const { data: courses } = useCourses();
+  const { user } = useAuth();
+  const canManagePaid = user?.canManagePaidContent !== false;
 
   const [form, setForm] = useState(emptyForm);
   const [instructions, setInstructions] = useState('');
   const [sections, setSections] = useState([emptySection(0)]);
   const [loadingTest, setLoadingTest] = useState(isEdit);
+  const [blockedPaid, setBlockedPaid] = useState(false);
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!isEdit) return;
     testService.getMentor(id).then((test) => {
+      if (test.isPaid && !canManagePaid) {
+        setBlockedPaid(true);
+        setLoadingTest(false);
+        return;
+      }
       setForm({
         title: test.title,
         description: test.description || '',
@@ -329,6 +339,20 @@ export default function TestEditor() {
 
   if (loadingTest) return <Spinner label="Loading test…" />;
 
+  if (blockedPaid) {
+    return (
+      <>
+        <SEO title="Edit Test" description="Author a test for students." path="/dashboard/mentor/tests" />
+        <DashboardLayout role="mentor">
+          <div className={formStyles.wrap}>
+            <h1>Edit Test</h1>
+            <ErrorState message="This is a paid test — you don't have permission to manage paid content. Ask an admin for access." />
+          </div>
+        </DashboardLayout>
+      </>
+    );
+  }
+
   return (
     <>
       <SEO title={isEdit ? 'Edit Test' : 'New Test'} description="Author a test for students." path="/dashboard/mentor/tests" />
@@ -391,9 +415,14 @@ export default function TestEditor() {
               </label>
 
               <label className={formStyles.checkboxLabel}>
-                <input type="checkbox" name="isPaid" checked={form.isPaid} onChange={handleChange} />
+                <input type="checkbox" name="isPaid" checked={form.isPaid} onChange={handleChange} disabled={!canManagePaid} />
                 This is paid
               </label>
+              {!canManagePaid && (
+                <p style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)', marginTop: '-0.5rem' }}>
+                  You don't have permission to manage paid content — ask an admin for access.
+                </p>
+              )}
 
               {form.isPaid && (
                 <label>

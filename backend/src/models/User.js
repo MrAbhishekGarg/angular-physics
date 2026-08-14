@@ -24,6 +24,17 @@ const userSchema = new mongoose.Schema(
     // Only meaningful for role: 'mentor'. Default true preserves today's
     // behavior — any mentor can reset any student's password.
     canResetPasswords: { type: Boolean, default: true },
+    // Fine-grained action gates within a section the mentor can already see —
+    // e.g. hiding "Create Test" while leaving "Edit Test" visible. A denylist,
+    // same shape/intent as restrictedSections. Keys come from
+    // constants/mentorActions.js.
+    restrictedActions: { type: [String], default: [] },
+    // Same 'all'/'selected' shape as studentAccessMode/assignedStudentIds.
+    courseAccessMode: { type: String, enum: ['all', 'selected'], default: 'all' },
+    assignedCourseIds: { type: [mongoose.Schema.Types.ObjectId], ref: 'Course', default: [] },
+    // Only meaningful for role: 'mentor'. Default true preserves today's
+    // behavior — any mentor can create/edit/delete paid tests and premium notes.
+    canManagePaidContent: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

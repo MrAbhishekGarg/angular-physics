@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import Spinner from '../components/common/Spinner.jsx';
 import { useAuth } from '../hooks/useAuth.js';
 
-export default function ProtectedRoute({ role, section, children }) {
+export default function ProtectedRoute({ role, section, action, children }) {
   const { user, loading } = useAuth();
 
   if (loading) return <Spinner label="Checking session…" />;
@@ -13,6 +13,11 @@ export default function ProtectedRoute({ role, section, children }) {
   // A logged-in mentor being denied one section — send them to their own
   // dashboard, not the unauthenticated bounce above.
   if (section && user.role === 'mentor' && user.restrictedSections?.includes(section)) {
+    return <Navigate to="/dashboard/mentor" replace />;
+  }
+  // Same idea, one level finer — a mentor who can see the section but not
+  // perform this specific action (e.g. create a test) on it.
+  if (action && user.role === 'mentor' && user.restrictedActions?.includes(action)) {
     return <Navigate to="/dashboard/mentor" replace />;
   }
 

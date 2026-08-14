@@ -7,10 +7,14 @@ import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { useMentorTests } from '../../hooks/useTests.js';
 import { testService } from '../../services/testService.js';
+import { useAuth } from '../../hooks/useAuth.js';
 import { formatPrice } from '../../data/courseFormat.js';
 import formStyles from './DashboardForm.module.css';
 
 export default function TestManager() {
+  const { user } = useAuth();
+  const canCreate = !user?.restrictedActions?.includes('tests-create');
+  const canEdit = !user?.restrictedActions?.includes('tests-edit');
   const { data: tests, loading, error, refetch } = useMentorTests();
 
   const handleDelete = async (test) => {
@@ -30,9 +34,11 @@ export default function TestManager() {
                 <Button as={Link} to="/dashboard/mentor/worksheets" variant="ghost" size="sm">
                   Manage Worksheets
                 </Button>
-                <Button as={Link} to="/dashboard/mentor/tests/new" size="sm">
-                  + New Test
-                </Button>
+                {canCreate && (
+                  <Button as={Link} to="/dashboard/mentor/tests/new" size="sm">
+                    + New Test
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -62,9 +68,11 @@ export default function TestManager() {
                     {(test.courseIds || []).map((c) => c.title || c).join(', ') || 'no courses assigned'}
                   </p>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <Button as={Link} to={`/dashboard/mentor/tests/${test._id}/edit`} size="sm" variant="ghost">
-                      Edit
-                    </Button>
+                    {canEdit && (
+                      <Button as={Link} to={`/dashboard/mentor/tests/${test._id}/edit`} size="sm" variant="ghost">
+                        Edit
+                      </Button>
+                    )}
                     <Button as={Link} to={`/dashboard/mentor/tests/${test._id}/results`} size="sm" variant="ghost">
                       Results
                     </Button>
@@ -78,9 +86,11 @@ export default function TestManager() {
                         </Button>
                       </>
                     )}
-                    <Button size="sm" variant="danger" onClick={() => handleDelete(test)}>
-                      Delete
-                    </Button>
+                    {canEdit && (
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(test)}>
+                        Delete
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

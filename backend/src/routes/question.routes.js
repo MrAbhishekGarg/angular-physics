@@ -11,7 +11,7 @@ import {
   generateQuestionSet,
   uploadQuestionImage,
 } from '../controllers/question.controller.js';
-import { authenticate, authorize, requireSection } from '../middleware/auth.js';
+import { authenticate, authorize, requireSection, requireAction } from '../middleware/auth.js';
 import {
   uploadQuestionsDocx,
   uploadQuestionsDocxAndExcel,
@@ -30,6 +30,7 @@ router.post(
   authenticate,
   authorize('mentor'),
   requireSection('questions'),
+  requireAction('questions-create'),
   uploadQuestionsDocx,
   bulkUploadQuestions
 );
@@ -38,18 +39,35 @@ router.post(
   authenticate,
   authorize('mentor'),
   requireSection('questions'),
+  requireAction('questions-create'),
   uploadQuestionsDocxAndExcel,
   bulkUploadQuestionsMapped
 );
-router.post('/generate-set', authenticate, authorize('mentor'), requireSection('questions'), generateQuestionSet);
-router.post('/upload-image', authenticate, authorize('mentor'), requireSection('questions'), uploadQuestionImageMiddleware, uploadQuestionImage);
+router.post('/generate-set', authenticate, authorize('mentor'), requireSection('questions'), requireAction('questions-create'), generateQuestionSet);
+router.post(
+  '/upload-image',
+  authenticate,
+  authorize('mentor'),
+  requireSection('questions'),
+  requireAction('questions-create'),
+  uploadQuestionImageMiddleware,
+  uploadQuestionImage
+);
 
 router.get('/', authenticate, authorize('mentor'), requireSection('questions'), listQuestions);
 router.get('/:id', authenticate, authorize('mentor'), requireSection('questions'), getQuestion);
 // examType is no longer required — a question can be created fully
 // unmapped (examTypes: []) and tagged to an exam later.
-router.post('/', authenticate, authorize('mentor'), requireSection('questions'), validateBody(['type', 'text']), createQuestion);
-router.put('/:id', authenticate, authorize('mentor'), requireSection('questions'), updateQuestion);
-router.delete('/:id', authenticate, authorize('mentor'), requireSection('questions'), deleteQuestion);
+router.post(
+  '/',
+  authenticate,
+  authorize('mentor'),
+  requireSection('questions'),
+  requireAction('questions-create'),
+  validateBody(['type', 'text']),
+  createQuestion
+);
+router.put('/:id', authenticate, authorize('mentor'), requireSection('questions'), requireAction('questions-edit'), updateQuestion);
+router.delete('/:id', authenticate, authorize('mentor'), requireSection('questions'), requireAction('questions-edit'), deleteQuestion);
 
 export default router;

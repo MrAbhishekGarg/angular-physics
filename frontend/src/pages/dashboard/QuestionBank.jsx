@@ -7,6 +7,7 @@ import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import QuestionEditor from '../../components/dashboard/QuestionEditor.jsx';
+import { useAuth } from '../../hooks/useAuth.js';
 import { useQuestions } from '../../hooks/useQuestions.js';
 import { questionService } from '../../services/questionService.js';
 import { questionOfDayService } from '../../services/questionOfDayService.js';
@@ -49,6 +50,9 @@ function UploadFeedback({ message, warnings, failed }) {
 }
 
 export default function QuestionBank() {
+  const { user } = useAuth();
+  const canCreate = !user?.restrictedActions?.includes('questions-create');
+  const canEdit = !user?.restrictedActions?.includes('questions-edit');
   const [filters, setFilters] = useState({
     examType: '',
     chapter: '',
@@ -176,6 +180,7 @@ export default function QuestionBank() {
               PDFs from <Link to="/dashboard/mentor/worksheets">Manage Worksheets</Link>.
             </p>
 
+            {canCreate && (
             <div className={formStyles.card}>
               <strong>Bulk Upload Questions</strong>
               <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
@@ -287,7 +292,9 @@ export default function QuestionBank() {
                 <UploadFeedback message={bulkMessage} warnings={bulkWarnings} failed={bulkFailed} />
               </div>
             </div>
+            )}
 
+            {canCreate && (
             <div className={formStyles.card}>
               <strong>Bulk Upload — Word + Excel Mapping</strong>
               <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
@@ -400,6 +407,7 @@ export default function QuestionBank() {
                 <UploadFeedback message={mappedMessage} warnings={mappedWarnings} failed={mappedFailed} />
               </div>
             </div>
+            )}
 
             <div className={formStyles.card}>
               <div className={formStyles.form}>
@@ -470,12 +478,14 @@ export default function QuestionBank() {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--ap-space-sm)' }}>
               <h2 style={{ color: 'var(--ap-primary)', margin: 0 }}>{questions ? `${questions.length} question(s)` : 'Questions'}</h2>
-              <Button size="sm" onClick={() => setShowCreate((v) => !v)}>
-                {showCreate ? 'Close' : '+ New Question'}
-              </Button>
+              {canCreate && (
+                <Button size="sm" onClick={() => setShowCreate((v) => !v)}>
+                  {showCreate ? 'Close' : '+ New Question'}
+                </Button>
+              )}
             </div>
 
-            {showCreate && (
+            {canCreate && showCreate && (
               <QuestionEditor
                 examType={filters.examType || undefined}
                 onSaved={handleSaved}
@@ -489,7 +499,7 @@ export default function QuestionBank() {
 
             {questions &&
               questions.map((q) =>
-                editingQuestion?._id === q._id ? (
+                canEdit && editingQuestion?._id === q._id ? (
                   <QuestionEditor
                     key={q._id}
                     initialQuestion={editingQuestion}
@@ -523,9 +533,11 @@ export default function QuestionBank() {
                       </div>
                     )}
                     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                      <Button size="sm" variant="ghost" onClick={() => setEditingQuestion(q)}>
-                        Edit
-                      </Button>
+                      {canEdit && (
+                        <Button size="sm" variant="ghost" onClick={() => setEditingQuestion(q)}>
+                          Edit
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="ghost"

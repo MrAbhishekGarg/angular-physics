@@ -19,7 +19,7 @@ import {
   downloadTestPdf,
   downloadTestAnswerPdf,
 } from '../controllers/test.controller.js';
-import { authenticate, authorize, requireSection } from '../middleware/auth.js';
+import { authenticate, authorize, requireSection, requireAction } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 
 const router = Router();
@@ -47,8 +47,16 @@ router.get('/:id/attendance', authenticate, authorize('mentor'), requireSection(
 router.get('/:id/question-analysis', authenticate, authorize('mentor'), requireSection('tests'), getQuestionAnalysisForTest);
 router.get('/:id/pdf', authenticate, authorize('mentor'), requireSection('tests'), downloadTestPdf);
 router.get('/:id/answer-pdf', authenticate, authorize('mentor'), requireSection('tests'), downloadTestAnswerPdf);
-router.post('/', authenticate, authorize('mentor'), requireSection('tests'), validateBody(REQUIRED_TEST_FIELDS), createTest);
-router.put('/:id', authenticate, authorize('mentor'), requireSection('tests'), updateTest);
-router.delete('/:id', authenticate, authorize('mentor'), requireSection('tests'), deleteTest);
+router.post(
+  '/',
+  authenticate,
+  authorize('mentor'),
+  requireSection('tests'),
+  requireAction('tests-create'),
+  validateBody(REQUIRED_TEST_FIELDS),
+  createTest
+);
+router.put('/:id', authenticate, authorize('mentor'), requireSection('tests'), requireAction('tests-edit'), updateTest);
+router.delete('/:id', authenticate, authorize('mentor'), requireSection('tests'), requireAction('tests-edit'), deleteTest);
 
 export default router;

@@ -2,6 +2,7 @@ import { api } from './api.js';
 
 export const courseService = {
   getAll: (track) => api.get('/courses', { params: track ? { track } : {} }),
+  getAllForMentor: () => api.get('/courses/mentor'),
   getFeatured: () => api.get('/courses/featured'),
   getBySlug: (slug) => api.get(`/courses/${slug}`),
   getTestimonials: () => api.get('/courses/testimonials'),

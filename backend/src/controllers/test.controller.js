@@ -3,6 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { generateTestPdf } from '../services/testPdf.service.js';
+import { assertCanManagePaidContent } from '../utils/mentorAccess.js';
 
 export const listTestsMentor = asyncHandler(async (req, res) => {
   const tests = await testService.getAllTestsForMentor();
@@ -15,16 +16,26 @@ export const getTestMentor = asyncHandler(async (req, res) => {
 });
 
 export const createTest = asyncHandler(async (req, res) => {
+  if (req.body.isPaid) assertCanManagePaidContent(req.user);
   const test = await testService.createTest(req.body);
   return ApiResponse(res, 201, test);
 });
 
 export const updateTest = asyncHandler(async (req, res) => {
+  if (req.user.role === 'mentor' && req.user.canManagePaidContent === false) {
+    const { isPaid: currentIsPaid } = await testService.getTestPaidStatus(req.params.id);
+    const nextIsPaid = req.body.isPaid !== undefined ? req.body.isPaid : currentIsPaid;
+    if (currentIsPaid || nextIsPaid) assertCanManagePaidContent(req.user);
+  }
   const test = await testService.updateTest(req.params.id, req.body);
   return ApiResponse(res, 200, test);
 });
 
 export const deleteTest = asyncHandler(async (req, res) => {
+  if (req.user.role === 'mentor' && req.user.canManagePaidContent === false) {
+    const { isPaid } = await testService.getTestPaidStatus(req.params.id);
+    if (isPaid) assertCanManagePaidContent(req.user);
+  }
   await testService.deleteTest(req.params.id);
   return ApiResponse(res, 200, { deleted: true });
 });

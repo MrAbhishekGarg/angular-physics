@@ -37,6 +37,10 @@ export const authenticate = asyncHandler(async (req, res, next) => {
     // never has to think about ObjectId identity.
     assignedStudentIds: (user.assignedStudentIds || []).map((sid) => sid.toString()),
     canResetPasswords: user.canResetPasswords !== false,
+    restrictedActions: user.restrictedActions || [],
+    courseAccessMode: user.courseAccessMode || 'all',
+    assignedCourseIds: (user.assignedCourseIds || []).map((cid) => cid.toString()),
+    canManagePaidContent: user.canManagePaidContent !== false,
   };
   next();
 });
@@ -80,4 +84,19 @@ export function requirePasswordResetPermission(req, res, next) {
     return next(new ApiError(403, 'Not authorized to reset student passwords'));
   }
   next();
+}
+
+/**
+ * Per-mentor fine-grained action gate, composed after requireSection on a
+ * route (e.g. `requireSection('tests'), requireAction('tests-create')`). A
+ * no-op for anyone who isn't a plain mentor, mirroring requireSection exactly.
+ */
+export function requireAction(actionKey) {
+  return (req, res, next) => {
+    if (req.user?.role !== 'mentor') return next();
+    if (req.user.restrictedActions?.includes(actionKey)) {
+      return next(new ApiError(403, 'Not authorized for this action'));
+    }
+    next();
+  };
 }

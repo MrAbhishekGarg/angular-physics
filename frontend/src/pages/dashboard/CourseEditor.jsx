@@ -4,7 +4,9 @@ import SEO from '../../components/seo/SEO.jsx';
 import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
 import Button from '../../components/common/Button.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
+import ErrorState from '../../components/common/ErrorState.jsx';
 import { courseService } from '../../services/courseService.js';
+import { useAuth } from '../../hooks/useAuth.js';
 import { EXAM_TRACKS } from '../../data/examTracks.js';
 import { assetUrl } from '../../data/assetUrl.js';
 import formStyles from './DashboardForm.module.css';
@@ -52,6 +54,7 @@ export default function CourseEditor() {
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
 
   const [form, setForm] = useState(emptyForm);
   const [currentImageUrl, setCurrentImageUrl] = useState(null);
@@ -59,19 +62,28 @@ export default function CourseEditor() {
   const [loadingCourse, setLoadingCourse] = useState(isEdit);
   const [status, setStatus] = useState('idle'); // idle | submitting | error
   const [error, setError] = useState('');
+  const [notAssigned, setNotAssigned] = useState(false);
+
+  const isAssigned = (course) =>
+    user?.courseAccessMode !== 'selected' || user.assignedCourseIds?.includes(course._id);
 
   useEffect(() => {
     if (!isEdit) return;
 
     const stateCourse = location.state?.course;
     if (stateCourse) {
+      if (!isAssigned(stateCourse)) {
+        setNotAssigned(true);
+        setLoadingCourse(false);
+        return;
+      }
       setForm(courseToForm(stateCourse));
       setCurrentImageUrl(stateCourse.imageUrl);
       setLoadingCourse(false);
       return;
     }
 
-    courseService.getAll().then((courses) => {
+    courseService.getAllForMentor().then((courses) => {
       const match = courses.find((c) => c._id === id);
       if (match) {
         setForm(courseToForm(match));
@@ -126,6 +138,20 @@ export default function CourseEditor() {
   };
 
   if (loadingCourse) return <Spinner label="Loading course…" />;
+
+  if (notAssigned) {
+    return (
+      <>
+        <SEO title="Edit Course" description="Manage course details." path="/dashboard/mentor" />
+        <DashboardLayout role="mentor">
+          <div className={formStyles.wrap}>
+            <h1>Edit Course</h1>
+            <ErrorState message="You don't have access to this course. Ask an admin to assign it to you." />
+          </div>
+        </DashboardLayout>
+      </>
+    );
+  }
 
   return (
     <>

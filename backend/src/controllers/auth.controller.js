@@ -50,12 +50,25 @@ export const removeMentor = asyncHandler(async (req, res) => {
 });
 
 export const updateMentorPermissions = asyncHandler(async (req, res) => {
-  const { restrictedSections, studentAccessMode, assignedStudentIds, canResetPasswords } = req.body;
+  const {
+    restrictedSections,
+    studentAccessMode,
+    assignedStudentIds,
+    canResetPasswords,
+    restrictedActions,
+    courseAccessMode,
+    assignedCourseIds,
+    canManagePaidContent,
+  } = req.body;
   const mentor = await authService.updateMentorPermissions(req.params.id, {
     restrictedSections,
     studentAccessMode,
     assignedStudentIds,
     canResetPasswords,
+    restrictedActions,
+    courseAccessMode,
+    assignedCourseIds,
+    canManagePaidContent,
   });
   return ApiResponse(res, 200, mentor);
 });

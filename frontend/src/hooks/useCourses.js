@@ -5,6 +5,10 @@ export function useCourses(track) {
   return useFetch(() => courseService.getAll(track), [track]);
 }
 
+export function useMentorCourses() {
+  return useFetch(() => courseService.getAllForMentor(), []);
+}
+
 export function useFeaturedCourses() {
   return useFetch(() => courseService.getFeatured(), []);
 }

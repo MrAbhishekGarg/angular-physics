@@ -13,3 +13,21 @@ export function assertStudentAssigned(user, studentId) {
     throw new ApiError(403, 'Not authorized for this student');
   }
 }
+
+/** Mirrors assertStudentAssigned exactly, for courses. */
+export function assertCourseAssigned(user, courseId) {
+  if (user?.role !== 'mentor' || user.courseAccessMode !== 'selected') return;
+  if (!user.assignedCourseIds?.includes(String(courseId))) {
+    throw new ApiError(403, 'Not authorized for this course');
+  }
+}
+
+/**
+ * Throws 403 if this mentor lacks canManagePaidContent. Caller decides
+ * WHETHER the content in question is paid/premium and only calls this
+ * when it is.
+ */
+export function assertCanManagePaidContent(user) {
+  if (user?.role !== 'mentor' || user.canManagePaidContent !== false) return;
+  throw new ApiError(403, 'Not authorized to manage paid content');
+}

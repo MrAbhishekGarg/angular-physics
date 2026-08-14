@@ -5,11 +5,26 @@ import Button from '../../components/common/Button.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { useMentors, useAdminStudents } from '../../hooks/useAdmin.js';
+import { useCourses } from '../../hooks/useCourses.js';
 import { authService } from '../../services/authService.js';
 import { MENTOR_SECTIONS } from '../../data/mentorSections.js';
+import { MENTOR_ACTIONS } from '../../data/mentorActions.js';
 import formStyles from './DashboardForm.module.css';
 
 const emptyForm = { name: '', email: '', password: '', phone: '' };
+
+// MENTOR_ACTIONS grouped by its `group` field, in first-seen order — clusters
+// related actions (e.g. all Question Bank actions together) in the form
+// instead of one flat 7-item list.
+const ACTION_GROUPS = MENTOR_ACTIONS.reduce((groups, action) => {
+  let group = groups.find((g) => g.name === action.group);
+  if (!group) {
+    group = { name: action.group, actions: [] };
+    groups.push(group);
+  }
+  group.actions.push(action);
+  return groups;
+}, []);
 
 function ResetPasswordForm({ mentor, onDone, onCancel }) {
   const [newPassword, setNewPassword] = useState('');
@@ -71,17 +86,35 @@ function PermissionsForm({ mentor, onDone, refetch }) {
   const [checked, setChecked] = useState(
     () => new Set(MENTOR_SECTIONS.filter((s) => !mentor.restrictedSections?.includes(s.key)).map((s) => s.key))
   );
+  const [actionChecked, setActionChecked] = useState(
+    () => new Set(MENTOR_ACTIONS.filter((a) => !mentor.restrictedActions?.includes(a.key)).map((a) => a.key))
+  );
+  const [canManagePaid, setCanManagePaid] = useState(mentor.canManagePaidContent !== false);
   const [accessMode, setAccessMode] = useState(mentor.studentAccessMode || 'all');
   const [assignedIds, setAssignedIds] = useState(() => new Set(mentor.assignedStudentIds || []));
   const [canReset, setCanReset] = useState(mentor.canResetPasswords !== false);
   const [studentQuery, setStudentQuery] = useState('');
   const { data: students, loading: studentsLoading } = useAdminStudents();
+  const [courseAccessMode, setCourseAccessMode] = useState(mentor.courseAccessMode || 'all');
+  const [assignedCourseIds, setAssignedCourseIds] = useState(() => new Set(mentor.assignedCourseIds || []));
+  const [courseQuery, setCourseQuery] = useState('');
+  const { data: courses, loading: coursesLoading } = useCourses();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
   const toggle = (key) => {
     setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+    setSuccess(false);
+  };
+
+  const toggleAction = (key) => {
+    setActionChecked((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -100,10 +133,26 @@ function PermissionsForm({ mentor, onDone, refetch }) {
     setSuccess(false);
   };
 
+  const toggleCourse = (id) => {
+    setAssignedCourseIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setSuccess(false);
+  };
+
   const filteredStudents = (students || []).filter((s) => {
     const q = studentQuery.trim().toLowerCase();
     if (!q) return true;
     return s.name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
+  });
+
+  const filteredCourses = (courses || []).filter((c) => {
+    const q = courseQuery.trim().toLowerCase();
+    if (!q) return true;
+    return c.title.toLowerCase().includes(q) || c.track.toLowerCase().includes(q);
   });
 
   const handleSubmit = async (e) => {
@@ -112,11 +161,16 @@ function PermissionsForm({ mentor, onDone, refetch }) {
     setError('');
     try {
       const restrictedSections = MENTOR_SECTIONS.filter((s) => !checked.has(s.key)).map((s) => s.key);
+      const restrictedActions = MENTOR_ACTIONS.filter((a) => !actionChecked.has(a.key)).map((a) => a.key);
       await authService.updateMentorPermissions(mentor._id, {
         restrictedSections,
         studentAccessMode: accessMode,
         assignedStudentIds: accessMode === 'selected' ? [...assignedIds] : [],
         canResetPasswords: canReset,
+        restrictedActions,
+        courseAccessMode,
+        assignedCourseIds: courseAccessMode === 'selected' ? [...assignedCourseIds] : [],
+        canManagePaidContent: canManagePaid,
       });
       await refetch();
       setSuccess(true);
@@ -140,6 +194,34 @@ function PermissionsForm({ mentor, onDone, refetch }) {
           </label>
         ))}
       </div>
+
+      <h3 style={{ fontSize: '0.85rem', color: 'var(--ap-primary)', margin: '0.6rem 0 0.3rem' }}>Content Permissions</h3>
+      <p style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)', marginBottom: '0.4rem' }}>
+        Fine-grained control within a section {mentor.name} can already see.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.6rem' }}>
+        {ACTION_GROUPS.map((group) => (
+          <div key={group.name}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)', display: 'block', marginBottom: '0.2rem' }}>
+              {group.name}
+            </span>
+            <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
+              {group.actions.map((a) => (
+                <label key={a.key} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 400, fontSize: '0.85rem' }}>
+                  <input type="checkbox" checked={actionChecked.has(a.key)} onChange={() => toggleAction(a.key)} />
+                  {a.label}
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <h3 style={{ fontSize: '0.85rem', color: 'var(--ap-primary)', margin: '0.6rem 0 0.3rem' }}>Paid Content</h3>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 400, fontSize: '0.85rem', marginBottom: '0.6rem' }}>
+        <input type="checkbox" checked={canManagePaid} onChange={() => setCanManagePaid((v) => !v)} />
+        Can create/edit/delete paid tests and premium notes
+      </label>
 
       <h3 style={{ fontSize: '0.85rem', color: 'var(--ap-primary)', margin: '0.6rem 0 0.3rem' }}>Student Access</h3>
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
@@ -184,6 +266,60 @@ function PermissionsForm({ mentor, onDone, refetch }) {
               </div>
               <p style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)', marginTop: '0.4rem', marginBottom: 0 }}>
                 {assignedIds.size} selected
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
+      <h3 style={{ fontSize: '0.85rem', color: 'var(--ap-primary)', margin: '0.6rem 0 0.3rem' }}>Course Access</h3>
+      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 400, fontSize: '0.85rem' }}>
+          <input
+            type="radio"
+            name={`course-access-${mentor._id}`}
+            checked={courseAccessMode === 'all'}
+            onChange={() => setCourseAccessMode('all')}
+          />
+          All courses
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 400, fontSize: '0.85rem' }}>
+          <input
+            type="radio"
+            name={`course-access-${mentor._id}`}
+            checked={courseAccessMode === 'selected'}
+            onChange={() => setCourseAccessMode('selected')}
+          />
+          Selected courses only
+        </label>
+      </div>
+
+      {courseAccessMode === 'selected' && (
+        <div style={{ border: '1px solid var(--ap-border)', padding: '0.5rem', marginBottom: '0.6rem' }}>
+          <input
+            value={courseQuery}
+            onChange={(e) => setCourseQuery(e.target.value)}
+            placeholder="Search by title or track"
+            style={{ marginBottom: '0.4rem', width: '100%' }}
+          />
+          {coursesLoading ? (
+            <Spinner label="Loading courses…" />
+          ) : (
+            <>
+              <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                {filteredCourses.length === 0 ? (
+                  <p style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}>No courses match.</p>
+                ) : (
+                  filteredCourses.map((c) => (
+                    <label key={c._id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 400, fontSize: '0.85rem' }}>
+                      <input type="checkbox" checked={assignedCourseIds.has(c._id)} onChange={() => toggleCourse(c._id)} />
+                      {c.title} — {c.track} ({c.status})
+                    </label>
+                  ))
+                )}
+              </div>
+              <p style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)', marginTop: '0.4rem', marginBottom: 0 }}>
+                {assignedCourseIds.size} selected
               </p>
             </>
           )}

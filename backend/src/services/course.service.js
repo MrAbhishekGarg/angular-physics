@@ -44,6 +44,19 @@ export async function getAllTestimonials() {
 }
 
 /**
+ * Mentor-scoped listing for a course-visibility-restricted mentor —
+ * `courseIds: undefined` means no filter (courseAccessMode 'all'), an array
+ * (possibly empty) filters to exactly those ids. Same semantics as
+ * enrollment.service.js's getAllEnrollments. DB-only, like the rest of the
+ * mentor course-management functions below.
+ */
+export async function getAllCoursesForMentor({ courseIds } = {}) {
+  const filter = {};
+  if (courseIds) filter._id = { $in: courseIds };
+  return Course.find(filter).sort({ isFeatured: -1, createdAt: -1 }).lean();
+}
+
+/**
  * Mentor course-management. These are DB-only (no seed-mode branching) —
  * writing courses requires a real account, which already requires the DB.
  */

@@ -5,6 +5,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { isDbConnected } from '../config/db.js';
 import { adminSafeUser, matchesAdminCredentials } from '../utils/adminUser.js';
 import { MENTOR_SECTIONS } from '../constants/mentorSections.js';
+import { MENTOR_ACTIONS } from '../constants/mentorActions.js';
 
 const SALT_ROUNDS = 10;
 
@@ -18,6 +19,10 @@ function toSafeUser(user) {
     studentAccessMode: user.studentAccessMode || 'all',
     assignedStudentIds: (user.assignedStudentIds || []).map((sid) => sid.toString()),
     canResetPasswords: user.canResetPasswords !== false,
+    restrictedActions: user.restrictedActions || [],
+    courseAccessMode: user.courseAccessMode || 'all',
+    assignedCourseIds: (user.assignedCourseIds || []).map((cid) => cid.toString()),
+    canManagePaidContent: user.canManagePaidContent !== false,
   };
 }
 
@@ -108,15 +113,36 @@ export async function removeMentor(id) {
  * replace (matches how the admin form always sends its complete current
  * state), not a partial merge.
  */
-export async function updateMentorPermissions(id, { restrictedSections, studentAccessMode, assignedStudentIds, canResetPasswords }) {
+export async function updateMentorPermissions(
+  id,
+  {
+    restrictedSections,
+    studentAccessMode,
+    assignedStudentIds,
+    canResetPasswords,
+    restrictedActions,
+    courseAccessMode,
+    assignedCourseIds,
+    canManagePaidContent,
+  }
+) {
   const keys = Array.isArray(restrictedSections) ? restrictedSections : [];
   const unknown = keys.filter((k) => !MENTOR_SECTIONS.includes(k));
   if (unknown.length > 0) throw new ApiError(400, `Unknown section(s): ${unknown.join(', ')}`);
+
+  const actionKeys = Array.isArray(restrictedActions) ? restrictedActions : [];
+  const unknownActions = actionKeys.filter((k) => !MENTOR_ACTIONS.includes(k));
+  if (unknownActions.length > 0) throw new ApiError(400, `Unknown action(s): ${unknownActions.join(', ')}`);
 
   const mode = studentAccessMode === 'selected' ? 'selected' : 'all';
   const ids = Array.isArray(assignedStudentIds) ? assignedStudentIds : [];
   const invalidIds = ids.filter((sid) => !mongoose.Types.ObjectId.isValid(sid));
   if (invalidIds.length > 0) throw new ApiError(400, `Invalid student id(s): ${invalidIds.join(', ')}`);
+
+  const cMode = courseAccessMode === 'selected' ? 'selected' : 'all';
+  const courseIds = Array.isArray(assignedCourseIds) ? assignedCourseIds : [];
+  const invalidCourseIds = courseIds.filter((cid) => !mongoose.Types.ObjectId.isValid(cid));
+  if (invalidCourseIds.length > 0) throw new ApiError(400, `Invalid course id(s): ${invalidCourseIds.join(', ')}`);
 
   const update = {
     restrictedSections: keys,
@@ -125,6 +151,10 @@ export async function updateMentorPermissions(id, { restrictedSections, studentA
     // hidden selection surviving a mode switch.
     assignedStudentIds: mode === 'selected' ? ids : [],
     canResetPasswords: canResetPasswords !== false,
+    restrictedActions: actionKeys,
+    courseAccessMode: cMode,
+    assignedCourseIds: cMode === 'selected' ? courseIds : [],
+    canManagePaidContent: canManagePaidContent !== false,
   };
 
   const user = await User.findOneAndUpdate({ _id: id, role: 'mentor' }, update, { new: true }).lean();

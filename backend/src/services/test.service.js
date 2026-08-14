@@ -82,6 +82,13 @@ export async function getTestByIdForMentor(id) {
   return { ...test, questions, sections };
 }
 
+/** Cheap lookup for the paid-content permission gate — avoids resolving the full test. */
+export async function getTestPaidStatus(id) {
+  const test = await Test.findById(id).select('isPaid').lean();
+  if (!test) throw new ApiError(404, 'Test not found');
+  return test;
+}
+
 // When sections are provided, questionIds is derived from them (the flat
 // field stays authoritative for every existing consumer — see Test.js).
 function withDerivedQuestionIds(payload) {
