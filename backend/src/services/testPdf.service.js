@@ -16,6 +16,8 @@ const QUESTION_IMAGE_MAX = { width: 300, height: 160 };
 const OPTION_IMAGE_MAX_HEIGHT = 40;
 const MIN_OPTION_ROW_HEIGHT = 28;
 const NUMBER_COL_WIDTH = 26;
+const STEM_TEXT_IMAGE_GAP = 4;
+const OPTION_TEXT_IMAGE_GAP = 3;
 
 const TRACK_LABELS = {
   'jee-main': 'JEE Main',
@@ -158,13 +160,16 @@ export function generateTestPdf(test, { includeAnswers = false } = {}) {
 
   function measureOptionCellHeight(option, colWidth) {
     const contentWidth = colWidth - CELL_PADDING * 2 - LETTER_COL_WIDTH;
+    const hasText = Boolean(option.text?.trim());
+    doc.fontSize(10).font('Helvetica');
+    const textHeight = hasText ? doc.heightOfString(option.text, { width: contentWidth }) : 0;
+
     const optionImagePath = resolveImagePath(option.imageUrl);
     if (optionImagePath) {
       const dims = measureImageDims(optionImagePath, contentWidth, OPTION_IMAGE_MAX_HEIGHT);
-      return Math.max(MIN_OPTION_ROW_HEIGHT, (dims ? dims.height : OPTION_IMAGE_MAX_HEIGHT) + CELL_PADDING * 2);
+      const imgHeight = dims ? dims.height : OPTION_IMAGE_MAX_HEIGHT;
+      return Math.max(MIN_OPTION_ROW_HEIGHT, textHeight + (hasText ? OPTION_TEXT_IMAGE_GAP : 0) + imgHeight + CELL_PADDING * 2);
     }
-    doc.fontSize(10).font('Helvetica');
-    const textHeight = doc.heightOfString(option.text || '', { width: contentWidth });
     return Math.max(MIN_OPTION_ROW_HEIGHT, textHeight + CELL_PADDING * 2);
   }
 
@@ -187,13 +192,21 @@ export function generateTestPdf(test, { includeAnswers = false } = {}) {
 
     const contentX = x + CELL_PADDING + LETTER_COL_WIDTH;
     const contentWidth = width - CELL_PADDING * 2 - LETTER_COL_WIDTH;
+    const hasText = Boolean(option.text?.trim());
+    let textBlockHeight = 0;
+    if (hasText) {
+      doc.font(highlight ? 'Helvetica-Bold' : 'Helvetica');
+      doc.text(option.text, contentX, y + CELL_PADDING, { width: contentWidth });
+      textBlockHeight = doc.heightOfString(option.text, { width: contentWidth });
+    }
+
     const optionImagePath = resolveImagePath(option.imageUrl);
     if (optionImagePath) {
       const dims = measureImageDims(optionImagePath, contentWidth, OPTION_IMAGE_MAX_HEIGHT);
-      if (dims) doc.image(optionImagePath, contentX, y + CELL_PADDING, { width: dims.width, height: dims.height });
-    } else {
-      doc.font(highlight ? 'Helvetica-Bold' : 'Helvetica');
-      doc.text(option.text || '', contentX, y + CELL_PADDING, { width: contentWidth });
+      if (dims) {
+        const imgY = y + CELL_PADDING + textBlockHeight + (hasText ? OPTION_TEXT_IMAGE_GAP : 0);
+        doc.image(optionImagePath, contentX, imgY, { width: dims.width, height: dims.height });
+      }
     }
 
     if (highlight) {
@@ -202,25 +215,29 @@ export function generateTestPdf(test, { includeAnswers = false } = {}) {
     doc.font('Helvetica').fillColor('#374151');
   }
 
-  // Text questions put "1." and the question text on the same line, with
-  // the text column pinned at a fixed x (tableX + padding + NUMBER_COL_WIDTH)
-  // for every wrapped line — a hanging indent, so line 2+ lines up under
-  // line 1's text instead of drifting back to the box's left edge. An
-  // image question keeps the number on its own line above the image,
-  // since an inline diagram wouldn't have anything sensible to hang from.
+  // "1." and the question text (if any) sit on the same line, with the text
+  // column pinned at a fixed x (tableX + padding + NUMBER_COL_WIDTH) for
+  // every wrapped line — a hanging indent, so line 2+ lines up under line 1's
+  // text instead of drifting back to the box's left edge. A diagram/equation
+  // image (if any) stacks below that text block — or below the number's own
+  // line, when the question has no text at all (an image-only stem).
   function measureQuestionRowHeight(q, tableWidth) {
     doc.fontSize(11).font('Helvetica-Bold');
     const numberLineHeight = doc.currentLineHeight(true);
+
+    const hasText = Boolean(q.text?.trim());
+    doc.fontSize(11).font('Helvetica');
+    const textWidth = tableWidth - CELL_PADDING * 2 - NUMBER_COL_WIDTH;
+    const textHeight = hasText ? doc.heightOfString(q.text, { width: textWidth }) : 0;
+    const textBlockHeight = Math.max(textHeight, numberLineHeight);
+
     const imagePath = resolveImagePath(q.imageUrl);
     if (imagePath) {
       const dims = measureImageDims(imagePath, tableWidth - CELL_PADDING * 2 - 20, QUESTION_IMAGE_MAX.height);
       const imgHeight = dims ? dims.height : QUESTION_IMAGE_MAX.height;
-      return { inline: false, numberLineHeight, total: numberLineHeight + 4 + imgHeight + CELL_PADDING * 2 };
+      return { textBlockHeight, total: textBlockHeight + (hasText ? STEM_TEXT_IMAGE_GAP : 4) + imgHeight + CELL_PADDING * 2 };
     }
-    doc.fontSize(11).font('Helvetica');
-    const textWidth = tableWidth - CELL_PADDING * 2 - NUMBER_COL_WIDTH;
-    const textHeight = doc.heightOfString(q.text || '', { width: textWidth });
-    return { inline: true, total: Math.max(textHeight, numberLineHeight) + CELL_PADDING * 2 };
+    return { textBlockHeight, total: textBlockHeight + CELL_PADDING * 2 };
   }
 
   // Every question renders as one bordered table: a header/body row
@@ -264,14 +281,17 @@ export function generateTestPdf(test, { includeAnswers = false } = {}) {
     doc.fontSize(11).font('Helvetica-Bold').fillColor('#111827');
     doc.text(`${i + 1}.`, tableX + CELL_PADDING, startY + CELL_PADDING, { width: NUMBER_COL_WIDTH, lineBreak: false });
 
-    const imagePath = resolveImagePath(q.imageUrl);
-    if (questionRow.inline) {
+    const hasText = Boolean(q.text?.trim());
+    if (hasText) {
       doc.fontSize(11).font('Helvetica').fillColor('#111827');
-      doc.text(q.text || '', tableX + CELL_PADDING + NUMBER_COL_WIDTH, startY + CELL_PADDING, {
+      doc.text(q.text, tableX + CELL_PADDING + NUMBER_COL_WIDTH, startY + CELL_PADDING, {
         width: tableWidth - CELL_PADDING * 2 - NUMBER_COL_WIDTH,
       });
-    } else {
-      const bodyY = startY + CELL_PADDING + questionRow.numberLineHeight + 4;
+    }
+
+    const imagePath = resolveImagePath(q.imageUrl);
+    if (imagePath) {
+      const bodyY = startY + CELL_PADDING + questionRow.textBlockHeight + (hasText ? STEM_TEXT_IMAGE_GAP : 4);
       const dims = measureImageDims(imagePath, tableWidth - CELL_PADDING * 2 - 20, QUESTION_IMAGE_MAX.height);
       if (dims) doc.image(imagePath, tableX + CELL_PADDING + 20, bodyY, { width: dims.width, height: dims.height });
     }

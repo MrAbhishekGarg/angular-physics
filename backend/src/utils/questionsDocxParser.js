@@ -1,6 +1,5 @@
-import { loadDocxParagraphs, stripLeadingChars } from './docxStructureParser.js';
-import { renderFragmentsToImages, findSoffice } from './docxFragmentRenderer.js';
-import { saveQuestionImage } from './questionImageStorage.js';
+import { loadDocxParagraphs } from './docxStructureParser.js';
+import { loadRelationships, extractParagraphImage } from './docxEmbeddedImageExtractor.js';
 import { ApiError } from './ApiError.js';
 
 /**
@@ -49,13 +48,13 @@ import { ApiError } from './ApiError.js';
  * Mongoose silently strips it back out at insert time for the plain
  * docx-only flow.
  *
- * The question stem and every option are ALSO rendered as faithful images
- * straight from their original Word paragraph (fonts, symbols, MathType
- * equations, diagrams — whatever was actually in the document), via
- * docxFragmentRenderer.js. The extracted text above still drives grading
- * (Answer:/Marks:/etc are always plain, unambiguous text — no reason to
- * image-ify those) and serves as a fallback/searchable label if rendering
- * is unavailable.
+ * When a stem or option paragraph genuinely carries an embedded picture or
+ * legacy equation object (MathType, etc. — anything a plain <w:t> text
+ * extraction can't represent), its imageUrl is ALSO populated alongside the
+ * extracted text (never instead of it — see docxEmbeddedImageExtractor.js).
+ * Most paragraphs are plain text and get no imageUrl at all. The extracted
+ * text always drives grading regardless (Answer:/Marks:/etc are always
+ * plain, unambiguous text).
  */
 
 const QUESTION_START = /^Q(\d+)[.)]/i;
@@ -110,42 +109,6 @@ function consumeLeadingTags(text) {
   }
 
   return { rest, explicitType, conceptCodes };
-}
-
-/**
- * How many leading characters of the paragraph's raw text are "Q1. [type]
- * [CC:code]" or "A) " syntax that must NOT appear in the rendered image —
- * the UI already shows the question number / option letter itself, and
- * these tags are parser metadata, not question content.
- */
-function computeStemPrefixLength(rawText) {
-  let consumed = 0;
-  let rest = rawText;
-
-  const leadingWs = rest.length - rest.trimStart().length;
-  consumed += leadingWs;
-  rest = rest.slice(leadingWs);
-
-  const qMatch = QUESTION_START.exec(rest);
-  if (!qMatch) return 0;
-  consumed += qMatch[0].length;
-  rest = rest.slice(qMatch[0].length);
-
-  const wsAfterQ = rest.length - rest.trimStart().length;
-  consumed += wsAfterQ;
-  rest = rest.slice(wsAfterQ);
-
-  const { rest: afterTags } = consumeLeadingTags(rest);
-  consumed += rest.length - afterTags.length;
-
-  return consumed;
-}
-
-function computeOptionPrefixLength(rawText) {
-  const leadingWs = rawText.length - rawText.trimStart().length;
-  const match = OPTION_LINE.exec(rawText.slice(leadingWs));
-  if (!match) return 0;
-  return leadingWs + (match[0].length - match[2].length);
 }
 
 function splitIntoBlocks(paragraphs) {
@@ -209,7 +172,6 @@ function classifyBlock(block, blockNumber, { requireAnswer = true } = {}) {
         paragraph: p,
         letter: optMatch[1],
         text: optMatch[2].trim(),
-        prefixLength: computeOptionPrefixLength(p.text),
       });
     } else if (!sawFieldOrOption) {
       stemParagraphs.push(p);
@@ -220,11 +182,9 @@ function classifyBlock(block, blockNumber, { requireAnswer = true } = {}) {
   if (requireAnswer && !fields.answerRaw) return { error: `Question ${blockNumber}: missing "Answer:" line` };
 
   const stemText = [firstLine, ...stemParagraphs.slice(1).map((p) => p.text.trim())].join(' ');
-  const stemPrefixLength = computeStemPrefixLength(paragraphs[0].text);
 
   return {
     stemParagraphs,
-    stemPrefixLength,
     optionParagraphs,
     fields,
     explicitType,
@@ -235,7 +195,7 @@ function classifyBlock(block, blockNumber, { requireAnswer = true } = {}) {
 }
 
 function buildQuestion(classified, blockNumber, conceptCodeMap, { requireAnswer = true } = {}) {
-  const { stemParagraphs, stemPrefixLength, optionParagraphs, fields, explicitType, conceptCodes, stemText, questionNumber } = classified;
+  const { stemParagraphs, optionParagraphs, fields, explicitType, conceptCodes, stemText, questionNumber } = classified;
   const options = optionParagraphs.map((o) => o.text);
   const hasAnswer = fields.answerRaw != null;
 
@@ -280,7 +240,6 @@ function buildQuestion(classified, blockNumber, conceptCodeMap, { requireAnswer 
       },
       questionNumber,
       stemParagraphs,
-      stemPrefixLength,
       optionParagraphs: [],
       conceptWarnings,
     };
@@ -314,16 +273,15 @@ function buildQuestion(classified, blockNumber, conceptCodeMap, { requireAnswer 
     },
     questionNumber,
     stemParagraphs,
-    stemPrefixLength,
     optionParagraphs,
     conceptWarnings,
   };
 }
 
 export async function parseQuestionsFromDocxBuffer(buffer, conceptCodeMap = new Map(), { requireInlineAnswer = true } = {}) {
-  let zip, documentRootNode, paragraphs;
+  let zip, paragraphs;
   try {
-    ({ zip, documentRootNode, paragraphs } = await loadDocxParagraphs(buffer));
+    ({ zip, paragraphs } = await loadDocxParagraphs(buffer));
   } catch {
     throw new ApiError(400, 'Could not read the Word document — make sure it\'s a valid, unprotected .docx file (not .doc, and not password-protected).');
   }
@@ -351,38 +309,23 @@ export async function parseQuestionsFromDocxBuffer(buffer, conceptCodeMap = new 
     built.push(result);
   });
 
-  const sofficeAvailable = await findSoffice();
-  if (!sofficeAvailable) {
-    warnings.unshift(
-      'Image rendering is unavailable on the server right now — questions were parsed as plain text, so equations/symbols/diagrams may not display correctly.'
-    );
-  } else {
-    const fragments = [];
-    built.forEach((b, qi) => {
-      // Only the first stem paragraph carries the "Q1. [type]" prefix —
-      // any wrapped continuation paragraphs are used as-is.
-      const [firstStem, ...restStem] = b.stemParagraphs;
-      const strippedFirstStem = stripLeadingChars(firstStem.node, b.stemPrefixLength);
-      fragments.push({ key: `q${qi}-stem`, paragraphNodes: [strippedFirstStem, ...restStem.map((p) => p.node)] });
+  const relsMap = await loadRelationships(zip);
 
-      b.optionParagraphs.forEach((o, oi) => {
-        const strippedOption = stripLeadingChars(o.paragraph.node, o.prefixLength);
-        fragments.push({ key: `q${qi}-opt${oi}`, paragraphNodes: [strippedOption] });
-      });
-    });
+  for (const [qi, b] of built.entries()) {
+    const label = `Question ${qi + 1}`;
+    const stemWithImage = b.stemParagraphs.find((p) => p.hasImage);
+    if (stemWithImage) {
+      // eslint-disable-next-line no-await-in-loop
+      const url = await extractParagraphImage(stemWithImage.node, zip, relsMap, warnings, label);
+      if (url) b.question.imageUrl = url;
+    }
 
-    const rendered = await renderFragmentsToImages(zip, documentRootNode, fragments);
-
-    built.forEach((b, qi) => {
-      const stemImage = rendered.get(`q${qi}-stem`);
-      if (stemImage) b.question.imageUrl = saveQuestionImage(stemImage, 'image/png');
-      else warnings.push(`Question ${qi + 1}: could not render an image for the question text — showing plain text instead.`);
-
-      b.optionParagraphs.forEach((o, oi) => {
-        const optImage = rendered.get(`q${qi}-opt${oi}`);
-        if (optImage) b.question.options[oi].imageUrl = saveQuestionImage(optImage, 'image/png');
-      });
-    });
+    for (const [oi, o] of b.optionParagraphs.entries()) {
+      if (!o.paragraph.hasImage) continue;
+      // eslint-disable-next-line no-await-in-loop
+      const url = await extractParagraphImage(o.paragraph.node, zip, relsMap, warnings, `${label}, option ${o.letter}`);
+      if (url) b.question.options[oi].imageUrl = url;
+    }
   }
 
   return { questions: built.map((b) => ({ ...b.question, questionNumber: b.questionNumber })), warnings };

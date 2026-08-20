@@ -309,11 +309,8 @@ export default function TestAttempt() {
             </span>
           </div>
 
-          {question.imageUrl ? (
-            <img src={assetUrl(question.imageUrl)} alt={question.text} className={styles.stemImage} />
-          ) : (
-            <p className={styles.stemText}>{question.text}</p>
-          )}
+          {question.text?.trim() && <p className={styles.stemText}>{question.text}</p>}
+          {question.imageUrl && <img src={assetUrl(question.imageUrl)} alt={question.text} className={styles.stemImage} />}
 
           {question.type === 'numerical' ? (
             <input
@@ -347,11 +344,8 @@ export default function TestAttempt() {
                             checked={isSelected}
                             onChange={() => toggleOption(optIndex)}
                           />
-                          {opt.imageUrl ? (
-                            <img src={assetUrl(opt.imageUrl)} alt={opt.text} className={styles.optionImage} />
-                          ) : (
-                            opt.text
-                          )}
+                          {opt.text?.trim() && opt.text}
+                          {opt.imageUrl && <img src={assetUrl(opt.imageUrl)} alt={opt.text} className={styles.optionImage} />}
                         </label>
                       </td>
                       <td className={styles.optionCheckCell}>

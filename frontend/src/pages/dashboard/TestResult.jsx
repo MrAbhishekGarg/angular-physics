@@ -130,11 +130,8 @@ export default function TestResult() {
                     </span>
                   </div>
 
-                  {q.imageUrl ? (
-                    <img src={assetUrl(q.imageUrl)} alt={q.text} className={styles.stemImage} />
-                  ) : (
-                    <p className={styles.stemText}>{q.text}</p>
-                  )}
+                  {q.text?.trim() && <p className={styles.stemText}>{q.text}</p>}
+                  {q.imageUrl && <img src={assetUrl(q.imageUrl)} alt={q.text} className={styles.stemImage} />}
 
                   {q.type === 'numerical' ? (
                     <div className={styles.numericAnswer}>
@@ -165,11 +162,8 @@ export default function TestResult() {
                                 <span className={`${styles.optionLetter} ${styles[`letter${optIndex % 6}`]}`}>
                                   {String.fromCharCode(65 + optIndex)}
                                 </span>
-                                {opt.imageUrl ? (
-                                  <img src={assetUrl(opt.imageUrl)} alt={opt.text} className={styles.optionImage} />
-                                ) : (
-                                  <span className={styles.optionText}>{opt.text}</span>
-                                )}
+                                {opt.text?.trim() && <span className={styles.optionText}>{opt.text}</span>}
+                                {opt.imageUrl && <img src={assetUrl(opt.imageUrl)} alt={opt.text} className={styles.optionImage} />}
                               </td>
                               <td className={styles.optionCenterCell}>
                                 {isSelected ? <span className={styles.optionIcon}>●</span> : '—'}

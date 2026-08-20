@@ -47,11 +47,8 @@ export default function QuestionOfDay() {
       <Container>
         <SectionHeading eyebrow="Daily Challenge" title="Question of the Day" subtitle="Test yourself — the answer reveals right after you pick." />
         <Card className={styles.card}>
-          {question.imageUrl ? (
-            <img src={assetUrl(question.imageUrl)} alt={question.text} className={styles.stemImage} />
-          ) : (
-            <p className={styles.stemText}>{question.text}</p>
-          )}
+          {question.text?.trim() && <p className={styles.stemText}>{question.text}</p>}
+          {question.imageUrl && <img src={assetUrl(question.imageUrl)} alt={question.text} className={styles.stemImage} />}
 
           {isNumerical ? (
             <div className={styles.numericRow}>
@@ -86,7 +83,8 @@ export default function QuestionOfDay() {
                     disabled={Boolean(result) || busy}
                     onClick={() => toggleOption(index)}
                   >
-                    {opt.imageUrl ? <img src={assetUrl(opt.imageUrl)} alt={opt.text} className={styles.optionImage} /> : opt.text}
+                    {opt.text?.trim() && opt.text}
+                    {opt.imageUrl && <img src={assetUrl(opt.imageUrl)} alt={opt.text} className={styles.optionImage} />}
                   </button>
                 );
               })}

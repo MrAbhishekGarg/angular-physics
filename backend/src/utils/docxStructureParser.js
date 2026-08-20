@@ -5,11 +5,10 @@ import xpath from 'xpath';
 /**
  * Loads a .docx's raw XML rather than using a plain-text extractor — needed
  * so later stages can (a) classify each paragraph's role (question stem /
- * option / structured field) from its text, and (b) re-serialize the exact
- * original paragraph node into a standalone mini-document for faithful
- * image rendering (see docxFragmentRenderer.js) — preserving whatever
- * fonts, Symbol-font character tricks, or embedded MathType/diagram objects
- * that paragraph contains, since a plain-text pass loses all of that.
+ * option / structured field) from its text, and (b) locate/extract whatever
+ * embedded picture or legacy equation-object preview (MathType, etc.) a
+ * paragraph carries — see docxEmbeddedImageExtractor.js — since a plain-text
+ * pass loses all of that.
  */
 export const NS = {
   w: 'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
@@ -31,37 +30,9 @@ function paragraphHasImage(pNode) {
 }
 
 /**
- * Returns a deep clone of pNode with the first `charCount` characters of its
- * text content removed — e.g. stripping "Q1. [mcq-single] " or "B) " before
- * rendering, so parser syntax and the option letter (already shown by the
- * surrounding UI) don't get baked into the rendered image itself. Operates
- * on <w:t> nodes in document order, clearing/truncating as many as the
- * character budget spans, since Word commonly splits what looks like one
- * run of text across several <w:r> elements.
- */
-export function stripLeadingChars(pNode, charCount) {
-  const clone = pNode.cloneNode(true);
-  if (charCount <= 0) return clone;
-
-  let remaining = charCount;
-  for (const textNode of select('.//w:t', clone)) {
-    if (remaining <= 0) break;
-    const text = textNode.textContent;
-    if (text.length <= remaining) {
-      textNode.textContent = '';
-      remaining -= text.length;
-    } else {
-      textNode.textContent = text.slice(remaining);
-      remaining = 0;
-    }
-  }
-  return clone;
-}
-
-/**
- * Returns { zip, documentRootNode, paragraphs } where paragraphs is an
- * ordered array of { node, text, hasImage } — node is the live DOM element
- * for that <w:p>, reusable later to build a fragment document.
+ * Returns { zip, paragraphs } where paragraphs is an ordered array of
+ * { node, text, hasImage } — node is the live DOM element for that <w:p>,
+ * reusable later to locate an embedded picture/equation preview.
  */
 export async function loadDocxParagraphs(buffer) {
   const zip = await JSZip.loadAsync(buffer);
@@ -70,7 +41,6 @@ export async function loadDocxParagraphs(buffer) {
 
   const documentXml = await documentXmlFile.async('string');
   const doc = new DOMParser().parseFromString(documentXml, 'text/xml');
-  const documentRootNode = doc.documentElement;
 
   const paragraphs = select('//w:p', doc).map((node) => ({
     node,
@@ -78,5 +48,5 @@ export async function loadDocxParagraphs(buffer) {
     hasImage: paragraphHasImage(node),
   }));
 
-  return { zip, documentRootNode, paragraphs };
+  return { zip, paragraphs };
 }
