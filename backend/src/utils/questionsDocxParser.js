@@ -59,7 +59,20 @@ import { ApiError } from './ApiError.js';
  */
 
 const QUESTION_START = /^Q(\d+)[.)]/i;
-const OPTION_LINE = /^([A-Z])[.)]\s*(.+)$/;
+// Case-insensitive — a mentor's source doc may use "a) / b) / c)" as easily
+// as "A) / B) / C)"; the actual letter typed doesn't affect grading (the
+// option's position in document order is what maps to an Answer: letter or
+// an Excel-mapped answer, both of which are already uppercase-normalized
+// before comparison), so accepting either case here just avoids silently
+// losing every option in a lowercase-lettered document.
+// (.*) not (.+) — an option whose content is entirely a Word equation
+// object (MathType/OMML, no literal characters) has nothing after the
+// letter for <w:t> extraction to see. It must still count as an option
+// slot (empty text now, filled in by the rendered image once available)
+// or a later option's letter silently shifts down and starts pointing at
+// the wrong position — e.g. losing "c)" here would make an Excel/inline
+// answer of "d" resolve to the actual 3rd option instead of the 4th.
+const OPTION_LINE = /^([A-Za-z])[.)]\s*(.*)$/;
 const TYPE_TAG = /^\[(mcq-single|mcq-multiple|numerical)\]\s*/i;
 // Accepts one or more codes per tag ("[CC:A,B]") AND repeated tags
 // ("[CC:A] [CC:B]") — a question can carry more than one Concept Code when
