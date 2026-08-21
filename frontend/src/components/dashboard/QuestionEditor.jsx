@@ -63,8 +63,7 @@ export default function QuestionEditor({ initialQuestion, examType: defaultExamT
 
   const update = (patch) => setQuestion((q) => ({ ...q, ...patch }));
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
+  const uploadImageFile = async (file) => {
     if (!file) return;
     setImageBusy(true);
     setImageError('');
@@ -317,9 +316,7 @@ export default function QuestionEditor({ initialQuestion, examType: defaultExamT
               </Button>
             </div>
           )}
-          <input type="file" accept="image/jpeg,image/png,image/webp" disabled={imageBusy} onChange={handleImageUpload} />
-          {imageBusy && <span style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}> Uploading…</span>}
-          {imageError && <p className={formStyles.errorMsg}>{imageError}</p>}
+          <PasteImageZone onFile={uploadImageFile} busy={imageBusy} error={imageError} />
         </div>
 
         {question.type === 'numerical' ? (
@@ -385,8 +382,7 @@ function OptionRow({ option, checked, inputType, name, onToggleCorrect, onChange
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
+  const uploadFile = async (file) => {
     if (!file) return;
     setBusy(true);
     setError('');
@@ -423,13 +419,65 @@ function OptionRow({ option, checked, inputType, name, onToggleCorrect, onChange
             placeholder={placeholder}
           />
         )}
-        <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={handleImageUpload} />
-        {busy && <span style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}> Uploading…</span>}
-        {error && <p className={formStyles.errorMsg}>{error}</p>}
+        <PasteImageZone onFile={uploadFile} busy={busy} error={error} compact />
       </div>
       <Button type="button" size="sm" variant="ghost" onClick={onRemove}>
         ✕
       </Button>
+    </div>
+  );
+}
+
+/**
+ * Lets a mentor either paste a screenshot straight from the clipboard
+ * (Ctrl+V after copying a cropped equation/diagram/table screenshot) or fall
+ * back to a traditional file picker — both land on the same upload path, so
+ * the resulting image is stored at whatever resolution the mentor's own
+ * screenshot/file already has (no server-side resize/compression happens),
+ * which is what keeps it clear: crop tightly before copying/choosing it.
+ */
+function PasteImageZone({ onFile, busy, error, compact }) {
+  const [pasteHint, setPasteHint] = useState('');
+
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items || [];
+    const imageItem = [...items].find((item) => item.type.startsWith('image/'));
+    if (imageItem) {
+      e.preventDefault();
+      setPasteHint('');
+      onFile(imageItem.getAsFile());
+    } else {
+      setPasteHint('No image found in clipboard — copy a screenshot first, then click here and paste again.');
+    }
+  };
+
+  return (
+    <div>
+      <div
+        tabIndex={0}
+        onPaste={handlePaste}
+        onFocus={() => setPasteHint('')}
+        style={{
+          border: '1.5px dashed var(--ap-border)',
+          borderRadius: 6,
+          padding: compact ? '0.35rem 0.5rem' : '0.5rem 0.6rem',
+          fontSize: compact ? '0.72rem' : '0.78rem',
+          color: 'var(--ap-text-muted)',
+          marginBottom: '0.3rem',
+          cursor: 'text',
+        }}
+      >
+        Click here, then press Ctrl+V to paste a screenshot — crop it tightly around just this content first for the clearest result.
+      </div>
+      {pasteHint && <p style={{ fontSize: '0.75rem', color: 'var(--ap-warning)', marginBottom: '0.3rem' }}>{pasteHint}</p>}
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        disabled={busy}
+        onChange={(e) => e.target.files[0] && onFile(e.target.files[0])}
+      />
+      {busy && <span style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}> Uploading…</span>}
+      {error && <p className={formStyles.errorMsg}>{error}</p>}
     </div>
   );
 }

@@ -70,6 +70,8 @@ export default function QuestionBank() {
   const [showCreate, setShowCreate] = useState(false);
   const [qotdId, setQotdId] = useState(null);
   const [qotdBusyId, setQotdBusyId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const [bulkForm, setBulkForm] = useState({
     examType: EXAM_TRACKS[0].key,
@@ -165,6 +167,28 @@ export default function QuestionBank() {
       setQotdId(question._id);
     } finally {
       setQotdBusyId(null);
+    }
+  };
+
+  const toggleSelected = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Delete ${selectedIds.size} selected question(s) from the bank? This can't be undone.`)) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all([...selectedIds].map((id) => questionService.remove(id)));
+      setSelectedIds(new Set());
+      await refetch();
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -476,13 +500,20 @@ export default function QuestionBank() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--ap-space-sm)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--ap-space-sm)', flexWrap: 'wrap', gap: '0.5rem' }}>
               <h2 style={{ color: 'var(--ap-primary)', margin: 0 }}>{questions ? `${questions.length} question(s)` : 'Questions'}</h2>
-              {canCreate && (
-                <Button size="sm" onClick={() => setShowCreate((v) => !v)}>
-                  {showCreate ? 'Close' : '+ New Question'}
-                </Button>
-              )}
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {canEdit && selectedIds.size > 0 && (
+                  <Button size="sm" variant="danger" disabled={bulkDeleting} onClick={handleBulkDelete}>
+                    {bulkDeleting ? 'Deleting…' : `Delete Selected (${selectedIds.size})`}
+                  </Button>
+                )}
+                {canCreate && (
+                  <Button size="sm" onClick={() => setShowCreate((v) => !v)}>
+                    {showCreate ? 'Close' : '+ New Question'}
+                  </Button>
+                )}
+              </div>
             </div>
 
             {canCreate && showCreate && (
@@ -510,7 +541,18 @@ export default function QuestionBank() {
                 ) : (
                   <div key={q._id} className={formStyles.card}>
                     <div className={formStyles.cardHeader}>
-                      <strong>{q.text.slice(0, 100)}</strong>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                        {canEdit && (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(q._id)}
+                            onChange={() => toggleSelected(q._id)}
+                            style={{ marginTop: '0.25rem' }}
+                            aria-label="Select question"
+                          />
+                        )}
+                        <strong>{q.text.slice(0, 100)}</strong>
+                      </div>
                       <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                         {q.isPYQ && <Badge tone="highlight">PYQ{q.pyqYear ? ` ${q.pyqYear}` : ''}</Badge>}
                         <Badge tone={DIFFICULTY_TONE[q.difficulty]}>{q.difficulty}</Badge>
