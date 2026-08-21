@@ -24,7 +24,16 @@ const optionSchema = new mongoose.Schema({ text: { type: String, default: '' }, 
 const questionSchema = new mongoose.Schema(
   {
     type: { type: String, enum: ['mcq-single', 'mcq-multiple', 'numerical'], required: true },
-    text: { type: String, required: true },
+    // Required only when there's no imageUrl either — a screenshot-only
+    // question (see bulkCreateFromScreenshotsAndExcel) legitimately has no
+    // text at all, and Mongoose's default `required` check for a String
+    // path rejects an empty string the same as it rejects undefined, so a
+    // plain `required: true` here would silently fail every such question.
+    text: {
+      type: String,
+      required: [function () { return !this.imageUrl; }, 'text is required when the question has no image'],
+      default: '',
+    },
     imageUrl: { type: String },
     options: { type: [optionSchema], default: [] },
     correctOptionIndexes: { type: [Number], default: [] },

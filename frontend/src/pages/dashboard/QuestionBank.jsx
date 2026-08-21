@@ -106,6 +106,22 @@ export default function QuestionBank() {
   const [mappedWarnings, setMappedWarnings] = useState([]);
   const [mappedFailed, setMappedFailed] = useState(false);
 
+  const [screenshotForm, setScreenshotForm] = useState({
+    examType: EXAM_TRACKS[0].key,
+    chapter: '',
+    topic: '',
+    difficulty: 'medium',
+    author: '',
+    subject: '',
+    tags: '',
+  });
+  const [screenshotFiles, setScreenshotFiles] = useState([]);
+  const [screenshotExcelFile, setScreenshotExcelFile] = useState(null);
+  const [screenshotBusy, setScreenshotBusy] = useState(false);
+  const [screenshotMessage, setScreenshotMessage] = useState('');
+  const [screenshotWarnings, setScreenshotWarnings] = useState([]);
+  const [screenshotFailed, setScreenshotFailed] = useState(false);
+
   const handleFilterChange = (e) => setFilters((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const handleMappedUpload = async () => {
@@ -126,6 +142,31 @@ export default function QuestionBank() {
       setMappedFailed(true);
     } finally {
       setMappedBusy(false);
+    }
+  };
+
+  const handleScreenshotUpload = async () => {
+    if (screenshotFiles.length === 0 || !screenshotExcelFile) return;
+    setScreenshotBusy(true);
+    setScreenshotMessage('');
+    setScreenshotWarnings([]);
+    setScreenshotFailed(false);
+    try {
+      const { questions: created, warnings } = await questionService.bulkUploadScreenshots(
+        screenshotFiles,
+        screenshotExcelFile,
+        screenshotForm
+      );
+      setScreenshotMessage(`Added ${created.length} question${created.length === 1 ? '' : 's'} to the bank.`);
+      setScreenshotWarnings(warnings);
+      setScreenshotFiles([]);
+      setScreenshotExcelFile(null);
+      await refetch();
+    } catch (err) {
+      setScreenshotWarnings([err.message]);
+      setScreenshotFailed(true);
+    } finally {
+      setScreenshotBusy(false);
     }
   };
 
@@ -429,6 +470,127 @@ export default function QuestionBank() {
                   </Button>
                 </div>
                 <UploadFeedback message={mappedMessage} warnings={mappedWarnings} failed={mappedFailed} />
+              </div>
+            </div>
+            )}
+
+            {canCreate && (
+            <div className={formStyles.card}>
+              <strong>Bulk Upload — Screenshots + Excel Mapping</strong>
+              <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
+                For when equations or symbols typed in Word don't extract correctly (a special font maps a keystroke
+                to the wrong character, and there's no way to tell from the file). Screenshot each question — the
+                stem/diagram, and every option separately — and upload the images directly; nothing is parsed, so
+                nothing can be misread. Name each file <code>Q1.png</code> for the stem/diagram and{' '}
+                <code>Q1-A.png</code>, <code>Q1-B.png</code>, <code>Q1-C.png</code>, <code>Q1-D.png</code> for
+                options (continue numbering for every question in the batch), then select every image at once. Pair
+                it with the same mapping sheet used above —{' '}
+                <a
+                  href="/templates/mapped-questions-mapping-template.xlsx"
+                  download
+                  style={{ color: 'var(--ap-accent)', fontWeight: 700, textDecoration: 'underline' }}
+                >
+                  download the sample Excel sheet
+                </a>{' '}
+                if you don't already have it open.
+              </p>
+              <div className={formStyles.form}>
+                <div className={formStyles.row}>
+                  <label>
+                    Exam type (fallback — leave blank to keep unmapped unless a row sets one)
+                    <select value={screenshotForm.examType} onChange={(e) => setScreenshotForm((f) => ({ ...f, examType: e.target.value }))}>
+                      <option value="">None</option>
+                      {EXAM_TRACKS.map((t) => (
+                        <option key={t.key} value={t.key}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Difficulty (fallback when a row doesn't set one)
+                    <select value={screenshotForm.difficulty} onChange={(e) => setScreenshotForm((f) => ({ ...f, difficulty: e.target.value }))}>
+                      <option value="easy">Easy</option>
+                      <option value="medium">Medium</option>
+                      <option value="hard">Hard</option>
+                    </select>
+                  </label>
+                </div>
+                <div className={formStyles.row}>
+                  <label>
+                    Chapter (fallback)
+                    <input
+                      value={screenshotForm.chapter}
+                      onChange={(e) => setScreenshotForm((f) => ({ ...f, chapter: e.target.value }))}
+                      placeholder="used when a row doesn't set one"
+                    />
+                  </label>
+                  <label>
+                    Topic (fallback)
+                    <input
+                      value={screenshotForm.topic}
+                      onChange={(e) => setScreenshotForm((f) => ({ ...f, topic: e.target.value }))}
+                      placeholder="used when a row doesn't set one"
+                    />
+                  </label>
+                </div>
+                <div className={formStyles.row}>
+                  <label>
+                    Author / Source (fallback)
+                    <input
+                      value={screenshotForm.author}
+                      onChange={(e) => setScreenshotForm((f) => ({ ...f, author: e.target.value }))}
+                      placeholder="used when a row doesn't set its own"
+                    />
+                  </label>
+                  <label>
+                    Subject (fallback)
+                    <input
+                      value={screenshotForm.subject}
+                      onChange={(e) => setScreenshotForm((f) => ({ ...f, subject: e.target.value }))}
+                      placeholder="used when a row doesn't set its own"
+                    />
+                  </label>
+                </div>
+                <label>
+                  Tags (comma-separated, fallback)
+                  <input
+                    value={screenshotForm.tags}
+                    onChange={(e) => setScreenshotForm((f) => ({ ...f, tags: e.target.value }))}
+                    placeholder="used when a row doesn't set its own"
+                  />
+                </label>
+                <div className={formStyles.row}>
+                  <label>
+                    Screenshots (Q1.png, Q1-A.png, Q1-B.png, ...)
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      multiple
+                      onChange={(e) => setScreenshotFiles([...e.target.files])}
+                    />
+                    {screenshotFiles.length > 0 && (
+                      <span style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)' }}>
+                        {screenshotFiles.length} file{screenshotFiles.length === 1 ? '' : 's'} selected
+                      </span>
+                    )}
+                  </label>
+                  <label>
+                    Excel sheet (mapping)
+                    <input type="file" accept=".xlsx,.xls" onChange={(e) => setScreenshotExcelFile(e.target.files[0])} />
+                  </label>
+                </div>
+                <div className={formStyles.actions}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={screenshotFiles.length === 0 || !screenshotExcelFile || screenshotBusy}
+                    onClick={handleScreenshotUpload}
+                  >
+                    {screenshotBusy ? 'Uploading…' : 'Upload & Add to Bank'}
+                  </Button>
+                </div>
+                <UploadFeedback message={screenshotMessage} warnings={screenshotWarnings} failed={screenshotFailed} />
               </div>
             </div>
             )}

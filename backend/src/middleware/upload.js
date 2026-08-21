@@ -290,9 +290,14 @@ const questionImageStorage = multer.diskStorage({
   },
 });
 
+// 8MB rather than the usual 5MB — a screenshot of dense equation/diagram
+// content at high DPI runs larger than a typical small icon-style image,
+// and clarity here matters more than most other image uploads in the app.
+const QUESTION_IMAGE_MAX_SIZE = 8 * 1024 * 1024;
+
 const questionImageUploader = multer({
   storage: questionImageStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: QUESTION_IMAGE_MAX_SIZE },
   fileFilter: (req, file, cb) => {
     if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
       return cb(new ApiError(400, 'Only JPG, PNG, or WEBP images are allowed'));
@@ -305,8 +310,51 @@ export function uploadQuestionImage(req, res, next) {
   questionImageUploader.single('image')(req, res, (err) => {
     if (!err) return next();
     if (err instanceof ApiError) return next(err);
-    if (err.code === 'LIMIT_FILE_SIZE') return next(new ApiError(400, 'Image must be 5MB or smaller'));
+    if (err.code === 'LIMIT_FILE_SIZE') return next(new ApiError(400, 'Image must be 8MB or smaller'));
     next(new ApiError(400, err.message || 'Image upload failed'));
+  });
+}
+
+// Bulk "screenshots + Excel mapping" upload — every screenshot (stem and
+// option images together, named "Q1.png"/"Q1-A.png"/etc.) plus the mapping
+// sheet in one request. Memory storage (not disk, unlike the single-image
+// uploader above) so the controller can save each image via the same
+// buffer-based saveQuestionImage() helper the docx pipeline already uses,
+// and so an unrelated 'excel' field can coexist in the same multer instance
+// — multer can't mix storage engines per-field within one instance.
+const questionScreenshotBatchUploader = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: QUESTION_IMAGE_MAX_SIZE, files: 200 },
+  fileFilter: (req, file, cb) => {
+    if (file.fieldname === 'excel') {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const isExcel = EXCEL_MIME_TYPES.has(file.mimetype) || ext === '.xlsx' || ext === '.xls';
+      if (!isExcel) return cb(new ApiError(400, 'The mapping sheet must be a .xlsx or .xls file'));
+    } else if (file.fieldname === 'images') {
+      if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+        return cb(new ApiError(400, `"${file.originalname}": only JPG, PNG, or WEBP images are allowed`));
+      }
+    } else {
+      return cb(new ApiError(400, `Unexpected file field "${file.fieldname}"`));
+    }
+    cb(null, true);
+  },
+});
+
+export function uploadQuestionScreenshotBatch(req, res, next) {
+  questionScreenshotBatchUploader.fields([
+    { name: 'images', maxCount: 200 },
+    { name: 'excel', maxCount: 1 },
+  ])(req, res, (err) => {
+    if (!err) {
+      if (!req.files?.images?.length) return next(new ApiError(400, 'At least one screenshot image is required'));
+      if (!req.files?.excel?.[0]) return next(new ApiError(400, 'An .xlsx/.xls mapping sheet is required'));
+      return next();
+    }
+    if (err instanceof ApiError) return next(err);
+    if (err.code === 'LIMIT_FILE_SIZE') return next(new ApiError(400, 'Each image must be 8MB or smaller'));
+    if (err.code === 'LIMIT_FILE_COUNT') return next(new ApiError(400, 'Too many files in one batch (max 200)'));
+    next(new ApiError(400, err.message || 'File upload failed'));
   });
 }
 

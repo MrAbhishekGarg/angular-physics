@@ -8,7 +8,7 @@ import { UPLOADS_ROOT } from '../middleware/upload.js';
 const QUESTION_IMAGES_DIR = path.join(UPLOADS_ROOT, 'question-images');
 fs.mkdirSync(QUESTION_IMAGES_DIR, { recursive: true });
 
-const EXT_BY_MIME = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/bmp': 'bmp' };
+const EXT_BY_MIME = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'image/bmp': 'bmp' };
 
 export function saveQuestionImage(buffer, mimeType) {
   const ext = EXT_BY_MIME[mimeType] || 'png';

@@ -2,6 +2,7 @@ import Question from '../models/Question.js';
 import { ApiError } from '../utils/ApiError.js';
 import { parseQuestionsFromDocxBuffer } from '../utils/questionsDocxParser.js';
 import { parseQuestionMetadataFromExcelBuffer } from '../utils/questionMetadataExcelParser.js';
+import { saveQuestionImage } from '../utils/questionImageStorage.js';
 import { getConceptCodeMap } from './conceptCode.service.js';
 
 export async function getAllQuestions({ examType, chapter, topic, difficulty, search, isPYQ, author, tag, subject, conceptCode } = {}) {
@@ -129,33 +130,21 @@ export async function bulkCreateFromDocx(buffer, { examType, chapter, topic, dif
 }
 
 /**
- * The "type in Word, tag in Excel" bulk upload — a Word doc with nothing
- * but question text/options (no inline Answer:/Marks:/[CC:] tags required),
- * paired with an Excel sheet mapping every piece of grading/taxonomy
- * metadata to a question by its literal printed number ("Q7." -> row where
- * Question Number = 7). Lets a mentor type questions freely without
- * worrying about exact tag syntax, then manage answers/concept
- * codes/author/PYQ tagging in a spreadsheet — easier to bulk-edit, sort,
- * and eyeball for consistency across a large batch than inline doc tags.
- *
- * Excel values win over any inline docx tag the mentor typed anyway (a
- * mentor can still write "Answer: A" in the doc as a fallback/reference,
- * but the sheet is treated as the source of truth whenever it specifies a
- * field). A question with no answer from EITHER source is skipped with a
- * warning, same as the docx-only flow's missing-Answer handling.
+ * Merges each "skeleton" question (already carrying whatever text/imageUrl/
+ * inline-answer content its own source produced — a parsed docx paragraph,
+ * or a grouped batch of screenshots, see bulkCreateFromScreenshotsAndExcel)
+ * with its matching Excel row by questionNumber, and inserts the result.
+ * Shared by every "...AndExcel" bulk-upload flow so the actual metadata
+ * merge rules (Excel wins over any inline signal, answer→index mapping,
+ * concept-code resolution, exam-type/chapter/topic/marks/tags/PYQ fallback
+ * chains) live in exactly one place.
  */
-export async function bulkCreateFromDocxAndExcel(docxBuffer, excelBuffer, { examType, chapter, topic, difficulty, author, subject, tags }) {
-  const conceptCodeMap = await getConceptCodeMap();
-  const [{ questions: parsedQuestions, warnings: docxWarnings }, { rowsByNumber, warnings: excelWarnings }] = await Promise.all([
-    parseQuestionsFromDocxBuffer(docxBuffer, conceptCodeMap, { requireInlineAnswer: false }),
-    parseQuestionMetadataFromExcelBuffer(excelBuffer),
-  ]);
-
-  const warnings = [...docxWarnings, ...excelWarnings];
+async function mergeAndInsertQuestions(skeletons, rowsByNumber, conceptCodeMap, { examType, chapter, topic, difficulty, author, subject, tags }) {
+  const warnings = [];
   const toInsert = [];
   const matchedNumbers = new Set();
 
-  parsedQuestions.forEach((q) => {
+  skeletons.forEach((q) => {
     const row = rowsByNumber.get(q.questionNumber);
     if (!row) {
       warnings.push(`Question ${q.questionNumber}: no matching row in the Excel sheet — skipped.`);
@@ -163,10 +152,11 @@ export async function bulkCreateFromDocxAndExcel(docxBuffer, excelBuffer, { exam
     }
     matchedNumbers.add(q.questionNumber);
 
-    // The row's own Concept Code(s) column wins over whatever the doc's
-    // inline [CC:...] tags already resolved — same "Excel is authoritative"
-    // rule as every other field. Only fall back to the doc's own resolution
-    // when the row doesn't list any codes at all.
+    // The row's own Concept Code(s) column wins over whatever the skeleton's
+    // own source already resolved (e.g. a docx's inline [CC:...] tags) —
+    // same "Excel is authoritative" rule as every other field. Only fall
+    // back to the skeleton's own resolution when the row doesn't list any
+    // codes at all.
     let taxonomyOverride;
     let finalConceptCodes;
     if (row.conceptCodes.length > 0) {
@@ -207,7 +197,7 @@ export async function bulkCreateFromDocxAndExcel(docxBuffer, excelBuffer, { exam
 
     const hasAnswer = finalType === 'numerical' ? correctNumericAnswer !== undefined : correctOptionIndexes.length > 0;
     if (!hasAnswer) {
-      warnings.push(`Question ${q.questionNumber}: no answer found in the Word doc or the Excel sheet — skipped.`);
+      warnings.push(`Question ${q.questionNumber}: no answer found — provide one in the Excel sheet.`);
       return;
     }
 
@@ -235,12 +225,12 @@ export async function bulkCreateFromDocxAndExcel(docxBuffer, excelBuffer, { exam
     });
   });
 
-  // Excel rows that never matched a parsed question (typo'd number, or
-  // that question failed to parse from the doc at all) are worth flagging
-  // too, not just silently ignored.
+  // Excel rows that never matched a skeleton question (typo'd number, or
+  // that question failed to parse/group from its source at all) are worth
+  // flagging too, not just silently ignored.
   rowsByNumber.forEach((_row, number) => {
     if (!matchedNumbers.has(number)) {
-      warnings.push(`Excel row for question ${number}: no matching question found in the Word document.`);
+      warnings.push(`Excel row for question ${number}: no matching question found.`);
     }
   });
 
@@ -249,7 +239,147 @@ export async function bulkCreateFromDocxAndExcel(docxBuffer, excelBuffer, { exam
     { ordered: false }
   );
 
-  return { questions: created.map((q) => q.toObject()), warnings };
+  return { created: created.map((q) => q.toObject()), warnings };
+}
+
+/**
+ * The "type in Word, tag in Excel" bulk upload — a Word doc with nothing
+ * but question text/options (no inline Answer:/Marks:/[CC:] tags required),
+ * paired with an Excel sheet mapping every piece of grading/taxonomy
+ * metadata to a question by its literal printed number ("Q7." -> row where
+ * Question Number = 7). Lets a mentor type questions freely without
+ * worrying about exact tag syntax, then manage answers/concept
+ * codes/author/PYQ tagging in a spreadsheet — easier to bulk-edit, sort,
+ * and eyeball for consistency across a large batch than inline doc tags.
+ *
+ * Excel values win over any inline docx tag the mentor typed anyway (a
+ * mentor can still write "Answer: A" in the doc as a fallback/reference,
+ * but the sheet is treated as the source of truth whenever it specifies a
+ * field). A question with no answer from EITHER source is skipped with a
+ * warning, same as the docx-only flow's missing-Answer handling.
+ */
+export async function bulkCreateFromDocxAndExcel(docxBuffer, excelBuffer, batchDefaults) {
+  const conceptCodeMap = await getConceptCodeMap();
+  const [{ questions: parsedQuestions, warnings: docxWarnings }, { rowsByNumber, warnings: excelWarnings }] = await Promise.all([
+    parseQuestionsFromDocxBuffer(docxBuffer, conceptCodeMap, { requireInlineAnswer: false }),
+    parseQuestionMetadataFromExcelBuffer(excelBuffer),
+  ]);
+
+  const { created, warnings: mergeWarnings } = await mergeAndInsertQuestions(parsedQuestions, rowsByNumber, conceptCodeMap, batchDefaults);
+
+  return { questions: created, warnings: [...docxWarnings, ...excelWarnings, ...mergeWarnings] };
+}
+
+const SCREENSHOT_FILENAME_RE = /^Q(\d+)(?:-([A-Za-z]))?\.(png|jpe?g|webp)$/i;
+
+/**
+ * Groups a flat list of uploaded screenshot files by the question number in
+ * their filename — "Q1.png" is the stem/diagram, "Q1-A.png"/"Q1-B.png"/...
+ * are options. Files that don't match the naming convention are warned
+ * about and skipped rather than silently dropped.
+ */
+function groupScreenshotsByQuestion(files, warnings) {
+  const groups = new Map();
+
+  files.forEach((file) => {
+    const match = SCREENSHOT_FILENAME_RE.exec(file.originalname);
+    if (!match) {
+      warnings.push(`File "${file.originalname}": doesn't match the expected naming pattern (Q1.png, Q1-A.png, etc.) — skipped.`);
+      return;
+    }
+    const number = Number(match[1]);
+    const letter = match[2];
+
+    if (!groups.has(number)) groups.set(number, { stem: null, options: new Map() });
+    const group = groups.get(number);
+
+    if (!letter) {
+      if (group.stem) warnings.push(`Question ${number}: more than one stem image uploaded — using the last one.`);
+      group.stem = file;
+    } else {
+      const index = letter.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+      if (group.options.has(index)) warnings.push(`Question ${number}, option ${letter.toUpperCase()}: more than one image uploaded — using the last one.`);
+      group.options.set(index, file);
+    }
+  });
+
+  return groups;
+}
+
+/**
+ * Orders a question's option-image files A, B, C, ... — returns null (after
+ * pushing a warning) if there's a gap, since a gap would silently shift
+ * every later option's index and misalign it against the Excel answer
+ * letter. An empty map (no option files at all) is valid — a numerical
+ * question needs only a stem.
+ */
+function buildContiguousOptions(optionsMap, questionNumber, warnings) {
+  if (optionsMap.size === 0) return [];
+
+  const maxIndex = Math.max(...optionsMap.keys());
+  const options = [];
+  for (let i = 0; i <= maxIndex; i += 1) {
+    if (!optionsMap.has(i)) {
+      warnings.push(
+        `Question ${questionNumber}: option ${String.fromCharCode(65 + i)} is missing an image (found others but not this one) — question skipped.`
+      );
+      return null;
+    }
+    options.push(optionsMap.get(i));
+  }
+  return options;
+}
+
+/**
+ * Bulk upload from mentor-captured screenshots instead of a parsed Word
+ * doc — for when a document's typed symbols/equations extract incorrectly
+ * (e.g. characters typed in a special font that don't map to the Unicode
+ * codepoint the doc actually stores). Each screenshot is stored exactly as
+ * uploaded via saveQuestionImage — no parsing, no font-decoding, no
+ * image-conversion step of any kind, so nothing can be misread. Metadata
+ * (answer, marks, chapter, etc.) comes entirely from the same Excel mapping
+ * sheet the Word+Excel flow uses — reuses mergeAndInsertQuestions, so the
+ * merge rules live in exactly one place.
+ */
+export async function bulkCreateFromScreenshotsAndExcel(imageFiles, excelBuffer, batchDefaults) {
+  const conceptCodeMap = await getConceptCodeMap();
+  const { rowsByNumber, warnings: excelWarnings } = await parseQuestionMetadataFromExcelBuffer(excelBuffer);
+
+  const warnings = [...excelWarnings];
+  const groups = groupScreenshotsByQuestion(imageFiles, warnings);
+  const skeletons = [];
+
+  for (const [number, group] of groups) {
+    if (!group.stem) {
+      warnings.push(`Question ${number}: no stem/question image found (expected "Q${number}.png") — skipped.`);
+      continue;
+    }
+    const optionFiles = buildContiguousOptions(group.options, number, warnings);
+    if (optionFiles === null) continue;
+
+    const imageUrl = saveQuestionImage(group.stem.buffer, group.stem.mimetype);
+    const options = optionFiles.map((file) => ({ text: '', imageUrl: saveQuestionImage(file.buffer, file.mimetype) }));
+
+    skeletons.push({
+      questionNumber: number,
+      type: options.length === 0 ? 'numerical' : 'mcq-single',
+      text: '',
+      imageUrl,
+      options,
+      correctOptionIndexes: [],
+      correctNumericAnswer: undefined,
+      numericTolerance: 0,
+      marks: 4,
+      negativeMarks: 1,
+      chapter: undefined,
+      topic: undefined,
+      conceptCodes: [],
+    });
+  }
+
+  const { created, warnings: mergeWarnings } = await mergeAndInsertQuestions(skeletons, rowsByNumber, conceptCodeMap, batchDefaults);
+
+  return { questions: created, warnings: [...warnings, ...mergeWarnings] };
 }
 
 /**

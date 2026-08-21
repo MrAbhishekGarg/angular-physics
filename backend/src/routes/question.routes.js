@@ -8,6 +8,7 @@ import {
   deleteQuestion,
   bulkUploadQuestions,
   bulkUploadQuestionsMapped,
+  bulkUploadQuestionsScreenshots,
   generateQuestionSet,
   uploadQuestionImage,
 } from '../controllers/question.controller.js';
@@ -15,6 +16,7 @@ import { authenticate, authorize, requireSection, requireAction } from '../middl
 import {
   uploadQuestionsDocx,
   uploadQuestionsDocxAndExcel,
+  uploadQuestionScreenshotBatch,
   uploadQuestionImage as uploadQuestionImageMiddleware,
 } from '../middleware/upload.js';
 import { validateBody } from '../middleware/validate.js';
@@ -42,6 +44,15 @@ router.post(
   requireAction('questions-create'),
   uploadQuestionsDocxAndExcel,
   bulkUploadQuestionsMapped
+);
+router.post(
+  '/bulk-upload-screenshots',
+  authenticate,
+  authorize('mentor'),
+  requireSection('questions'),
+  requireAction('questions-create'),
+  uploadQuestionScreenshotBatch,
+  bulkUploadQuestionsScreenshots
 );
 router.post('/generate-set', authenticate, authorize('mentor'), requireSection('questions'), requireAction('questions-create'), generateQuestionSet);
 router.post(
