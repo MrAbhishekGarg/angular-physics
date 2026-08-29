@@ -2,6 +2,7 @@ import Question from '../models/Question.js';
 import { ApiError } from '../utils/ApiError.js';
 import { parseQuestionsFromDocxBuffer } from '../utils/questionsDocxParser.js';
 import { parseQuestionMetadataFromExcelBuffer } from '../utils/questionMetadataExcelParser.js';
+import { extractExcelScreenshotGroups } from '../utils/excelScreenshotParser.js';
 import { saveQuestionImage } from '../utils/questionImageStorage.js';
 import { getConceptCodeMap } from './conceptCode.service.js';
 
@@ -341,17 +342,19 @@ function buildContiguousOptions(optionsMap, questionNumber, warnings) {
  * sheet the Word+Excel flow uses — reuses mergeAndInsertQuestions, so the
  * merge rules live in exactly one place.
  */
-export async function bulkCreateFromScreenshotsAndExcel(imageFiles, excelBuffer, batchDefaults) {
-  const conceptCodeMap = await getConceptCodeMap();
-  const { rowsByNumber, warnings: excelWarnings } = await parseQuestionMetadataFromExcelBuffer(excelBuffer);
-
-  const warnings = [...excelWarnings];
-  const groups = groupScreenshotsByQuestion(imageFiles, warnings);
+/**
+ * Turns { questionNumber -> { stem, options: Map<letterIndex, {buffer,
+ * mimetype}> } } groups (from either groupScreenshotsByQuestion or
+ * extractExcelScreenshotGroups — same shape) into skeleton questions ready
+ * for mergeAndInsertQuestions, saving each image via saveQuestionImage
+ * along the way. Shared by both screenshot-sourced bulk-upload flows.
+ */
+function buildSkeletonsFromGroups(groups, warnings, missingStemMessage) {
   const skeletons = [];
 
   for (const [number, group] of groups) {
     if (!group.stem) {
-      warnings.push(`Question ${number}: no stem/question image found (expected "Q${number}.png") — skipped.`);
+      warnings.push(missingStemMessage(number));
       continue;
     }
     const optionFiles = buildContiguousOptions(group.options, number, warnings);
@@ -376,6 +379,51 @@ export async function bulkCreateFromScreenshotsAndExcel(imageFiles, excelBuffer,
       conceptCodes: [],
     });
   }
+
+  return skeletons;
+}
+
+export async function bulkCreateFromScreenshotsAndExcel(imageFiles, excelBuffer, batchDefaults) {
+  const conceptCodeMap = await getConceptCodeMap();
+  const { rowsByNumber, warnings: excelWarnings } = await parseQuestionMetadataFromExcelBuffer(excelBuffer);
+
+  const warnings = [...excelWarnings];
+  const groups = groupScreenshotsByQuestion(imageFiles, warnings);
+  const skeletons = buildSkeletonsFromGroups(
+    groups,
+    warnings,
+    (n) => `Question ${n}: no stem/question image found (expected "Q${n}.png") — skipped.`
+  );
+
+  const { created, warnings: mergeWarnings } = await mergeAndInsertQuestions(skeletons, rowsByNumber, conceptCodeMap, batchDefaults);
+
+  return { questions: created, warnings: [...warnings, ...mergeWarnings] };
+}
+
+/**
+ * Bulk upload from a single Excel file with screenshots pasted directly
+ * into "Stem"/"Option <letter>" cells — the whole batch (metadata AND
+ * visual content) lives in one spreadsheet, no separate image files or
+ * Word doc needed. Metadata comes from the same column conventions
+ * parseQuestionMetadataFromExcelBuffer already reads; images come from
+ * extractExcelScreenshotGroups, which independently re-reads the same
+ * buffer for its embedded pictures and their cell positions. Reuses
+ * buildSkeletonsFromGroups/mergeAndInsertQuestions, so this flow adds only
+ * "where do the images come from" — everything else is shared.
+ */
+export async function bulkCreateFromExcelScreenshots(excelBuffer, batchDefaults) {
+  const conceptCodeMap = await getConceptCodeMap();
+  const [{ rowsByNumber, warnings: excelWarnings }, { groups, warnings: imageWarnings }] = await Promise.all([
+    parseQuestionMetadataFromExcelBuffer(excelBuffer),
+    extractExcelScreenshotGroups(excelBuffer),
+  ]);
+
+  const warnings = [...excelWarnings, ...imageWarnings];
+  const skeletons = buildSkeletonsFromGroups(
+    groups,
+    warnings,
+    (n) => `Question ${n}: no stem image found in the "Stem" column — skipped.`
+  );
 
   const { created, warnings: mergeWarnings } = await mergeAndInsertQuestions(skeletons, rowsByNumber, conceptCodeMap, batchDefaults);
 

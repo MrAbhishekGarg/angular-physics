@@ -9,6 +9,7 @@ import {
   bulkUploadQuestions,
   bulkUploadQuestionsMapped,
   bulkUploadQuestionsScreenshots,
+  bulkUploadQuestionsExcelScreenshots,
   generateQuestionSet,
   uploadQuestionImage,
 } from '../controllers/question.controller.js';
@@ -17,6 +18,7 @@ import {
   uploadQuestionsDocx,
   uploadQuestionsDocxAndExcel,
   uploadQuestionScreenshotBatch,
+  uploadQuestionExcelWithImages,
   uploadQuestionImage as uploadQuestionImageMiddleware,
 } from '../middleware/upload.js';
 import { validateBody } from '../middleware/validate.js';
@@ -53,6 +55,15 @@ router.post(
   requireAction('questions-create'),
   uploadQuestionScreenshotBatch,
   bulkUploadQuestionsScreenshots
+);
+router.post(
+  '/bulk-upload-excel-screenshots',
+  authenticate,
+  authorize('mentor'),
+  requireSection('questions'),
+  requireAction('questions-create'),
+  uploadQuestionExcelWithImages,
+  bulkUploadQuestionsExcelScreenshots
 );
 router.post('/generate-set', authenticate, authorize('mentor'), requireSection('questions'), requireAction('questions-create'), generateQuestionSet);
 router.post(

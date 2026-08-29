@@ -12,6 +12,7 @@
     "generate:template": "node src/scripts/generateBulkQuestionsTemplate.js",
     "generate:cc-template": "node src/scripts/generateConceptCodesExcelTemplate.js",
     "generate:mapped-template": "node src/scripts/generateMappedBulkUploadTemplates.js",
+    "generate:screenshot-template": "node src/scripts/generateExcelScreenshotTemplate.js",
     "migrate:question-examtypes": "node src/scripts/migrateQuestionExamTypes.js"
   },
   "dependencies": {

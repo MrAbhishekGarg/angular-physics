@@ -358,6 +358,32 @@ export function uploadQuestionScreenshotBatch(req, res, next) {
   });
 }
 
+// A single Excel file carries both the metadata AND every screenshot,
+// pasted directly into "Stem"/"Option <letter>" cells — memory storage, one
+// bigger size ceiling than the plain mapping sheet since this one file now
+// holds every image for the whole batch embedded inside it.
+const EXCEL_WITH_IMAGES_MAX_SIZE = 25 * 1024 * 1024;
+
+const questionExcelWithImagesUploader = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: EXCEL_WITH_IMAGES_MAX_SIZE },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isExcel = EXCEL_MIME_TYPES.has(file.mimetype) || ext === '.xlsx' || ext === '.xls';
+    if (!isExcel) return cb(new ApiError(400, 'The file must be a .xlsx or .xls file'));
+    cb(null, true);
+  },
+});
+
+export function uploadQuestionExcelWithImages(req, res, next) {
+  questionExcelWithImagesUploader.single('excel')(req, res, (err) => {
+    if (!err) return next();
+    if (err instanceof ApiError) return next(err);
+    if (err.code === 'LIMIT_FILE_SIZE') return next(new ApiError(400, 'The file must be 25MB or smaller'));
+    next(new ApiError(400, err.message || 'File upload failed'));
+  });
+}
+
 const doubtImageStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, DOUBT_IMAGE_UPLOADS_DIR),
   filename: (req, file, cb) => {

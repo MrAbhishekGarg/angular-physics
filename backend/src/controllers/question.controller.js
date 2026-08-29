@@ -109,6 +109,21 @@ export const bulkUploadQuestionsScreenshots = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, { questions, warnings }, { created: questions.length, skipped: warnings.length });
 });
 
+export const bulkUploadQuestionsExcelScreenshots = asyncHandler(async (req, res) => {
+  const { examType, chapter, topic, difficulty, author, subject, tags } = req.body;
+
+  const { questions, warnings } = await questionService.bulkCreateFromExcelScreenshots(req.file.buffer, {
+    examType: examType || '',
+    chapter: chapter || '',
+    topic: topic || '',
+    difficulty: difficulty || 'medium',
+    author: author || '',
+    subject: subject || '',
+    tags: parseTagsField(tags),
+  });
+  return ApiResponse(res, 200, { questions, warnings }, { created: questions.length, skipped: warnings.length });
+});
+
 export const generateQuestionSet = asyncHandler(async (req, res) => {
   const { examType, chapter, topic, difficulty, isPYQ, year, count } = req.body;
   const questions = await questionService.generateQuestionSet({ examType, chapter, topic, difficulty, isPYQ, year, count });

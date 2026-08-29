@@ -53,6 +53,20 @@ export const questionService = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  bulkUploadExcelScreenshots: (excelFile, { examType, chapter, topic, difficulty, author, subject, tags }) => {
+    const formData = new FormData();
+    formData.append('excel', excelFile);
+    if (examType) formData.append('examType', examType);
+    if (chapter) formData.append('chapter', chapter);
+    if (topic) formData.append('topic', topic);
+    if (difficulty) formData.append('difficulty', difficulty);
+    if (author) formData.append('author', author);
+    if (subject) formData.append('subject', subject);
+    if (tags) formData.append('tags', tags);
+    return api.post('/questions/bulk-upload-excel-screenshots', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
   generateSet: (payload) => api.post('/questions/generate-set', payload),
   uploadImage: (file) => {
     const formData = new FormData();

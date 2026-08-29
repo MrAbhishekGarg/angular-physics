@@ -25,6 +25,21 @@ const RASTER_MIME_BY_EXT = {
   '.bmp': 'image/bmp',
 };
 
+/**
+ * Sniffs the first few magic bytes to identify a raster format when the
+ * relationship's own file extension is missing or unrecognized — real Word
+ * always writes a correct extension, so this is a defensive fallback for an
+ * unusual producer, not something expected to fire on typical documents.
+ * Returns a MIME type, or null if nothing recognizable matched.
+ */
+function detectFormatFromBytes(buffer) {
+  if (buffer.length >= 8 && buffer.readUInt32BE(0) === 0x89504e47 && buffer.readUInt32BE(4) === 0x0d0a1a0a) return 'image/png';
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'image/jpeg';
+  if (buffer.length >= 6 && buffer.toString('ascii', 0, 6).match(/^GIF8[79]a$/)) return 'image/gif';
+  if (buffer.length >= 2 && buffer.toString('ascii', 0, 2) === 'BM') return 'image/bmp';
+  return null;
+}
+
 const MAGICK_CANDIDATES = [process.env.IMAGEMAGICK_PATH, 'magick', 'convert'].filter(Boolean);
 let cachedMagickPath;
 
@@ -165,6 +180,15 @@ export async function extractParagraphImage(pNode, zip, relsMap, warnings, label
     }
 
     if (RASTER_MIME_BY_EXT[ext]) {
+      const trimmed = await sharp(raw).trim().png().toBuffer();
+      return saveQuestionImage(trimmed, 'image/png');
+    }
+
+    // The extension didn't match anything expected — real Word always
+    // writes a correct one, so this only fires for an unusual producer.
+    // Sniff the actual bytes before giving up entirely.
+    const sniffed = detectFormatFromBytes(raw);
+    if (sniffed) {
       const trimmed = await sharp(raw).trim().png().toBuffer();
       return saveQuestionImage(trimmed, 'image/png');
     }

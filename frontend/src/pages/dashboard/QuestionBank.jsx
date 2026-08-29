@@ -122,6 +122,21 @@ export default function QuestionBank() {
   const [screenshotWarnings, setScreenshotWarnings] = useState([]);
   const [screenshotFailed, setScreenshotFailed] = useState(false);
 
+  const [excelScreenshotForm, setExcelScreenshotForm] = useState({
+    examType: EXAM_TRACKS[0].key,
+    chapter: '',
+    topic: '',
+    difficulty: 'medium',
+    author: '',
+    subject: '',
+    tags: '',
+  });
+  const [excelScreenshotFile, setExcelScreenshotFile] = useState(null);
+  const [excelScreenshotBusy, setExcelScreenshotBusy] = useState(false);
+  const [excelScreenshotMessage, setExcelScreenshotMessage] = useState('');
+  const [excelScreenshotWarnings, setExcelScreenshotWarnings] = useState([]);
+  const [excelScreenshotFailed, setExcelScreenshotFailed] = useState(false);
+
   const handleFilterChange = (e) => setFilters((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const handleMappedUpload = async () => {
@@ -167,6 +182,29 @@ export default function QuestionBank() {
       setScreenshotFailed(true);
     } finally {
       setScreenshotBusy(false);
+    }
+  };
+
+  const handleExcelScreenshotUpload = async () => {
+    if (!excelScreenshotFile) return;
+    setExcelScreenshotBusy(true);
+    setExcelScreenshotMessage('');
+    setExcelScreenshotWarnings([]);
+    setExcelScreenshotFailed(false);
+    try {
+      const { questions: created, warnings } = await questionService.bulkUploadExcelScreenshots(
+        excelScreenshotFile,
+        excelScreenshotForm
+      );
+      setExcelScreenshotMessage(`Added ${created.length} question${created.length === 1 ? '' : 's'} to the bank.`);
+      setExcelScreenshotWarnings(warnings);
+      setExcelScreenshotFile(null);
+      await refetch();
+    } catch (err) {
+      setExcelScreenshotWarnings([err.message]);
+      setExcelScreenshotFailed(true);
+    } finally {
+      setExcelScreenshotBusy(false);
     }
   };
 
@@ -260,6 +298,9 @@ export default function QuestionBank() {
                 . Write <code>[CC:code]</code> next to any question to map just that question to a specific chapter/topic
                 from your{' '}
                 <Link to="/dashboard/mentor/concept-codes">Concept Code list</Link>, overriding the batch tags below.
+                If an equation or diagram won't type correctly, paste a screenshot of it directly in place of the
+                option/question text (Ctrl+V into the document right after the <code>A)</code>/<code>Q1.</code>
+                prefix) — it's extracted and shown exactly as pasted, nothing typed required.
               </p>
               <div className={formStyles.form}>
                 <div className={formStyles.row}>
@@ -381,7 +422,8 @@ export default function QuestionBank() {
                 >
                   the matching Excel sheet
                 </a>
-                .
+                . Same as above — paste a screenshot directly in place of typed text for anything that won't type
+                correctly.
               </p>
               <div className={formStyles.form}>
                 <div className={formStyles.row}>
@@ -591,6 +633,114 @@ export default function QuestionBank() {
                   </Button>
                 </div>
                 <UploadFeedback message={screenshotMessage} warnings={screenshotWarnings} failed={screenshotFailed} />
+              </div>
+            </div>
+            )}
+
+            {canCreate && (
+            <div className={formStyles.card}>
+              <strong>Bulk Upload — Excel with Pasted Screenshots</strong>
+              <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
+                The simplest option — one file, no separate images. Paste a screenshot directly into the "Stem",
+                "Option A", "Option B", "Option C", "Option D" cells (Ctrl+V after copying), one row per question,
+                and fill in the Answer/Marks/Chapter/etc. columns as usual. Leave the Option columns blank for a
+                numerical question.{' '}
+                <a
+                  href="/templates/screenshot-questions-template.xlsx"
+                  download
+                  style={{ color: 'var(--ap-accent)', fontWeight: 700, textDecoration: 'underline' }}
+                >
+                  Download the sample template
+                </a>
+                .
+              </p>
+              <div className={formStyles.form}>
+                <div className={formStyles.row}>
+                  <label>
+                    Exam type (fallback — leave blank to keep unmapped unless a row sets one)
+                    <select
+                      value={excelScreenshotForm.examType}
+                      onChange={(e) => setExcelScreenshotForm((f) => ({ ...f, examType: e.target.value }))}
+                    >
+                      <option value="">None</option>
+                      {EXAM_TRACKS.map((t) => (
+                        <option key={t.key} value={t.key}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Difficulty (fallback when a row doesn't set one)
+                    <select
+                      value={excelScreenshotForm.difficulty}
+                      onChange={(e) => setExcelScreenshotForm((f) => ({ ...f, difficulty: e.target.value }))}
+                    >
+                      <option value="easy">Easy</option>
+                      <option value="medium">Medium</option>
+                      <option value="hard">Hard</option>
+                    </select>
+                  </label>
+                </div>
+                <div className={formStyles.row}>
+                  <label>
+                    Chapter (fallback)
+                    <input
+                      value={excelScreenshotForm.chapter}
+                      onChange={(e) => setExcelScreenshotForm((f) => ({ ...f, chapter: e.target.value }))}
+                      placeholder="used when a row doesn't set one"
+                    />
+                  </label>
+                  <label>
+                    Topic (fallback)
+                    <input
+                      value={excelScreenshotForm.topic}
+                      onChange={(e) => setExcelScreenshotForm((f) => ({ ...f, topic: e.target.value }))}
+                      placeholder="used when a row doesn't set one"
+                    />
+                  </label>
+                </div>
+                <div className={formStyles.row}>
+                  <label>
+                    Author / Source (fallback)
+                    <input
+                      value={excelScreenshotForm.author}
+                      onChange={(e) => setExcelScreenshotForm((f) => ({ ...f, author: e.target.value }))}
+                      placeholder="used when a row doesn't set its own"
+                    />
+                  </label>
+                  <label>
+                    Subject (fallback)
+                    <input
+                      value={excelScreenshotForm.subject}
+                      onChange={(e) => setExcelScreenshotForm((f) => ({ ...f, subject: e.target.value }))}
+                      placeholder="used when a row doesn't set its own"
+                    />
+                  </label>
+                </div>
+                <label>
+                  Tags (comma-separated, fallback)
+                  <input
+                    value={excelScreenshotForm.tags}
+                    onChange={(e) => setExcelScreenshotForm((f) => ({ ...f, tags: e.target.value }))}
+                    placeholder="used when a row doesn't set its own"
+                  />
+                </label>
+                <label>
+                  Excel sheet (with pasted screenshots)
+                  <input type="file" accept=".xlsx,.xls" onChange={(e) => setExcelScreenshotFile(e.target.files[0])} />
+                </label>
+                <div className={formStyles.actions}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={!excelScreenshotFile || excelScreenshotBusy}
+                    onClick={handleExcelScreenshotUpload}
+                  >
+                    {excelScreenshotBusy ? 'Uploading…' : 'Upload & Add to Bank'}
+                  </Button>
+                </div>
+                <UploadFeedback message={excelScreenshotMessage} warnings={excelScreenshotWarnings} failed={excelScreenshotFailed} />
               </div>
             </div>
             )}
