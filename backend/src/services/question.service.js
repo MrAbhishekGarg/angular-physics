@@ -261,7 +261,7 @@ function buildContiguousOptions(optionsMap, questionNumber, warnings) {
   for (let i = 0; i <= maxIndex; i += 1) {
     if (!optionsMap.has(i)) {
       warnings.push(
-        `Question ${questionNumber}: option ${String.fromCharCode(65 + i)} is missing an image (found others but not this one) — question skipped.`
+        `Question ${questionNumber}: option ${String.fromCharCode(65 + i)} has no image or typed value (found others but not this one) — question skipped.`
       );
       return null;
     }
@@ -282,24 +282,26 @@ function buildContiguousOptions(optionsMap, questionNumber, warnings) {
  * merge rules live in exactly one place.
  */
 /**
- * A group's per-slot file is either a raw { buffer, mimetype } pair still
- * needing saveQuestionImage (groupScreenshotsByQuestion,
- * extractExcelScreenshotGroups) or an already-saved { imageUrl } (the docx
- * flow's extractDocxScreenshotGroups, whose extractParagraphImage helper
- * saves — and WMF/EMF-converts — as part of extraction, so there's no raw
- * buffer left to hand back).
+ * A group's per-slot file carries an image, typed text, or both:
+ * groupScreenshotsByQuestion/extractExcelScreenshotGroups only ever produce
+ * image-only slots (a raw { buffer, mimetype } pair still needing
+ * saveQuestionImage), while extractDocxScreenshotGroups's slots can carry
+ * typed `text` alongside an already-saved `imageUrl` (its
+ * extractParagraphImage helper saves — and WMF/EMF-converts — as part of
+ * extraction, so there's no raw buffer left to hand back there).
  */
-function resolveFileUrl(file) {
-  return file.imageUrl ?? saveQuestionImage(file.buffer, file.mimetype);
+function resolveSlotContent(file) {
+  const imageUrl = file.imageUrl ?? (file.buffer ? saveQuestionImage(file.buffer, file.mimetype) : undefined);
+  return { text: file.text || '', imageUrl };
 }
 
 /**
  * Turns { questionNumber -> { stem, options: Map<letterIndex, file> } }
  * groups (from groupScreenshotsByQuestion, extractExcelScreenshotGroups, or
- * extractDocxScreenshotGroups — same Map shape, see resolveFileUrl above for
- * the one difference in what a "file" looks like) into skeleton questions
- * ready for mergeAndInsertQuestions. Shared by every screenshot-sourced
- * bulk-upload flow.
+ * extractDocxScreenshotGroups — same Map shape, see resolveSlotContent above
+ * for the one difference in what a "file" looks like) into skeleton
+ * questions ready for mergeAndInsertQuestions. Shared by every
+ * screenshot-sourced bulk-upload flow.
  */
 function buildSkeletonsFromGroups(groups, warnings, missingStemMessage) {
   const skeletons = [];
@@ -312,14 +314,14 @@ function buildSkeletonsFromGroups(groups, warnings, missingStemMessage) {
     const optionFiles = buildContiguousOptions(group.options, number, warnings);
     if (optionFiles === null) continue;
 
-    const imageUrl = resolveFileUrl(group.stem);
-    const options = optionFiles.map((file) => ({ text: '', imageUrl: resolveFileUrl(file) }));
+    const stemContent = resolveSlotContent(group.stem);
+    const options = optionFiles.map((file) => resolveSlotContent(file));
 
     skeletons.push({
       questionNumber: number,
       type: options.length === 0 ? 'numerical' : 'mcq-single',
-      text: '',
-      imageUrl,
+      text: stemContent.text,
+      imageUrl: stemContent.imageUrl,
       options,
       correctOptionIndexes: [],
       correctNumericAnswer: undefined,
@@ -402,7 +404,7 @@ export async function bulkCreateFromDocxScreenshots(docxBuffer, excelBuffer, bat
   const skeletons = buildSkeletonsFromGroups(
     groups,
     warnings,
-    (n) => `Question ${n}: no stem image found after the "Q${n}." marker — skipped.`
+    (n) => `Question ${n}: no image or typed text found after the "Q${n}." marker — skipped.`
   );
 
   const { created, warnings: mergeWarnings } = await mergeAndInsertQuestions(skeletons, rowsByNumber, conceptCodeMap, batchDefaults);

@@ -3,35 +3,39 @@ import { loadRelationships, extractParagraphImage } from './docxEmbeddedImageExt
 import { ApiError } from './ApiError.js';
 
 /**
- * Bulk question format — screenshots only, nothing is ever read as typed
- * text (unlike the old docx parser this replaces, which broke on equation
+ * Bulk question format — each Q<n>./A)/B)/C)/D) marker accepts EITHER a
+ * pasted screenshot OR typed text (or both). Paste a screenshot only for
+ * whatever actually needs it (an equation, a diagram); type everything else
+ * directly, exactly like typing "A) 1.2 J" for a plain numeric option. This
+ * never touches typed text as anything but a literal, verbatim value —
+ * unlike the old docx parser this replaces (which additionally inferred
+ * answer letters/marks/concept-code tags from text and broke on equation
  * fonts that don't decode to the Unicode codepoint the doc actually
- * stores). Word is purely a container here:
+ * stores), so there's no font-decoding failure mode here even for typed
+ * content:
  *
- *   Q1.
- *   [paste the stem/diagram screenshot here]
- *   A)
- *   [paste option A's screenshot here]
- *   B)
- *   [paste option B's screenshot here]
- *   ...
+ *   Q1. An electric dipole ... (typed directly — no image needed)
+ *   A) 1.2 J
+ *   B) 1.5 J
+ *   C) [paste a screenshot here if this option needs one]
+ *   D) 1.0 J
  *
  *   Q2.
- *   ...
+ *   [paste the stem/diagram screenshot on the next line instead]
+ *   A) ...
  *
- * A marker's screenshot may also be pasted on the same line as the marker
- * (no Enter first) — both land in the same Word paragraph either way, and
- * this parser only cares about which paragraph carries an embedded image,
- * never what the paragraph's text says beyond the marker itself. Answers,
- * marks, chapter, etc. all come from the paired Excel mapping sheet — see
+ * A marker's content may be typed right after it on the same line, pasted
+ * on the same line, or pasted/typed on the following line(s) up to the next
+ * marker — all forms land fine. Answers, marks, chapter, etc. always come
+ * from the paired Excel mapping sheet, never from anything typed here — see
  * question.service.js's bulkCreateFromDocxScreenshots.
  */
 
-const QUESTION_START = /^Q(\d+)[.)]/i;
-// Case-insensitive, same reasoning as the old parser: a mentor might type
-// "a)" as easily as "A)". Trailing text after the marker is ignored — only
-// the letter matters now, there's no option text to extract.
-const OPTION_START = /^([A-Za-z])[.)]/;
+const QUESTION_START = /^Q(\d+)[.)]\s*(.*)$/i;
+// Case-insensitive by construction ([A-Za-z]): a mentor might type "a)" as
+// easily as "A)". Trailing text becomes that option's typed value when no
+// screenshot follows.
+const OPTION_START = /^([A-Za-z])[.)]\s*(.*)$/;
 
 function splitIntoBlocks(paragraphs) {
   const blocks = [];
@@ -41,13 +45,22 @@ function splitIntoBlocks(paragraphs) {
     const qMatch = QUESTION_START.exec(p.text.trim());
     if (qMatch) {
       if (current) blocks.push(current);
-      current = { number: Number(qMatch[1]), paragraphs: [] };
+      current = { number: Number(qMatch[1]), markerText: qMatch[2].trim(), markerParagraph: p, paragraphs: [] };
     } else if (current) {
       current.paragraphs.push(p);
     }
   }
   if (current) blocks.push(current);
   return blocks;
+}
+
+function appendText(slot, text) {
+  if (!text) return;
+  slot.text = slot.text ? `${slot.text} ${text}` : text;
+}
+
+function hasContent(slot) {
+  return Boolean(slot && (slot.text || slot.imageUrl));
 }
 
 export async function extractDocxScreenshotGroups(buffer) {
@@ -74,33 +87,54 @@ export async function extractDocxScreenshotGroups(buffer) {
     if (groups.has(number)) {
       warnings.push(`Question ${number}: this number appears more than once in the document — later occurrence used.`);
     }
-    const group = { stem: null, options: new Map() };
-    groups.set(number, group);
+
+    const slots = new Map(); // 'stem' or a letter-index -> { text, imageUrl }
+    const getSlot = (key) => {
+      if (!slots.has(key)) slots.set(key, { text: '', imageUrl: undefined });
+      return slots.get(key);
+    };
+
+    // eslint-disable-next-line no-await-in-loop
+    const applyImage = async (paragraph, slot, label) => {
+      if (!paragraph.hasImage) return;
+      const imageUrl = await extractParagraphImage(paragraph.node, zip, relsMap, warnings, label);
+      if (!imageUrl) return;
+      if (slot.imageUrl) warnings.push(`${label}: more than one image found — using the last one.`);
+      slot.imageUrl = imageUrl;
+    };
+
+    const stemSlot = getSlot('stem');
+    appendText(stemSlot, block.markerText);
+    // eslint-disable-next-line no-await-in-loop
+    await applyImage(block.markerParagraph, stemSlot, `Question ${number}`);
 
     let context = 'stem';
-
     for (const p of block.paragraphs) {
-      const optMatch = OPTION_START.exec(p.text.trim());
-      if (optMatch) context = optMatch[1].toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+      const trimmed = p.text.trim();
+      const optMatch = OPTION_START.exec(trimmed);
 
-      if (!p.hasImage) continue;
-
-      const label = context === 'stem' ? `Question ${number}` : `Question ${number}, option ${String.fromCharCode(65 + context)}`;
-      // eslint-disable-next-line no-await-in-loop
-      const imageUrl = await extractParagraphImage(p.node, zip, relsMap, warnings, label);
-      if (!imageUrl) continue;
-      const file = { imageUrl };
-
-      if (context === 'stem') {
-        if (group.stem) warnings.push(`Question ${number}: more than one stem image found — using the last one.`);
-        group.stem = file;
+      let slot;
+      let label;
+      if (optMatch) {
+        context = optMatch[1].toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+        slot = getSlot(context);
+        label = `Question ${number}, option ${String.fromCharCode(65 + context)}`;
+        appendText(slot, optMatch[2].trim());
       } else {
-        if (group.options.has(context)) {
-          warnings.push(`Question ${number}, option ${String.fromCharCode(65 + context)}: more than one image found — using the last one.`);
-        }
-        group.options.set(context, file);
+        slot = getSlot(context);
+        label = context === 'stem' ? `Question ${number}` : `Question ${number}, option ${String.fromCharCode(65 + context)}`;
+        appendText(slot, trimmed);
       }
+
+      // eslint-disable-next-line no-await-in-loop
+      await applyImage(p, slot, label);
     }
+
+    const group = { stem: hasContent(stemSlot) ? stemSlot : null, options: new Map() };
+    for (const [key, slot] of slots) {
+      if (key !== 'stem' && hasContent(slot)) group.options.set(key, slot);
+    }
+    groups.set(number, group);
   }
 
   return { groups, warnings };
