@@ -6,19 +6,17 @@ import {
   createQuestion,
   updateQuestion,
   deleteQuestion,
-  bulkUploadQuestions,
-  bulkUploadQuestionsMapped,
   bulkUploadQuestionsScreenshots,
   bulkUploadQuestionsExcelScreenshots,
+  bulkUploadQuestionsDocxScreenshots,
   generateQuestionSet,
   uploadQuestionImage,
 } from '../controllers/question.controller.js';
 import { authenticate, authorize, requireSection, requireAction } from '../middleware/auth.js';
 import {
-  uploadQuestionsDocx,
-  uploadQuestionsDocxAndExcel,
   uploadQuestionScreenshotBatch,
   uploadQuestionExcelWithImages,
+  uploadQuestionDocxScreenshots,
   uploadQuestionImage as uploadQuestionImageMiddleware,
 } from '../middleware/upload.js';
 import { validateBody } from '../middleware/validate.js';
@@ -29,24 +27,6 @@ const router = Router();
 // topic/chapter-wise practice generator — everything else here stays
 // mentor-only (the bank's actual content, including correct answers).
 router.get('/taxonomy', authenticate, getTaxonomy);
-router.post(
-  '/bulk-upload',
-  authenticate,
-  authorize('mentor'),
-  requireSection('questions'),
-  requireAction('questions-create'),
-  uploadQuestionsDocx,
-  bulkUploadQuestions
-);
-router.post(
-  '/bulk-upload-mapped',
-  authenticate,
-  authorize('mentor'),
-  requireSection('questions'),
-  requireAction('questions-create'),
-  uploadQuestionsDocxAndExcel,
-  bulkUploadQuestionsMapped
-);
 router.post(
   '/bulk-upload-screenshots',
   authenticate,
@@ -65,6 +45,15 @@ router.post(
   uploadQuestionExcelWithImages,
   bulkUploadQuestionsExcelScreenshots
 );
+router.post(
+  '/bulk-upload-docx-screenshots',
+  authenticate,
+  authorize('mentor'),
+  requireSection('questions'),
+  requireAction('questions-create'),
+  uploadQuestionDocxScreenshots,
+  bulkUploadQuestionsDocxScreenshots
+);
 router.post('/generate-set', authenticate, authorize('mentor'), requireSection('questions'), requireAction('questions-create'), generateQuestionSet);
 router.post(
   '/upload-image',
@@ -80,13 +69,17 @@ router.get('/', authenticate, authorize('mentor'), requireSection('questions'), 
 router.get('/:id', authenticate, authorize('mentor'), requireSection('questions'), getQuestion);
 // examType is no longer required — a question can be created fully
 // unmapped (examTypes: []) and tagged to an exam later.
+// text alone used to be required here, but a screenshot-only question
+// (stem/options pasted as images, no typed text) legitimately has an empty
+// text — the Question model itself already enforces "text is required only
+// when there's no imageUrl" (Question.js), so the route only checks type.
 router.post(
   '/',
   authenticate,
   authorize('mentor'),
   requireSection('questions'),
   requireAction('questions-create'),
-  validateBody(['type', 'text']),
+  validateBody(['type']),
   createQuestion
 );
 router.put('/:id', authenticate, authorize('mentor'), requireSection('questions'), requireAction('questions-edit'), updateQuestion);

@@ -53,43 +53,6 @@ export const deleteQuestion = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, { deleted: true });
 });
 
-export const bulkUploadQuestions = asyncHandler(async (req, res) => {
-  if (!req.file) throw new ApiError(400, 'No .docx file uploaded');
-  const { examType, chapter, topic, difficulty, isPYQ, pyqYear, author, subject, tags } = req.body;
-
-  const { questions, warnings } = await questionService.bulkCreateFromDocx(req.file.buffer, {
-    examType: examType || '',
-    chapter: chapter || '',
-    topic: topic || '',
-    difficulty: difficulty || 'medium',
-    isPYQ: isPYQ === 'true',
-    pyqYear: pyqYear ? Number(pyqYear) : undefined,
-    author: author || '',
-    subject: subject || '',
-    tags: parseTagsField(tags),
-  });
-  return ApiResponse(res, 200, { questions, warnings }, { created: questions.length, skipped: warnings.length });
-});
-
-export const bulkUploadQuestionsMapped = asyncHandler(async (req, res) => {
-  const { examType, chapter, topic, difficulty, author, subject, tags } = req.body;
-
-  const { questions, warnings } = await questionService.bulkCreateFromDocxAndExcel(
-    req.files.docx[0].buffer,
-    req.files.excel[0].buffer,
-    {
-      examType: examType || '',
-      chapter: chapter || '',
-      topic: topic || '',
-      difficulty: difficulty || 'medium',
-      author: author || '',
-      subject: subject || '',
-      tags: parseTagsField(tags),
-    }
-  );
-  return ApiResponse(res, 200, { questions, warnings }, { created: questions.length, skipped: warnings.length });
-});
-
 export const bulkUploadQuestionsScreenshots = asyncHandler(async (req, res) => {
   const { examType, chapter, topic, difficulty, author, subject, tags } = req.body;
 
@@ -121,6 +84,25 @@ export const bulkUploadQuestionsExcelScreenshots = asyncHandler(async (req, res)
     subject: subject || '',
     tags: parseTagsField(tags),
   });
+  return ApiResponse(res, 200, { questions, warnings }, { created: questions.length, skipped: warnings.length });
+});
+
+export const bulkUploadQuestionsDocxScreenshots = asyncHandler(async (req, res) => {
+  const { examType, chapter, topic, difficulty, author, subject, tags } = req.body;
+
+  const { questions, warnings } = await questionService.bulkCreateFromDocxScreenshots(
+    req.files.docx[0].buffer,
+    req.files.excel[0].buffer,
+    {
+      examType: examType || '',
+      chapter: chapter || '',
+      topic: topic || '',
+      difficulty: difficulty || 'medium',
+      author: author || '',
+      subject: subject || '',
+      tags: parseTagsField(tags),
+    }
+  );
   return ApiResponse(res, 200, { questions, warnings }, { created: questions.length, skipped: warnings.length });
 });
 

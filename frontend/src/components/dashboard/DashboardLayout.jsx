@@ -36,7 +36,8 @@ const MENTOR_NAV = [
     section: 'Content',
     items: [
       { to: '/dashboard/mentor/notes', label: 'Notes', sectionKey: 'notes' },
-      { to: '/dashboard/mentor/questions', label: 'Question Bank', sectionKey: 'questions' },
+      { to: '/dashboard/mentor/questions/upload', label: 'Question Uploading', sectionKey: 'questions' },
+      { to: '/dashboard/mentor/questions', label: 'Question Bank', sectionKey: 'questions', end: true },
       { to: '/dashboard/mentor/concept-codes', label: 'Concept Codes', sectionKey: 'concept-codes' },
       { to: '/dashboard/mentor/articles', label: 'Articles', sectionKey: 'articles' },
       { to: '/dashboard/mentor/videos', label: 'Videos & Playlists', sectionKey: 'videos' },

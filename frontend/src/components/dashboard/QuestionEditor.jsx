@@ -43,8 +43,11 @@ export const emptyQuestion = (examType) => ({
  * /api/questions rather than mutating a parent's local array state, so
  * every question authored here immediately becomes reusable across any
  * test or practice set, not just the one being built when it was written.
+ * Pass `onStage` instead of relying on the default create/update behavior to
+ * hand the built question to a parent (e.g. a staged batch) without saving
+ * it yet — see ScreenshotQuestionBuilder.jsx.
  */
-export default function QuestionEditor({ initialQuestion, examType: defaultExamType, onSaved, onCancel, onDeleted }) {
+export default function QuestionEditor({ initialQuestion, examType: defaultExamType, onSaved, onStage, onCancel, onDeleted }) {
   const isEdit = Boolean(initialQuestion?._id);
   const [question, setQuestion] = useState(() => initialQuestion || emptyQuestion(defaultExamType));
   const [saving, setSaving] = useState(false);
@@ -115,6 +118,13 @@ export default function QuestionEditor({ initialQuestion, examType: defaultExamT
         ...question,
         pyqYear: question.isPYQ && question.pyqYear ? Number(question.pyqYear) : undefined,
       };
+      if (onStage) {
+        onStage(payload);
+        setQuestion(emptyQuestion(question.examTypes[0]));
+        setTagsText('');
+        setConceptCodesText('');
+        return;
+      }
       const saved = isEdit ? await questionService.update(question._id, payload) : await questionService.create(payload);
       onSaved?.(saved);
       if (!isEdit) {
@@ -364,7 +374,7 @@ export default function QuestionEditor({ initialQuestion, examType: defaultExamT
 
         <div className={formStyles.actions}>
           <Button type="button" size="sm" disabled={saving} onClick={handleSave}>
-            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add to Bank'}
+            {saving ? 'Saving…' : isEdit ? 'Save Changes' : onStage ? 'Add to Batch' : 'Add to Bank'}
           </Button>
           {onCancel && (
             <Button type="button" size="sm" variant="ghost" onClick={onCancel}>

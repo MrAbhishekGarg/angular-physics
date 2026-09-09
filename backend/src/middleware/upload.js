@@ -185,33 +185,6 @@ export function uploadWorksheetFile(req, res, next) {
   });
 }
 
-const DOCX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-
-// Bulk-question docx is parsed once and discarded — memory storage, no disk
-// footprint, unlike notes/videos which persist as files.
-const questionsDocxUploader = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    // Some browser/OS combinations send application/octet-stream for .docx
-    // when the file association is missing, so fall back to the extension.
-    const isDocx = file.mimetype === DOCX_MIME_TYPE || path.extname(file.originalname).toLowerCase() === '.docx';
-    if (!isDocx) {
-      return cb(new ApiError(400, 'Only .docx files are allowed'));
-    }
-    cb(null, true);
-  },
-});
-
-export function uploadQuestionsDocx(req, res, next) {
-  questionsDocxUploader.single('file')(req, res, (err) => {
-    if (!err) return next();
-    if (err instanceof ApiError) return next(err);
-    if (err.code === 'LIMIT_FILE_SIZE') return next(new ApiError(400, 'File must be 5MB or smaller'));
-    next(new ApiError(400, err.message || 'File upload failed'));
-  });
-}
-
 const EXCEL_MIME_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
   'application/vnd.ms-excel', // .xls
@@ -235,45 +208,6 @@ export function uploadConceptCodesExcel(req, res, next) {
     if (!err) return next();
     if (err instanceof ApiError) return next(err);
     if (err.code === 'LIMIT_FILE_SIZE') return next(new ApiError(400, 'File must be 5MB or smaller'));
-    next(new ApiError(400, err.message || 'File upload failed'));
-  });
-}
-
-// "Type in Word, tag in Excel" bulk upload — two files in one request
-// (fields 'docx' and 'excel'), each validated against its own expected
-// type. Memory storage for both, same reasoning as the single-file
-// uploaders above: parsed once, never persisted to disk.
-const questionsDocxAndExcelUploader = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (file.fieldname === 'docx') {
-      const isDocx = file.mimetype === DOCX_MIME_TYPE || ext === '.docx';
-      if (!isDocx) return cb(new ApiError(400, 'The question document must be a .docx file'));
-    } else if (file.fieldname === 'excel') {
-      const isExcel = EXCEL_MIME_TYPES.has(file.mimetype) || ext === '.xlsx' || ext === '.xls';
-      if (!isExcel) return cb(new ApiError(400, 'The mapping sheet must be a .xlsx or .xls file'));
-    } else {
-      return cb(new ApiError(400, `Unexpected file field "${file.fieldname}"`));
-    }
-    cb(null, true);
-  },
-});
-
-export function uploadQuestionsDocxAndExcel(req, res, next) {
-  questionsDocxAndExcelUploader.fields([
-    { name: 'docx', maxCount: 1 },
-    { name: 'excel', maxCount: 1 },
-  ])(req, res, (err) => {
-    if (!err) {
-      if (!req.files?.docx?.[0] || !req.files?.excel?.[0]) {
-        return next(new ApiError(400, 'Both a .docx question document and a .xlsx/.xls mapping sheet are required'));
-      }
-      return next();
-    }
-    if (err instanceof ApiError) return next(err);
-    if (err.code === 'LIMIT_FILE_SIZE') return next(new ApiError(400, 'Each file must be 5MB or smaller'));
     next(new ApiError(400, err.message || 'File upload failed'));
   });
 }
@@ -380,6 +314,48 @@ export function uploadQuestionExcelWithImages(req, res, next) {
     if (!err) return next();
     if (err instanceof ApiError) return next(err);
     if (err.code === 'LIMIT_FILE_SIZE') return next(new ApiError(400, 'The file must be 25MB or smaller'));
+    next(new ApiError(400, err.message || 'File upload failed'));
+  });
+}
+
+const DOCX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+// Bulk "screenshots in a Word doc + Excel mapping" upload — a docx used
+// purely as a container for pasted screenshots (memory storage, parsed once
+// and discarded) paired with the same mapping-sheet uploader shape used
+// elsewhere. Two fields in one request, each validated against its own
+// expected type — same pattern as questionScreenshotBatchUploader above.
+const questionDocxScreenshotsUploader = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: QUESTION_IMAGE_MAX_SIZE * 5 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (file.fieldname === 'docx') {
+      const isDocx = file.mimetype === DOCX_MIME_TYPE || ext === '.docx';
+      if (!isDocx) return cb(new ApiError(400, 'The question document must be a .docx file'));
+    } else if (file.fieldname === 'excel') {
+      const isExcel = EXCEL_MIME_TYPES.has(file.mimetype) || ext === '.xlsx' || ext === '.xls';
+      if (!isExcel) return cb(new ApiError(400, 'The mapping sheet must be a .xlsx or .xls file'));
+    } else {
+      return cb(new ApiError(400, `Unexpected file field "${file.fieldname}"`));
+    }
+    cb(null, true);
+  },
+});
+
+export function uploadQuestionDocxScreenshots(req, res, next) {
+  questionDocxScreenshotsUploader.fields([
+    { name: 'docx', maxCount: 1 },
+    { name: 'excel', maxCount: 1 },
+  ])(req, res, (err) => {
+    if (!err) {
+      if (!req.files?.docx?.[0] || !req.files?.excel?.[0]) {
+        return next(new ApiError(400, 'Both a .docx question document and a .xlsx/.xls mapping sheet are required'));
+      }
+      return next();
+    }
+    if (err instanceof ApiError) return next(err);
+    if (err.code === 'LIMIT_FILE_SIZE') return next(new ApiError(400, 'The Word document must be 40MB or smaller (it likely holds every screenshot for the batch)'));
     next(new ApiError(400, err.message || 'File upload failed'));
   });
 }

@@ -9,10 +9,10 @@
     "start": "node src/server.js",
     "seed:mentor": "node src/scripts/seedMentor.js",
     "seed:courses": "node src/scripts/seedCourseData.js",
-    "generate:template": "node src/scripts/generateBulkQuestionsTemplate.js",
     "generate:cc-template": "node src/scripts/generateConceptCodesExcelTemplate.js",
     "generate:mapped-template": "node src/scripts/generateMappedBulkUploadTemplates.js",
     "generate:screenshot-template": "node src/scripts/generateExcelScreenshotTemplate.js",
+    "generate:docx-screenshot-template": "node src/scripts/generateDocxScreenshotTemplate.js",
     "migrate:question-examtypes": "node src/scripts/migrateQuestionExamTypes.js"
   },
   "dependencies": {

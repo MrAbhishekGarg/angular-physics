@@ -24,6 +24,7 @@ import TestHistory from '../pages/dashboard/TestHistory.jsx';
 import TestAttempt from '../pages/dashboard/TestAttempt.jsx';
 import TestResult from '../pages/dashboard/TestResult.jsx';
 import QuestionBank from '../pages/dashboard/QuestionBank.jsx';
+import QuestionUpload from '../pages/dashboard/QuestionUpload.jsx';
 import ConceptCodes from '../pages/dashboard/ConceptCodes.jsx';
 import WorksheetManager from '../pages/dashboard/WorksheetManager.jsx';
 import WorksheetsLibrary from '../pages/dashboard/WorksheetsLibrary.jsx';
@@ -141,6 +142,14 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute role="mentor" section="questions">
             <QuestionBank />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/mentor/questions/upload"
+        element={
+          <ProtectedRoute role="mentor" section="questions">
+            <QuestionUpload />
           </ProtectedRoute>
         }
       />

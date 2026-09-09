@@ -1,8 +1,8 @@
 import Question from '../models/Question.js';
 import { ApiError } from '../utils/ApiError.js';
-import { parseQuestionsFromDocxBuffer } from '../utils/questionsDocxParser.js';
 import { parseQuestionMetadataFromExcelBuffer } from '../utils/questionMetadataExcelParser.js';
 import { extractExcelScreenshotGroups } from '../utils/excelScreenshotParser.js';
+import { extractDocxScreenshotGroups } from '../utils/docxScreenshotParser.js';
 import { saveQuestionImage } from '../utils/questionImageStorage.js';
 import { getConceptCodeMap } from './conceptCode.service.js';
 
@@ -95,39 +95,6 @@ function resolveConceptCodes(codes, conceptCodeMap, warnings, questionLabel) {
     }
   });
   return { taxonomyOverride };
-}
-
-/**
- * Parses a bulk-upload docx (same image-rendering pipeline used previously
- * for direct Test authoring) and persists each parsed question straight
- * into the bank, tagged uniformly with the batch's examType/chapter/topic/
- * difficulty — mentors can retag individual questions afterward if needed.
- */
-export async function bulkCreateFromDocx(buffer, { examType, chapter, topic, difficulty, isPYQ, pyqYear, author, subject, tags }) {
-  const conceptCodeMap = await getConceptCodeMap();
-  const { questions, warnings } = await parseQuestionsFromDocxBuffer(buffer, conceptCodeMap);
-
-  const created = await Question.insertMany(
-    // A question tagged with one or more recognized [CC:code] tags carries
-    // its own examTypes/chapter/topic (set by the parser) which wins over
-    // the batch-level defaults from the upload form; difficulty/PYQ/author/
-    // subject/tags stay batch-level only since ConceptCode has no such fields.
-    questions.map((q) => ({
-      ...q,
-      examTypes: resolveExamTypes({ batchExamType: examType }),
-      chapter: q.chapter ?? chapter,
-      topic: q.topic ?? topic,
-      difficulty,
-      isPYQ,
-      pyqYear: isPYQ ? pyqYear : undefined,
-      author: author || '',
-      subject: subject || '',
-      tags: tags || [],
-    })),
-    { ordered: false }
-  );
-
-  return { questions: created.map((q) => q.toObject()), warnings };
 }
 
 /**
@@ -243,34 +210,6 @@ async function mergeAndInsertQuestions(skeletons, rowsByNumber, conceptCodeMap, 
   return { created: created.map((q) => q.toObject()), warnings };
 }
 
-/**
- * The "type in Word, tag in Excel" bulk upload — a Word doc with nothing
- * but question text/options (no inline Answer:/Marks:/[CC:] tags required),
- * paired with an Excel sheet mapping every piece of grading/taxonomy
- * metadata to a question by its literal printed number ("Q7." -> row where
- * Question Number = 7). Lets a mentor type questions freely without
- * worrying about exact tag syntax, then manage answers/concept
- * codes/author/PYQ tagging in a spreadsheet — easier to bulk-edit, sort,
- * and eyeball for consistency across a large batch than inline doc tags.
- *
- * Excel values win over any inline docx tag the mentor typed anyway (a
- * mentor can still write "Answer: A" in the doc as a fallback/reference,
- * but the sheet is treated as the source of truth whenever it specifies a
- * field). A question with no answer from EITHER source is skipped with a
- * warning, same as the docx-only flow's missing-Answer handling.
- */
-export async function bulkCreateFromDocxAndExcel(docxBuffer, excelBuffer, batchDefaults) {
-  const conceptCodeMap = await getConceptCodeMap();
-  const [{ questions: parsedQuestions, warnings: docxWarnings }, { rowsByNumber, warnings: excelWarnings }] = await Promise.all([
-    parseQuestionsFromDocxBuffer(docxBuffer, conceptCodeMap, { requireInlineAnswer: false }),
-    parseQuestionMetadataFromExcelBuffer(excelBuffer),
-  ]);
-
-  const { created, warnings: mergeWarnings } = await mergeAndInsertQuestions(parsedQuestions, rowsByNumber, conceptCodeMap, batchDefaults);
-
-  return { questions: created, warnings: [...docxWarnings, ...excelWarnings, ...mergeWarnings] };
-}
-
 const SCREENSHOT_FILENAME_RE = /^Q(\d+)(?:-([A-Za-z]))?\.(png|jpe?g|webp)$/i;
 
 /**
@@ -343,11 +282,24 @@ function buildContiguousOptions(optionsMap, questionNumber, warnings) {
  * merge rules live in exactly one place.
  */
 /**
- * Turns { questionNumber -> { stem, options: Map<letterIndex, {buffer,
- * mimetype}> } } groups (from either groupScreenshotsByQuestion or
- * extractExcelScreenshotGroups — same shape) into skeleton questions ready
- * for mergeAndInsertQuestions, saving each image via saveQuestionImage
- * along the way. Shared by both screenshot-sourced bulk-upload flows.
+ * A group's per-slot file is either a raw { buffer, mimetype } pair still
+ * needing saveQuestionImage (groupScreenshotsByQuestion,
+ * extractExcelScreenshotGroups) or an already-saved { imageUrl } (the docx
+ * flow's extractDocxScreenshotGroups, whose extractParagraphImage helper
+ * saves — and WMF/EMF-converts — as part of extraction, so there's no raw
+ * buffer left to hand back).
+ */
+function resolveFileUrl(file) {
+  return file.imageUrl ?? saveQuestionImage(file.buffer, file.mimetype);
+}
+
+/**
+ * Turns { questionNumber -> { stem, options: Map<letterIndex, file> } }
+ * groups (from groupScreenshotsByQuestion, extractExcelScreenshotGroups, or
+ * extractDocxScreenshotGroups — same Map shape, see resolveFileUrl above for
+ * the one difference in what a "file" looks like) into skeleton questions
+ * ready for mergeAndInsertQuestions. Shared by every screenshot-sourced
+ * bulk-upload flow.
  */
 function buildSkeletonsFromGroups(groups, warnings, missingStemMessage) {
   const skeletons = [];
@@ -360,8 +312,8 @@ function buildSkeletonsFromGroups(groups, warnings, missingStemMessage) {
     const optionFiles = buildContiguousOptions(group.options, number, warnings);
     if (optionFiles === null) continue;
 
-    const imageUrl = saveQuestionImage(group.stem.buffer, group.stem.mimetype);
-    const options = optionFiles.map((file) => ({ text: '', imageUrl: saveQuestionImage(file.buffer, file.mimetype) }));
+    const imageUrl = resolveFileUrl(group.stem);
+    const options = optionFiles.map((file) => ({ text: '', imageUrl: resolveFileUrl(file) }));
 
     skeletons.push({
       questionNumber: number,
@@ -423,6 +375,34 @@ export async function bulkCreateFromExcelScreenshots(excelBuffer, batchDefaults)
     groups,
     warnings,
     (n) => `Question ${n}: no stem image found in the "Stem" column — skipped.`
+  );
+
+  const { created, warnings: mergeWarnings } = await mergeAndInsertQuestions(skeletons, rowsByNumber, conceptCodeMap, batchDefaults);
+
+  return { questions: created, warnings: [...warnings, ...mergeWarnings] };
+}
+
+/**
+ * Bulk upload from a Word doc used purely as a container for pasted
+ * screenshots (Q1./A)/B)/... markers, one screenshot per marker — nothing is
+ * ever read as typed text, so this can't hit the equation/font-decoding
+ * failures the old typed-text docx parser had. Metadata/answers come from
+ * the same paired Excel mapping sheet the other two "...AndExcel" flows use.
+ * Reuses buildSkeletonsFromGroups/mergeAndInsertQuestions unchanged — this
+ * flow adds only "where do the images come from."
+ */
+export async function bulkCreateFromDocxScreenshots(docxBuffer, excelBuffer, batchDefaults) {
+  const conceptCodeMap = await getConceptCodeMap();
+  const [{ rowsByNumber, warnings: excelWarnings }, { groups, warnings: imageWarnings }] = await Promise.all([
+    parseQuestionMetadataFromExcelBuffer(excelBuffer),
+    extractDocxScreenshotGroups(docxBuffer),
+  ]);
+
+  const warnings = [...excelWarnings, ...imageWarnings];
+  const skeletons = buildSkeletonsFromGroups(
+    groups,
+    warnings,
+    (n) => `Question ${n}: no stem image found after the "Q${n}." marker — skipped.`
   );
 
   const { created, warnings: mergeWarnings } = await mergeAndInsertQuestions(skeletons, rowsByNumber, conceptCodeMap, batchDefaults);
