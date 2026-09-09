@@ -111,9 +111,28 @@ export async function updateClass(id, payload) {
   return updated;
 }
 
+/**
+ * Deleting the last class tied to a given upload also removes that upload
+ * row (and its stored PDF) — otherwise the date stays permanently blocked
+ * from re-ingestion by ingestSchedulePdf's duplicate guard even after every
+ * class from it is gone, which would silently contradict the "delete its
+ * classes first if you want to re-ingest" error that guard gives.
+ */
 export async function deleteClass(id) {
   const deleted = await JobClass.findByIdAndDelete(id).lean();
   if (!deleted) throw new ApiError(404, 'Class not found');
+
+  if (deleted.sourceUploadId) {
+    const remaining = await JobClass.countDocuments({ sourceUploadId: deleted.sourceUploadId });
+    if (remaining === 0) {
+      const upload = await JobScheduleUpload.findByIdAndDelete(deleted.sourceUploadId).lean();
+      if (upload) {
+        const filePath = path.join(JOB_SCHEDULE_UPLOADS_DIR, upload.storedPath);
+        fs.rm(filePath, { force: true }, () => {}); // best-effort — a missing file here is never worth failing the delete over
+      }
+    }
+  }
+
   return deleted;
 }
 
