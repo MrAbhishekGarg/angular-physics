@@ -180,14 +180,23 @@ export default function QuestionUpload() {
               <strong>Bulk Upload — Screenshots in a Word Doc</strong>
               <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
                 For pasting straight out of a PDF or your own scanned questions — type <code>Q1.</code> on its own
-                line, then <code>A)</code>, <code>B)</code>, <code>C)</code>, <code>D)</code> each on their own line,
-                and repeat for every question. For each one, either <strong>type its value directly</strong> right
-                after the marker (e.g. <code>A) 1.2 J</code>) if it's plain text, <strong>or paste a screenshot</strong> on
-                the next line if it's an equation or diagram — never both unless it genuinely needs both. Whatever
-                you type is stored exactly as typed, never re-parsed or auto-corrected, so there's no font/equation
-                garbling risk even for typed text. Only screenshot what actually needs it — most options in a real
-                question (numbers, short phrases) can just be typed. Answers, marks, chapter, etc. still come from
-                the same Excel mapping sheet the option above uses —{' '}
+                line, then <code>[A]</code>, <code>[B]</code>, <code>[C]</code>, <code>[D]</code> (square brackets)
+                each on their own line, and repeat for every question. For each one, either{' '}
+                <strong>type its value directly</strong> right after the marker (e.g. <code>[A] 1.2 J</code>) if it's
+                plain text, <strong>or paste a screenshot</strong> on the next line if it's an equation or diagram —
+                never both unless it genuinely needs both. Whatever you type is stored exactly as typed, never
+                re-parsed or auto-corrected, so there's no font/equation garbling risk even for typed text. Only
+                screenshot what actually needs it — most options in a real question (numbers, short phrases) can
+                just be typed.
+              </p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--ap-warning)', margin: '0.3rem 0' }}>
+                Use <code>[A]</code>, not <code>A)</code> — Word's AutoCorrect silently turns a typed <code>A)</code> at
+                the start of a line into an automatic numbered list the moment you press Enter, which erases the
+                literal "A)" text entirely and makes every option collapse into the stem. Square brackets aren't a
+                pattern Word auto-converts, so they always stay as typed.
+              </p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
+                Answers, marks, chapter, etc. still come from the same Excel mapping sheet the option above uses —{' '}
                 <a
                   href="/templates/docx-screenshot-questions-template.docx"
                   download

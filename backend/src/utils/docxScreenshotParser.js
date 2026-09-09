@@ -3,10 +3,10 @@ import { loadRelationships, extractParagraphImage } from './docxEmbeddedImageExt
 import { ApiError } from './ApiError.js';
 
 /**
- * Bulk question format — each Q<n>./A)/B)/C)/D) marker accepts EITHER a
+ * Bulk question format — each Q<n>./[A]/[B]/[C]/[D] marker accepts EITHER a
  * pasted screenshot OR typed text (or both). Paste a screenshot only for
  * whatever actually needs it (an equation, a diagram); type everything else
- * directly, exactly like typing "A) 1.2 J" for a plain numeric option. This
+ * directly, exactly like typing "[A] 1.2 J" for a plain numeric option. This
  * never touches typed text as anything but a literal, verbatim value —
  * unlike the old docx parser this replaces (which additionally inferred
  * answer letters/marks/concept-code tags from text and broke on equation
@@ -15,14 +15,23 @@ import { ApiError } from './ApiError.js';
  * content:
  *
  *   Q1. An electric dipole ... (typed directly — no image needed)
- *   A) 1.2 J
- *   B) 1.5 J
- *   C) [paste a screenshot here if this option needs one]
- *   D) 1.0 J
+ *   [A] 1.2 J
+ *   [B] 1.5 J
+ *   [C] [paste a screenshot here if this option needs one]
+ *   [D] 1.0 J
  *
  *   Q2.
  *   [paste the stem/diagram screenshot on the next line instead]
- *   A) ...
+ *   [A] ...
+ *
+ * Options are marked "[A]"/"[B]"/... (square brackets), not "A)"/"B)" — a
+ * bracket isn't a pattern Word's "AutoFormat As You Type" recognizes, while
+ * a typed "A)" at the start of a line gets silently converted into an
+ * automatic numbered list the moment the mentor presses Enter, which
+ * removes the literal "A)" text entirely (it becomes list-numbering
+ * metadata, invisible to plain text extraction) — every option's content
+ * then silently falls through to whatever the current context still is
+ * (usually the stem), which is exactly the failure this format avoids.
  *
  * A marker's content may be typed right after it on the same line, pasted
  * on the same line, or pasted/typed on the following line(s) up to the next
@@ -32,10 +41,12 @@ import { ApiError } from './ApiError.js';
  */
 
 const QUESTION_START = /^Q(\d+)[.)]\s*(.*)$/i;
-// Case-insensitive by construction ([A-Za-z]): a mentor might type "a)" as
-// easily as "A)". Trailing text becomes that option's typed value when no
-// screenshot follows.
-const OPTION_START = /^([A-Za-z])[.)]\s*(.*)$/;
+// Bracket form is the documented, autocorrect-safe convention (see the
+// module doc-comment above). The old "A)"/"A." form is still accepted as a
+// fallback for a document where Word's autocorrect happened to be off, but
+// it can't be relied on — that literal text can vanish entirely once
+// AutoFormat As You Type converts it into a numbered list.
+const OPTION_START = /^(?:\[([A-Za-z])\]|([A-Za-z])[.)])\s*(.*)$/;
 
 function splitIntoBlocks(paragraphs) {
   const blocks = [];
@@ -116,10 +127,11 @@ export async function extractDocxScreenshotGroups(buffer) {
       let slot;
       let label;
       if (optMatch) {
-        context = optMatch[1].toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+        const letter = optMatch[1] || optMatch[2];
+        context = letter.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
         slot = getSlot(context);
         label = `Question ${number}, option ${String.fromCharCode(65 + context)}`;
-        appendText(slot, optMatch[2].trim());
+        appendText(slot, optMatch[3].trim());
       } else {
         slot = getSlot(context);
         label = context === 'stem' ? `Question ${number}` : `Question ${number}, option ${String.fromCharCode(65 + context)}`;
