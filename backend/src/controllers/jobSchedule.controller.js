@@ -38,6 +38,11 @@ export const deleteClass = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, { deleted: true });
 });
 
+export const deleteUpload = asyncHandler(async (req, res) => {
+  await jobScheduleService.deleteUpload(req.params.id);
+  return ApiResponse(res, 200, { deleted: true });
+});
+
 export const getBatches = asyncHandler(async (req, res) => {
   const batches = await jobScheduleService.getBatchSummaries();
   return ApiResponse(res, 200, batches, { count: batches.length });

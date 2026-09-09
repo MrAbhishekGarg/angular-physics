@@ -5,6 +5,7 @@ import {
   createClass,
   updateClass,
   deleteClass,
+  deleteUpload,
   getBatches,
   downloadSchedulePdf,
 } from '../controllers/jobSchedule.controller.js';
@@ -45,5 +46,6 @@ router.delete('/classes/:id', deleteClass);
 router.post('/upload', uploadJobSchedulePdf, ingestSchedule);
 router.get('/batches', getBatches);
 router.get('/uploads/:id/pdf', downloadSchedulePdf);
+router.delete('/uploads/:id', deleteUpload);
 
 export default router;

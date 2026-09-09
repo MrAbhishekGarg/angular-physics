@@ -194,14 +194,33 @@ export default function JobSchedule() {
           {error && <ErrorState message={error} onRetry={refetch} />}
           {!loading &&
             !error &&
-            groups.map(([date, dayClasses]) => (
-              <div key={date} style={{ marginBottom: '1rem' }}>
-                <h3 style={{ marginBottom: '0.4rem' }}>{formatDate(date)}</h3>
-                {dayClasses.map((cls) => (
-                  <ClassRow key={cls._id} cls={cls} onSaved={handleSaved} onDeleted={handleDeleted} />
-                ))}
-              </div>
-            ))}
+            groups.map(([date, dayClasses]) => {
+              const uploadId = dayClasses.find((c) => c.source === 'pdf')?.sourceUploadId;
+              return (
+                <div key={date} style={{ marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '0.4rem' }}>
+                    <h3 style={{ marginBottom: '0.4rem' }}>{formatDate(date)}</h3>
+                    {uploadId && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={async () => {
+                          if (!window.confirm("Delete this whole day's upload and every class extracted from it?")) return;
+                          await jobScheduleService.removeUpload(uploadId);
+                          await refetch();
+                        }}
+                      >
+                        Delete this upload
+                      </Button>
+                    )}
+                  </div>
+                  {dayClasses.map((cls) => (
+                    <ClassRow key={cls._id} cls={cls} onSaved={handleSaved} onDeleted={handleDeleted} />
+                  ))}
+                </div>
+              );
+            })}
           {!loading && !error && classes.length === 0 && <p style={{ color: 'var(--ap-text-muted)' }}>No classes yet — upload a schedule PDF above.</p>}
         </div>
       </DashboardLayout>

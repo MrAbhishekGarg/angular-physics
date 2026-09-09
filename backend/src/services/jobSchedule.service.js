@@ -141,6 +141,23 @@ export async function deleteClass(id) {
  * this is a live aggregation over JobClass.batchCode, cheap enough at the
  * scale one mentor's own schedule ever reaches.
  */
+/**
+ * Deletes a whole day's ingest — every class tied to it plus the upload row
+ * and stored PDF. For undoing a bad upload outright (wrong file, garbled
+ * extraction) rather than one class at a time.
+ */
+export async function deleteUpload(id) {
+  const upload = await JobScheduleUpload.findByIdAndDelete(id).lean();
+  if (!upload) throw new ApiError(404, 'Schedule upload not found');
+
+  await JobClass.deleteMany({ sourceUploadId: id });
+
+  const filePath = path.join(JOB_SCHEDULE_UPLOADS_DIR, upload.storedPath);
+  fs.rm(filePath, { force: true }, () => {});
+
+  return upload;
+}
+
 export async function getBatchSummaries() {
   const rows = await JobClass.aggregate([
     { $sort: { date: -1, startTime: -1 } },
