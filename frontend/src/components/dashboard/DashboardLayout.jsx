@@ -79,13 +79,24 @@ const ADMIN_NAV_GROUP = {
   ],
 };
 
+// A personal Aakash-job tracker, not part of the Angular Physics business —
+// deliberately its own nav group (not folded into ADMIN_NAV_GROUP above) so
+// it reads as a distinct thing, visible only to the real admin account.
+const MY_JOB_NAV_GROUP = {
+  section: 'My Job',
+  items: [
+    { to: '/dashboard/mentor/admin/job-schedule', label: 'Schedule', end: true },
+    { to: '/dashboard/mentor/admin/job-schedule/batches', label: 'Batch Progress' },
+  ],
+};
+
 export default function DashboardLayout({ role, children }) {
   const { user } = useAuth();
   const baseNav = role === 'mentor' ? MENTOR_NAV : STUDENT_NAV;
   // Admin sees everything a mentor does (same pages, same DashboardLayout
   // calls) plus this one extra group — real role, not the `role` prop,
   // since every mentor page still passes role="mentor" unchanged.
-  const withAdminGroup = user?.role === 'admin' ? [...baseNav, ADMIN_NAV_GROUP] : baseNav;
+  const withAdminGroup = user?.role === 'admin' ? [...baseNav, ADMIN_NAV_GROUP, MY_JOB_NAV_GROUP] : baseNav;
   // Drop any item the admin has restricted this mentor from, then drop any
   // group that's now empty — admin never carries restrictedSections, so
   // this is a no-op for them regardless of which nav they're looking at.

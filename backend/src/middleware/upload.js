@@ -18,6 +18,11 @@ export const SECURE_UPLOADS_ROOT = path.join(__dirname, '..', '..', 'secure-uplo
 const NOTE_UPLOADS_DIR = path.join(SECURE_UPLOADS_ROOT, 'notes');
 const VIDEO_UPLOADS_DIR = path.join(SECURE_UPLOADS_ROOT, 'videos');
 const WORKSHEET_UPLOADS_DIR = path.join(SECURE_UPLOADS_ROOT, 'worksheets');
+// The mentor's personal Aakash schedule PDFs — not business content, but
+// still not something to serve at a guessable public URL, so this lives
+// under SECURE_UPLOADS_ROOT alongside notes/worksheets rather than the
+// publicly-static UPLOADS_ROOT.
+export const JOB_SCHEDULE_UPLOADS_DIR = path.join(SECURE_UPLOADS_ROOT, 'job-schedules');
 
 fs.mkdirSync(COURSE_UPLOADS_DIR, { recursive: true });
 fs.mkdirSync(CONTENT_UPLOADS_DIR, { recursive: true });
@@ -26,6 +31,7 @@ fs.mkdirSync(VIDEO_UPLOADS_DIR, { recursive: true });
 fs.mkdirSync(WORKSHEET_UPLOADS_DIR, { recursive: true });
 fs.mkdirSync(QUESTION_IMAGE_UPLOADS_DIR, { recursive: true });
 fs.mkdirSync(DOUBT_IMAGE_UPLOADS_DIR, { recursive: true });
+fs.mkdirSync(JOB_SCHEDULE_UPLOADS_DIR, { recursive: true });
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
@@ -385,5 +391,32 @@ export function uploadDoubtImage(req, res, next) {
     if (err instanceof ApiError) return next(err);
     if (err.code === 'LIMIT_FILE_SIZE') return next(new ApiError(400, 'Image must be 5MB or smaller'));
     next(new ApiError(400, err.message || 'Image upload failed'));
+  });
+}
+
+// The daily Aakash schedule PDF — memory storage since the buffer is parsed
+// (scheduleGridParser.js) before being written to disk under its own
+// generated filename, same reasoning as the question-screenshot uploaders
+// above. Used by both the manual "My Job" upload button and the
+// unauthenticated Zapier ingestion webhook — see jobSchedule.routes.js.
+const jobSchedulePdfUploader = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const isPdf = file.mimetype === 'application/pdf' || path.extname(file.originalname).toLowerCase() === '.pdf';
+    if (!isPdf) return cb(new ApiError(400, 'Only .pdf files are allowed'));
+    cb(null, true);
+  },
+});
+
+export function uploadJobSchedulePdf(req, res, next) {
+  jobSchedulePdfUploader.single('pdf')(req, res, (err) => {
+    if (!err) {
+      if (!req.file) return next(new ApiError(400, 'A .pdf file is required (field name "pdf")'));
+      return next();
+    }
+    if (err instanceof ApiError) return next(err);
+    if (err.code === 'LIMIT_FILE_SIZE') return next(new ApiError(400, 'File must be 15MB or smaller'));
+    next(new ApiError(400, err.message || 'File upload failed'));
   });
 }

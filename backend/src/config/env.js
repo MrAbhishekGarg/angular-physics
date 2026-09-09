@@ -33,6 +33,17 @@ export const env = {
   // shows nothing when these are unset — see services/youtube.service.js.
   youtubeApiKey: process.env.YOUTUBE_API_KEY || '',
   youtubeChannelId: process.env.YOUTUBE_CHANNEL_ID || '',
+
+  // "My Job" module (backend/src/services/jobSchedule.service.js) — a
+  // personal, admin-only Aakash schedule tracker, unrelated to the business.
+  // MENTOR_FACULTY_CODE is the mentor's own faculty code as printed in the
+  // schedule PDF (e.g. the "AGP" in "P/AGP") — a fact about this one person,
+  // not a constant of the app, so it's configurable rather than hardcoded.
+  // SCHEDULE_INGEST_SECRET gates the unauthenticated Zapier webhook route
+  // (POST /api/job-schedule/ingest) since an external automation has no
+  // session cookie to authenticate with.
+  mentorFacultyCode: process.env.MENTOR_FACULTY_CODE || 'AGP',
+  scheduleIngestSecret: process.env.SCHEDULE_INGEST_SECRET || '',
 };
 
 if (!process.env.JWT_SECRET) {
@@ -49,4 +60,8 @@ if (!env.razorpayKeyId || !env.razorpayKeySecret) {
 
 if (!env.youtubeApiKey || !env.youtubeChannelId) {
   console.warn('[env] No YOUTUBE_API_KEY/YOUTUBE_CHANNEL_ID set — the homepage "Latest Uploads" section will stay hidden until both are set.');
+}
+
+if (!env.scheduleIngestSecret) {
+  console.warn('[env] No SCHEDULE_INGEST_SECRET set — the "My Job" schedule ingest webhook is disabled until it is set.');
 }

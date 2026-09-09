@@ -34,6 +34,8 @@ import TestimonialManager from '../pages/dashboard/TestimonialManager.jsx';
 import VideoLibraryManager from '../pages/dashboard/VideoLibraryManager.jsx';
 import AdminMentors from '../pages/dashboard/AdminMentors.jsx';
 import AdminStudents from '../pages/dashboard/AdminStudents.jsx';
+import JobSchedule from '../pages/dashboard/JobSchedule.jsx';
+import JobScheduleBatches from '../pages/dashboard/JobScheduleBatches.jsx';
 import AllStudents from '../pages/dashboard/AllStudents.jsx';
 import Enquiries from '../pages/dashboard/Enquiries.jsx';
 import StudentDetail from '../pages/dashboard/StudentDetail.jsx';
@@ -214,6 +216,22 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute role="admin">
             <AdminStudents />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/mentor/admin/job-schedule"
+        element={
+          <ProtectedRoute role="admin">
+            <JobSchedule />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/mentor/admin/job-schedule/batches"
+        element={
+          <ProtectedRoute role="admin">
+            <JobScheduleBatches />
           </ProtectedRoute>
         }
       />
