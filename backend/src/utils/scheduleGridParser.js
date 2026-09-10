@@ -24,6 +24,23 @@ const DAY_RE = /^(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)$/;
 const TIME_RANGE_RE = /^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/;
 const PAREN_TIME_RE = /\((\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})\)/;
 
+// Aakash writes a cell as "<subject letter>/<faculty code>" — expand the
+// letter to the full subject name so "P/AGP" reads as Physics, not "P".
+const SUBJECT_BY_PREFIX = {
+  P: 'Physics',
+  C: 'Chemistry',
+  B: 'Biology',
+  Z: 'Zoology',
+  M: 'Mathematics',
+  MAT: 'Mathematics',
+  ENG: 'English',
+  SST: 'Social Science',
+};
+
+export function expandSubject(prefix) {
+  return SUBJECT_BY_PREFIX[String(prefix || '').toUpperCase()] || prefix || '';
+}
+
 // Points, not pixels — PDF user-space units at the page's native scale.
 // Items within this Y distance are treated as printed on the same visual
 // row; this only needs to be smaller than a table's row height.
@@ -153,7 +170,7 @@ export async function extractMyClassesFromPdf(buffer, facultyCode) {
         endTime,
         room: roomItem ? roomItem.text : '',
         batchCode: batchItem.text,
-        subjectPrefix: hit[1],
+        subjectPrefix: expandSubject(hit[1]),
         rawText: item.text,
       });
     });

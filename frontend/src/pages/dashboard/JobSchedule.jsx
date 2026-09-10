@@ -39,6 +39,15 @@ function formatDate(dateStr) {
   });
 }
 
+// Existing rows may hold a bare "P" or a shouty "PHYSICS" from before the
+// backend started expanding the prefix — normalise both to "Physics".
+const SUBJECT_LABELS = { p: 'Physics', c: 'Chemistry', b: 'Biology', z: 'Zoology', m: 'Mathematics', mat: 'Mathematics' };
+function prettySubject(s) {
+  if (!s) return '';
+  const key = s.trim().toLowerCase();
+  return SUBJECT_LABELS[key] || s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
 function groupByDate(classes) {
   const groups = new Map();
   classes.forEach((c) => {
@@ -152,6 +161,9 @@ function ClassRow({ cls, onSaved, onDeleted }) {
         <strong>
           {cls.startTime}
           {cls.endTime ? `–${cls.endTime}` : ''} · Room {cls.room || '?'} · {cls.batchCode}
+          {cls.subjectPrefix && (
+            <span style={{ fontWeight: 400, color: 'var(--ap-text-muted)' }}> · {prettySubject(cls.subjectPrefix)}</span>
+          )}
         </strong>
         <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
           {status === 'saving' && <span style={{ fontSize: '0.72rem', color: 'var(--ap-text-muted)' }}>Saving…</span>}

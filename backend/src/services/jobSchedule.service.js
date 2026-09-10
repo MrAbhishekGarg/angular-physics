@@ -113,7 +113,7 @@ export async function createClass(payload) {
     endTime: payload.endTime || '',
     room: payload.room || '',
     batchCode: payload.batchCode,
-    subjectPrefix: payload.subjectPrefix || '',
+    subjectPrefix: payload.subjectPrefix || 'Physics',
     topicsCovered: payload.topicsCovered || '',
     notes: payload.notes || '',
     needsReview: false,
