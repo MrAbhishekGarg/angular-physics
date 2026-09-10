@@ -125,6 +125,7 @@ export async function createClass(payload) {
     room: payload.room || '',
     batchCode: payload.batchCode,
     subjectPrefix: payload.subjectPrefix || 'Physics',
+    plannedTopics: payload.plannedTopics || '',
     topicsCovered: payload.topicsCovered || '',
     notes: payload.notes || '',
     needsReview: false,
@@ -134,8 +135,10 @@ export async function createClass(payload) {
 }
 
 /**
- * Any successful edit clears needsReview — the mentor having looked at (and
- * corrected, if needed) a row is exactly what that flag exists to prompt.
+ * Editing a class always clears the extraction-review flag (the mentor
+ * having looked at the row is what that flag exists to prompt). `reviewed`
+ * — the separate post-class review state — is only touched when the caller
+ * passes it explicitly (the "Mark as taught" action).
  */
 export async function updateClass(id, payload) {
   const update = { ...payload, needsReview: false };
@@ -196,7 +199,7 @@ export async function deleteUpload(id) {
 }
 
 export async function getBatchSummaries() {
-  const today = startOfDay(new Date());
+  const tomorrow = new Date(startOfDay(new Date()).getTime() + 24 * 60 * 60 * 1000);
   const [classes, plans] = await Promise.all([
     JobClass.find().sort({ date: -1, startTime: -1 }).lean(),
     JobTopicPlan.find().sort({ order: 1, createdAt: 1 }).lean(),
@@ -221,13 +224,16 @@ export async function getBatchSummaries() {
       const cs = byBatch.get(code) || [];
       const plan = plansByBatch.get(code) || [];
       const minutes = cs.reduce((sum, c) => sum + durationMinutes(c.startTime, c.endTime), 0);
-      const past = cs.filter((c) => new Date(c.date) < today);
-      const future = cs.filter((c) => new Date(c.date) >= today);
+      // "Done" = the class day has arrived (today counts as done); upcoming
+      // is only strictly-future days.
+      const past = cs.filter((c) => new Date(c.date) < tomorrow);
+      const future = cs.filter((c) => new Date(c.date) >= tomorrow);
       return {
         batchCode: code,
         classCount: cs.length,
         doneCount: past.length,
         upcomingCount: future.length,
+        toReviewCount: past.filter((c) => !c.reviewed).length,
         hours: Math.round((minutes / 60) * 10) / 10,
         // most-recent past class, and soonest upcoming — never conflate the
         // two (a future class isn't something that was "taught").
@@ -243,8 +249,10 @@ export async function getBatchSummaries() {
           startTime: c.startTime,
           endTime: c.endTime,
           room: c.room,
+          plannedTopics: c.plannedTopics,
           topicsCovered: c.topicsCovered,
           notes: c.notes,
+          reviewed: c.reviewed,
           needsReview: c.needsReview,
         })),
       };
@@ -261,21 +269,23 @@ export async function getBatchSummaries() {
 /**
  * One aggregate call powering the "My Job" overview dashboard — every
  * headline number the mentor asked for, derived from the class log plus the
- * topic-plan checklist. "Done" is date-only (a class before today); today's
- * classes count as upcoming so the number never silently drops mid-day.
+ * topic-plan checklist. A class counts as "done" once its day has arrived
+ * (today included); "upcoming" is strictly-future days. "To review" is a
+ * done class the mentor hasn't yet confirmed what was taught in.
  */
 export async function getDashboard() {
-  const today = startOfDay(new Date());
+  const tomorrow = new Date(startOfDay(new Date()).getTime() + 24 * 60 * 60 * 1000);
   const [classes, plans, uploadCount] = await Promise.all([
     JobClass.find().sort({ date: 1, startTime: 1 }).lean(),
     JobTopicPlan.find().lean(),
     JobScheduleUpload.countDocuments(),
   ]);
 
-  const done = classes.filter((c) => new Date(c.date) < today);
-  const upcoming = classes.filter((c) => new Date(c.date) >= today);
+  const done = classes.filter((c) => new Date(c.date) < tomorrow);
+  const upcoming = classes.filter((c) => new Date(c.date) >= tomorrow);
   const doneMinutes = done.reduce((s, c) => s + durationMinutes(c.startTime, c.endTime), 0);
   const upcomingMinutes = upcoming.reduce((s, c) => s + durationMinutes(c.startTime, c.endTime), 0);
+  const toReview = done.filter((c) => !c.reviewed);
 
   const weekStart = isoWeekStart(new Date());
   const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -319,8 +329,9 @@ export async function getDashboard() {
       total: classes.length,
       done: done.length,
       upcoming: upcoming.length,
+      toReview: toReview.length,
       thisWeek: thisWeek.length,
-      needsReview: classes.filter((c) => c.needsReview).length,
+      extractionReview: classes.filter((c) => c.needsReview).length,
       batches: new Set(classes.map((c) => c.batchCode)).size,
       uploads: uploadCount,
     },

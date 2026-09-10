@@ -109,6 +109,29 @@
   color: var(--ap-text-muted);
   margin-top: 0.1rem;
 }
+.logTag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.02rem 0.35rem;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+.logTag_taught {
+  color: var(--ap-success);
+  border: 1px solid var(--ap-success);
+}
+.logTag_toreview {
+  color: #fff;
+  background: var(--ap-warning);
+}
+.logTag_upcoming {
+  color: #fff;
+  background: var(--ap-secondary-accent);
+}
 
 /* topic plan */
 .progressWrap {

@@ -274,11 +274,17 @@
   font-size: 1.15rem;
   font-weight: 800;
 }
-.phaseHeadUpcoming .phaseHeadTitle {
+.phaseHead_upcoming .phaseHeadTitle {
   color: var(--ap-secondary-accent);
 }
-.phaseHeadDone .phaseHeadTitle {
+.phaseHead_review .phaseHeadTitle {
+  color: var(--ap-warning);
+}
+.phaseHead_done .phaseHeadTitle {
   color: var(--ap-text-muted);
+}
+.phaseHead_review {
+  border-bottom-color: var(--ap-warning);
 }
 .phaseHeadCount {
   font-size: 0.8rem;
@@ -287,23 +293,32 @@
 }
 
 .classDone {
-  opacity: 0.72;
+  opacity: 0.74;
 }
 
-.phaseDone,
+.plannedRef {
+  font-size: 0.8rem;
+  color: var(--ap-text-muted);
+  margin: 0 0 0.5rem;
+}
+.plannedRefLabel {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
 .phaseToday,
-.phaseUpcoming {
+.phaseUpcoming,
+.phaseReview,
+.phaseTaught {
   font-size: 0.68rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
-}
-.phaseDone {
-  color: var(--ap-text-muted);
-  background: var(--ap-bg-muted);
-  border: 1px solid var(--ap-border);
+  white-space: nowrap;
 }
 .phaseUpcoming {
   color: #fff;
@@ -312,4 +327,13 @@
 .phaseToday {
   color: #fff;
   background: var(--ap-accent);
+}
+.phaseReview {
+  color: #fff;
+  background: var(--ap-warning);
+}
+.phaseTaught {
+  color: var(--ap-success);
+  background: var(--ap-bg-muted);
+  border: 1px solid var(--ap-success);
 }

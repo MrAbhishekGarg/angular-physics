@@ -22,11 +22,21 @@ const jobClassSchema = new mongoose.Schema(
     batchCode: { type: String, required: true, trim: true, index: true },
     subjectPrefix: { type: String, default: '' },
     rawText: { type: String, default: '' },
+    // What the mentor intends to cover — set while the class is still
+    // upcoming ("topics to be taught").
+    plannedTopics: { type: String, default: '' },
+    // What was actually covered — the post-class record ("topics covered
+    // and taught").
     topicsCovered: { type: String, default: '' },
     notes: { type: String, default: '' },
+    // Set once the mentor has done the post-class review (confirmed what
+    // was actually taught). A past class that isn't reviewed yet shows as
+    // "review pending".
+    reviewed: { type: Boolean, default: false },
     // True on auto-ingest until the mentor edits the row or explicitly
     // clears it — the PDF parser is a best-effort heuristic against a
-    // complex, human-formatted grid, not a guaranteed-exact reader.
+    // complex, human-formatted grid, not a guaranteed-exact reader. This is
+    // the extraction-confidence flag, distinct from `reviewed` above.
     needsReview: { type: Boolean, default: false },
     source: { type: String, enum: ['pdf', 'manual'], default: 'manual' },
     sourceUploadId: { type: mongoose.Schema.Types.ObjectId, ref: 'JobScheduleUpload', default: null },

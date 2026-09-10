@@ -29,11 +29,14 @@ function relativeDay(dateStr) {
   if (diff === -1) return 'Yesterday';
   return null;
 }
-function classPhase(dateStr) {
-  const diff = utcMidnight(dateStr) - todayUtcMidnight();
-  if (diff < 0) return 'done';
-  if (diff === 0) return 'today';
-  return 'upcoming';
+function isToday(dateStr) {
+  return utcMidnight(dateStr) === todayUtcMidnight();
+}
+// A class's workflow state — the day arriving (today counts) makes it
+// "done", then the mentor's post-class review moves it to "taught".
+function classState(cls) {
+  if (utcMidnight(cls.date) > todayUtcMidnight()) return 'upcoming';
+  return cls.reviewed ? 'taught' : 'toReview';
 }
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-IN', {
@@ -71,7 +74,7 @@ function Field({ label, wide, children }) {
 }
 
 function ManualClassForm({ defaultDate, onCreated }) {
-  const [form, setForm] = useState({ date: defaultDate || '', startTime: '', endTime: '', room: '', batchCode: '', topicsCovered: '' });
+  const [form, setForm] = useState({ date: defaultDate || '', startTime: '', endTime: '', room: '', batchCode: '', plannedTopics: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -88,7 +91,7 @@ function ManualClassForm({ defaultDate, onCreated }) {
     try {
       const created = await jobScheduleService.createClass(form);
       onCreated(created);
-      set({ startTime: '', endTime: '', room: '', batchCode: '', topicsCovered: '' });
+      set({ startTime: '', endTime: '', room: '', batchCode: '', plannedTopics: '' });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -114,8 +117,8 @@ function ManualClassForm({ defaultDate, onCreated }) {
         <Field label="Room">
           <input className={styles.input} value={form.room} onChange={(e) => set({ room: e.target.value })} placeholder="8" />
         </Field>
-        <Field label="Topics covered (optional)" wide>
-          <input className={styles.input} value={form.topicsCovered} onChange={(e) => set({ topicsCovered: e.target.value })} />
+        <Field label="Topics to be taught (optional)" wide>
+          <input className={styles.input} value={form.plannedTopics} onChange={(e) => set({ plannedTopics: e.target.value })} />
         </Field>
       </div>
       <div className={styles.formActions}>
@@ -129,14 +132,18 @@ function ManualClassForm({ defaultDate, onCreated }) {
 }
 
 function ClassCard({ cls, order, onSaved, onDeleted }) {
-  const [topicsCovered, setTopicsCovered] = useState(cls.topicsCovered || '');
+  const state = classState(cls); // 'upcoming' | 'toReview' | 'taught'
+  const [plannedTopics, setPlannedTopics] = useState(cls.plannedTopics || '');
+  // On review, start from the plan so the mentor edits it down to what
+  // actually happened rather than retyping.
+  const [topicsCovered, setTopicsCovered] = useState(cls.topicsCovered || (state === 'toReview' ? cls.plannedTopics || '' : ''));
   const [notes, setNotes] = useState(cls.notes || '');
   const [status, setStatus] = useState(''); // '' | 'saving' | 'saved'
 
   const save = async (extra = {}) => {
     setStatus('saving');
     try {
-      const updated = await jobScheduleService.updateClass(cls._id, { topicsCovered, notes, ...extra });
+      const updated = await jobScheduleService.updateClass(cls._id, { plannedTopics, topicsCovered, notes, ...extra });
       onSaved(updated);
       setStatus('saved');
       setTimeout(() => setStatus(''), 1500);
@@ -151,11 +158,9 @@ function ClassCard({ cls, order, onSaved, onDeleted }) {
     onDeleted(cls._id);
   };
 
-  const phase = classPhase(cls.date);
-
   return (
     <div
-      className={`${styles.class} ${phase === 'done' ? styles.classDone : ''}`}
+      className={`${styles.class} ${state === 'taught' ? styles.classDone : ''}`}
       style={{ borderLeft: `4px solid ${batchColor(cls.batchCode, order)}` }}
     >
       <div className={styles.classHead}>
@@ -170,37 +175,68 @@ function ClassCard({ cls, order, onSaved, onDeleted }) {
         <div className={styles.classTags}>
           {status === 'saving' && <span className={styles.tagMuted}>Saving…</span>}
           {status === 'saved' && <span className={styles.tagOk}>Saved ✓</span>}
-          {phase === 'done' ? (
-            <span className={styles.phaseDone}>Done</span>
-          ) : phase === 'today' ? (
-            <span className={styles.phaseToday}>Today</span>
-          ) : (
-            <span className={styles.phaseUpcoming}>Upcoming</span>
-          )}
-          {cls.needsReview && <Badge tone="default">Needs review</Badge>}
+          {isToday(cls.date) && <span className={styles.phaseToday}>Today</span>}
+          {state === 'upcoming' && <span className={styles.phaseUpcoming}>Upcoming</span>}
+          {state === 'toReview' && <span className={styles.phaseReview}>Review</span>}
+          {state === 'taught' && <span className={styles.phaseTaught}>✓ Taught</span>}
+          {cls.needsReview && <Badge tone="default">Check details</Badge>}
           {cls.source === 'pdf' && cls.rawText && <span className={styles.tagMuted}>from PDF · {cls.rawText}</span>}
         </div>
       </div>
 
-      <div className={styles.fieldGrid}>
-        <Field label="Topics covered">
-          <input
-            className={styles.input}
-            value={topicsCovered}
-            onChange={(e) => setTopicsCovered(e.target.value)}
-            onBlur={() => save()}
-            placeholder="e.g. Terminal velocity, Poiseuille's equation"
-          />
-        </Field>
-        <Field label="Notes">
-          <input className={styles.input} value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => save()} placeholder="optional" />
-        </Field>
-      </div>
+      {state === 'upcoming' ? (
+        <div className={styles.fieldGrid}>
+          <Field label="Topics to be taught">
+            <input
+              className={styles.input}
+              value={plannedTopics}
+              onChange={(e) => setPlannedTopics(e.target.value)}
+              onBlur={() => save()}
+              placeholder="e.g. Terminal velocity, Poiseuille's equation"
+            />
+          </Field>
+          <Field label="Notes">
+            <input className={styles.input} value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => save()} placeholder="optional" />
+          </Field>
+        </div>
+      ) : (
+        <>
+          {cls.plannedTopics && (
+            <p className={styles.plannedRef}>
+              <span className={styles.plannedRefLabel}>Planned:</span> {cls.plannedTopics}
+            </p>
+          )}
+          <div className={styles.fieldGrid}>
+            <Field label="Topics covered & taught">
+              <input
+                className={styles.input}
+                value={topicsCovered}
+                onChange={(e) => setTopicsCovered(e.target.value)}
+                onBlur={() => save()}
+                placeholder="what you actually got through"
+              />
+            </Field>
+            <Field label="Notes">
+              <input className={styles.input} value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => save()} placeholder="optional" />
+            </Field>
+          </div>
+        </>
+      )}
 
       <div className={styles.formActions}>
+        {state === 'toReview' && (
+          <Button type="button" size="sm" onClick={() => save({ reviewed: true })}>
+            Mark as taught
+          </Button>
+        )}
+        {state === 'taught' && (
+          <Button type="button" size="sm" variant="ghost" onClick={() => save({ reviewed: false })}>
+            Reopen
+          </Button>
+        )}
         {cls.needsReview && (
           <Button type="button" size="sm" variant="ghost" onClick={() => save({ needsReview: false })}>
-            Looks good
+            Details look right
           </Button>
         )}
         <Button type="button" size="sm" variant="danger" onClick={handleDelete}>
@@ -282,23 +318,63 @@ export default function JobSchedule() {
   const needsReviewCount = classes.filter((c) => c.needsReview).length;
   const order = useMemo(() => batchOrder(classes.map((c) => c.batchCode)), [classes]);
 
-  const dayBlocks = useMemo(() => {
-    const byDate = new Map();
-    groupByDate(classes).forEach(([date, dayClasses]) => byDate.set(new Date(date).toISOString(), { date, classes: dayClasses, upload: null }));
+  // Split classes by workflow state, then group each subset by day so a
+  // day with (say) one reviewed + one still-to-review class shows in both
+  // the "To review" and "Done" sections, not one arbitrary bucket.
+  const sections = useMemo(() => {
+    const buckets = { upcoming: [], toReview: [], done: [] };
+    classes.forEach((c) => {
+      const s = classState(c);
+      buckets[s === 'taught' ? 'done' : s].push(c);
+    });
+
+    const blocksOf = (list, ascending) => {
+      const byDate = new Map();
+      list.forEach((c) => {
+        const key = new Date(c.date).toISOString();
+        if (!byDate.has(key)) byDate.set(key, { date: c.date, classes: [], upload: null });
+        byDate.get(key).classes.push(c);
+      });
+      return byDate;
+    };
+
+    const upcomingMap = blocksOf(buckets.upcoming);
+    const toReviewMap = blocksOf(buckets.toReview);
+    const doneMap = blocksOf(buckets.done);
+
+    // Attach uploads; an upload with no classes yet lands in the section
+    // matching its date (future -> upcoming, past -> to review, since the
+    // mentor still owes it that day's classes).
     uploads.forEach((u) => {
       const key = new Date(u.date).toISOString();
-      if (byDate.has(key)) byDate.get(key).upload = u;
-      else byDate.set(key, { date: u.date, classes: [], upload: u });
+      const future = utcMidnight(u.date) > todayUtcMidnight();
+      const map = upcomingMap.has(key)
+        ? upcomingMap
+        : toReviewMap.has(key)
+          ? toReviewMap
+          : doneMap.has(key)
+            ? doneMap
+            : future
+              ? upcomingMap
+              : toReviewMap;
+      if (!map.has(key)) map.set(key, { date: u.date, classes: [], upload: u });
+      else map.get(key).upload = u;
     });
-    const all = [...byDate.values()];
+
+    const sortAsc = (a, b) => new Date(a.date) - new Date(b.date);
+    const sortDesc = (a, b) => new Date(b.date) - new Date(a.date);
     return {
-      upcoming: all.filter((b) => classPhase(b.date) !== 'done').sort((a, b) => new Date(a.date) - new Date(b.date)),
-      done: all.filter((b) => classPhase(b.date) === 'done').sort((a, b) => new Date(b.date) - new Date(a.date)),
+      upcoming: [...upcomingMap.values()].sort(sortAsc),
+      toReview: [...toReviewMap.values()].sort(sortDesc),
+      done: [...doneMap.values()].sort(sortDesc),
     };
   }, [classes, uploads]);
 
-  const upcomingCount = classes.filter((c) => classPhase(c.date) !== 'done').length;
-  const doneCount = classes.length - upcomingCount;
+  const counts = {
+    upcoming: classes.filter((c) => classState(c) === 'upcoming').length,
+    toReview: classes.filter((c) => classState(c) === 'toReview').length,
+    done: classes.filter((c) => classState(c) === 'taught').length,
+  };
 
   const weekStats = useMemo(() => {
     const start = todayUtcMidnight() - 3 * DAY_MS;
@@ -310,11 +386,11 @@ export default function JobSchedule() {
     return { count: inWindow.length, batches: new Set(inWindow.map((c) => c.batchCode)).size };
   }, [classes]);
 
-  const renderPhaseBlocks = (title, count, blocks) => {
+  const renderPhaseBlocks = (title, tone, count, blocks) => {
     if (blocks.length === 0) return null;
     return (
       <div className={styles.phaseSection}>
-        <div className={`${styles.phaseHead} ${title === 'Done' ? styles.phaseHeadDone : styles.phaseHeadUpcoming}`}>
+        <div className={`${styles.phaseHead} ${styles[`phaseHead_${tone}`]}`}>
           <span className={styles.phaseHeadTitle}>{title}</span>
           <span className={styles.phaseHeadCount}>
             {count} class{count === 1 ? '' : 'es'}
@@ -442,12 +518,13 @@ export default function JobSchedule() {
 
           {loading && <Spinner />}
           {error && <ErrorState message={error} onRetry={refetch} />}
-          {!loading && !error && dayBlocks.upcoming.length === 0 && dayBlocks.done.length === 0 && (
+          {!loading && !error && sections.upcoming.length === 0 && sections.toReview.length === 0 && sections.done.length === 0 && (
             <p className={styles.empty}>Nothing yet — upload a schedule above, or add a class by hand.</p>
           )}
 
-          {!loading && !error && renderPhaseBlocks('Upcoming', upcomingCount, dayBlocks.upcoming)}
-          {!loading && !error && renderPhaseBlocks('Done', doneCount, dayBlocks.done)}
+          {!loading && !error && renderPhaseBlocks('Upcoming', 'upcoming', counts.upcoming, sections.upcoming)}
+          {!loading && !error && renderPhaseBlocks('To review', 'review', counts.toReview, sections.toReview)}
+          {!loading && !error && renderPhaseBlocks('Done', 'done', counts.done, sections.done)}
         </div>
       </DashboardLayout>
     </>

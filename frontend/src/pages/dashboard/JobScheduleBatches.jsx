@@ -179,6 +179,7 @@ export default function JobScheduleBatches() {
                   </span>
                   <span className={styles.batchStats}>
                     {batch.doneCount ?? batch.classCount} done
+                    {batch.toReviewCount ? ` (${batch.toReviewCount} to review)` : ''}
                     {batch.upcomingCount ? ` · ${batch.upcomingCount} upcoming` : ''} · {batch.hours} h
                     {batch.lastTaught ? ` · last taught ${formatDate(batch.lastTaught)}` : ''}
                     {batch.nextClass ? ` · next ${formatDate(batch.nextClass)}` : ''}
@@ -189,12 +190,18 @@ export default function JobScheduleBatches() {
                   <>
                     <p className={styles.sectionLabel}>Class log</p>
                     <div className={styles.log}>
-                      {batch.classes.map((c) => (
-                        <div key={c._id} className={styles.logItem}>
-                          <strong>{formatDate(c.date)}</strong> · {formatTimeRange(c.startTime, c.endTime)} · Room {c.room || '?'}
-                          {c.topicsCovered && <div className={styles.logMuted}>{c.topicsCovered}</div>}
-                        </div>
-                      ))}
+                      {batch.classes.map((c) => {
+                        const future = new Date(c.date) > new Date(new Date().toISOString().slice(0, 10));
+                        const label = future ? 'upcoming' : c.reviewed ? 'taught' : 'to review';
+                        const topics = c.reviewed || !future ? c.topicsCovered : c.plannedTopics;
+                        return (
+                          <div key={c._id} className={styles.logItem}>
+                            <strong>{formatDate(c.date)}</strong> · {formatTimeRange(c.startTime, c.endTime)} · Room {c.room || '?'}
+                            <span className={`${styles.logTag} ${styles[`logTag_${label.replace(' ', '')}`]}`}>{label}</span>
+                            {topics && <div className={styles.logMuted}>{topics}</div>}
+                          </div>
+                        );
+                      })}
                     </div>
                   </>
                 )}

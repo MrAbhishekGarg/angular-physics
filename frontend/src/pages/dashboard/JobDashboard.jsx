@@ -125,10 +125,10 @@ export default function JobDashboard() {
                   tone="ok"
                 />
                 <Tile
-                  value={data.counts.needsReview}
-                  label="Need review"
-                  sub={data.counts.needsReview ? 'check the schedule' : 'all clear'}
-                  tone={data.counts.needsReview ? 'warn' : undefined}
+                  value={data.counts.toReview}
+                  label="To review"
+                  sub={data.counts.toReview ? 'confirm what was taught' : 'all reviewed'}
+                  tone={data.counts.toReview ? 'warn' : undefined}
                 />
                 <Tile value={`${data.hours.avgClassMinutes}m`} label="Avg class length" sub={data.busiestDay ? `busiest: ${data.busiestDay}` : undefined} />
               </div>
