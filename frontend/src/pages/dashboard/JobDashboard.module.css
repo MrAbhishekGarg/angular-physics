@@ -1,0 +1,217 @@
+.wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--ap-space-md) 0;
+}
+
+.wrap h1 {
+  color: var(--ap-primary);
+  margin-bottom: 0.35rem;
+}
+
+.lede {
+  color: var(--ap-text-muted);
+  margin-bottom: var(--ap-space-md);
+}
+
+/* KPI tiles */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: var(--ap-space-md);
+}
+
+.tile {
+  border: 1px solid var(--ap-border);
+  background: var(--ap-bg);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.tile.accent {
+  border-left: 3px solid var(--ap-accent);
+}
+.tile.warn {
+  border-left: 3px solid var(--ap-warning);
+}
+.tile.ok {
+  border-left: 3px solid var(--ap-success);
+}
+
+.tileValue {
+  font-family: var(--ap-font-heading);
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ap-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.tileLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ap-text-muted);
+}
+
+.tileSub {
+  font-size: 0.78rem;
+  color: var(--ap-text-muted);
+}
+
+/* Section cards */
+.card {
+  border: 1px solid var(--ap-border);
+  background: var(--ap-bg);
+  border-radius: 12px;
+  padding: 1.1rem 1.2rem;
+  margin-bottom: var(--ap-space-md);
+}
+
+.card h2 {
+  font-size: 1rem;
+  color: var(--ap-primary);
+  margin: 0 0 0.8rem;
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: var(--ap-space-md);
+}
+
+@media (max-width: 820px) {
+  .cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Bar chart */
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 150px;
+  padding-top: 1.2rem; /* room for the value labels */
+}
+
+.bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.barFill {
+  width: 60%;
+  max-width: 34px;
+  background: var(--ap-accent);
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  transition: background 0.15s ease;
+}
+.bar:hover .barFill {
+  background: var(--ap-accent-light);
+}
+
+.barValue {
+  position: absolute;
+  top: -1.15rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ap-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.barLabel {
+  font-size: 0.66rem;
+  color: var(--ap-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.chartAxis {
+  border-top: 1px solid var(--ap-border);
+  margin-top: 0.1rem;
+}
+
+/* Batch table */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ap-text-muted);
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--ap-border);
+}
+.table td {
+  padding: 0.5rem 0.5rem;
+  border-bottom: 1px solid var(--ap-border);
+  font-variant-numeric: tabular-nums;
+}
+.table tr:last-child td {
+  border-bottom: none;
+}
+.tableScroll {
+  overflow-x: auto;
+}
+
+/* progress bar for topic plan */
+.progress {
+  height: 6px;
+  background: var(--ap-bg-muted);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progressFill {
+  height: 100%;
+  background: var(--ap-success);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.listItem {
+  border-left: 3px solid var(--ap-border);
+  padding-left: 0.65rem;
+  font-size: 0.85rem;
+}
+.listItem strong {
+  font-weight: 700;
+}
+.listItem .muted {
+  color: var(--ap-text-muted);
+}
+
+.factRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  font-size: 0.85rem;
+  color: var(--ap-text-muted);
+}
+.factRow strong {
+  color: var(--ap-text);
+}

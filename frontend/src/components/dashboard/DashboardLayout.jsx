@@ -85,6 +85,7 @@ const ADMIN_NAV_GROUP = {
 const MY_JOB_NAV_GROUP = {
   section: 'My Job',
   items: [
+    { to: '/dashboard/mentor/admin/job', label: 'Overview', end: true },
     { to: '/dashboard/mentor/admin/job-schedule', label: 'Schedule', end: true },
     { to: '/dashboard/mentor/admin/job-schedule/batches', label: 'Batch Progress' },
   ],

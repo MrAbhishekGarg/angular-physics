@@ -8,6 +8,11 @@ import {
   deleteClass,
   deleteUpload,
   getBatches,
+  getDashboard,
+  listTopicPlans,
+  createTopicPlan,
+  updateTopicPlan,
+  deleteTopicPlan,
   downloadScheduleFile,
 } from '../controllers/jobSchedule.controller.js';
 import { authenticate, authorize } from '../middleware/auth.js';
@@ -49,5 +54,11 @@ router.post('/upload', uploadJobScheduleFile, ingestSchedule);
 router.get('/uploads/:id/file', downloadScheduleFile);
 router.delete('/uploads/:id', deleteUpload);
 router.get('/batches', getBatches);
+router.get('/dashboard', getDashboard);
+
+router.get('/topic-plan', listTopicPlans);
+router.post('/topic-plan', validateBody(['batchCode', 'title']), createTopicPlan);
+router.patch('/topic-plan/:id', updateTopicPlan);
+router.delete('/topic-plan/:id', deleteTopicPlan);
 
 export default router;

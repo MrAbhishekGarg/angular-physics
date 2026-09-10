@@ -2,7 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import JobClass from '../models/JobClass.js';
 import JobScheduleUpload from '../models/JobScheduleUpload.js';
+import JobTopicPlan from '../models/JobTopicPlan.js';
 import { extractMyClassesFromPdf } from '../utils/scheduleGridParser.js';
+import { durationMinutes } from '../utils/jobTime.js';
 import { JOB_SCHEDULE_UPLOADS_DIR } from '../middleware/upload.js';
 import { ApiError } from '../utils/ApiError.js';
 import { env } from '../config/env.js';
@@ -10,6 +12,15 @@ import { env } from '../config/env.js';
 function startOfDay(date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
+
+function isoWeekStart(date) {
+  const d = new Date(date);
+  const dow = (d.getUTCDay() + 6) % 7; // Mon = 0
+  d.setUTCDate(d.getUTCDate() - dow);
+  return startOfDay(d);
+}
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const EXT_BY_MIME = { 'application/pdf': '.pdf', 'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp' };
 
@@ -185,29 +196,169 @@ export async function deleteUpload(id) {
 }
 
 export async function getBatchSummaries() {
-  const rows = await JobClass.aggregate([
-    { $sort: { date: -1, startTime: -1 } },
-    {
-      $group: {
-        _id: '$batchCode',
-        classCount: { $sum: 1 },
-        lastTaught: { $max: '$date' },
-        classes: {
-          $push: {
-            _id: '$_id',
-            date: '$date',
-            startTime: '$startTime',
-            endTime: '$endTime',
-            room: '$room',
-            topicsCovered: '$topicsCovered',
-            notes: '$notes',
-            needsReview: '$needsReview',
-          },
-        },
-      },
-    },
-    { $sort: { lastTaught: -1 } },
+  const [classes, plans] = await Promise.all([
+    JobClass.find().sort({ date: -1, startTime: -1 }).lean(),
+    JobTopicPlan.find().sort({ order: 1, createdAt: 1 }).lean(),
   ]);
 
-  return rows.map((r) => ({ batchCode: r._id, classCount: r.classCount, lastTaught: r.lastTaught, classes: r.classes }));
+  const plansByBatch = new Map();
+  plans.forEach((p) => {
+    if (!plansByBatch.has(p.batchCode)) plansByBatch.set(p.batchCode, []);
+    plansByBatch.get(p.batchCode).push(p);
+  });
+
+  const byBatch = new Map();
+  classes.forEach((c) => {
+    if (!byBatch.has(c.batchCode)) byBatch.set(c.batchCode, []);
+    byBatch.get(c.batchCode).push(c);
+  });
+
+  const codes = new Set([...byBatch.keys(), ...plansByBatch.keys()]);
+
+  return [...codes]
+    .map((code) => {
+      const cs = byBatch.get(code) || [];
+      const plan = plansByBatch.get(code) || [];
+      const minutes = cs.reduce((sum, c) => sum + durationMinutes(c.startTime, c.endTime), 0);
+      return {
+        batchCode: code,
+        classCount: cs.length,
+        hours: Math.round((minutes / 60) * 10) / 10,
+        lastTaught: cs.length ? cs.reduce((max, c) => (c.date > max ? c.date : max), cs[0].date) : null,
+        topicsLogged: cs.filter((c) => c.topicsCovered?.trim()).length,
+        plan,
+        planned: plan.length,
+        planCovered: plan.filter((p) => p.done).length,
+        classes: cs.map((c) => ({
+          _id: c._id,
+          date: c.date,
+          startTime: c.startTime,
+          endTime: c.endTime,
+          room: c.room,
+          topicsCovered: c.topicsCovered,
+          notes: c.notes,
+          needsReview: c.needsReview,
+        })),
+      };
+    })
+    .sort((a, b) => {
+      if (!a.lastTaught) return 1;
+      if (!b.lastTaught) return -1;
+      return new Date(b.lastTaught) - new Date(a.lastTaught);
+    });
+}
+
+/**
+ * One aggregate call powering the "My Job" overview dashboard — every
+ * headline number the mentor asked for, derived from the class log plus the
+ * topic-plan checklist. "Done" is date-only (a class before today); today's
+ * classes count as upcoming so the number never silently drops mid-day.
+ */
+export async function getDashboard() {
+  const today = startOfDay(new Date());
+  const [classes, plans, uploadCount] = await Promise.all([
+    JobClass.find().sort({ date: 1, startTime: 1 }).lean(),
+    JobTopicPlan.find().lean(),
+    JobScheduleUpload.countDocuments(),
+  ]);
+
+  const done = classes.filter((c) => new Date(c.date) < today);
+  const upcoming = classes.filter((c) => new Date(c.date) >= today);
+  const doneMinutes = done.reduce((s, c) => s + durationMinutes(c.startTime, c.endTime), 0);
+  const upcomingMinutes = upcoming.reduce((s, c) => s + durationMinutes(c.startTime, c.endTime), 0);
+
+  const weekStart = isoWeekStart(new Date());
+  const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const thisWeek = classes.filter((c) => new Date(c.date) >= weekStart && new Date(c.date) < weekEnd);
+  const thisWeekMinutes = thisWeek.reduce((s, c) => s + durationMinutes(c.startTime, c.endTime), 0);
+
+  // Classes per ISO week for the last 8 weeks (oldest -> newest), for a bar chart.
+  const byWeek = [];
+  for (let i = 7; i >= 0; i -= 1) {
+    const ws = new Date(weekStart.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+    const we = new Date(ws.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const inWeek = classes.filter((c) => new Date(c.date) >= ws && new Date(c.date) < we);
+    byWeek.push({
+      weekStart: ws.toISOString().slice(0, 10),
+      classes: inWeek.length,
+      hours: Math.round((inWeek.reduce((s, c) => s + durationMinutes(c.startTime, c.endTime), 0) / 60) * 10) / 10,
+    });
+  }
+
+  // Which weekday the mentor teaches most.
+  const byWeekday = WEEKDAYS.map((name, idx) => ({
+    weekday: name,
+    classes: classes.filter((c) => new Date(c.date).getUTCDay() === idx).length,
+  }));
+  const busiestDay = [...byWeekday].sort((a, b) => b.classes - a.classes)[0];
+
+  // Per-batch class counts, for "most-taught batch".
+  const batchCounts = {};
+  classes.forEach((c) => {
+    batchCounts[c.batchCode] = (batchCounts[c.batchCode] || 0) + 1;
+  });
+  const topBatch = Object.entries(batchCounts).sort((a, b) => b[1] - a[1])[0];
+
+  const topicsTaught = classes
+    .filter((c) => c.topicsCovered?.trim())
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .map((c) => ({ _id: c._id, date: c.date, batchCode: c.batchCode, topicsCovered: c.topicsCovered }));
+
+  return {
+    counts: {
+      total: classes.length,
+      done: done.length,
+      upcoming: upcoming.length,
+      thisWeek: thisWeek.length,
+      needsReview: classes.filter((c) => c.needsReview).length,
+      batches: new Set(classes.map((c) => c.batchCode)).size,
+      uploads: uploadCount,
+    },
+    hours: {
+      done: Math.round((doneMinutes / 60) * 10) / 10,
+      upcoming: Math.round((upcomingMinutes / 60) * 10) / 10,
+      total: Math.round(((doneMinutes + upcomingMinutes) / 60) * 10) / 10,
+      thisWeek: Math.round((thisWeekMinutes / 60) * 10) / 10,
+      avgClassMinutes: classes.length ? Math.round((doneMinutes + upcomingMinutes) / classes.length) : 0,
+    },
+    topics: {
+      planned: plans.length,
+      covered: plans.filter((p) => p.done).length,
+      remaining: plans.filter((p) => !p.done).length,
+      logged: topicsTaught.length,
+    },
+    byWeek,
+    byWeekday,
+    busiestDay: busiestDay?.classes ? busiestDay.weekday : null,
+    topBatch: topBatch ? { batchCode: topBatch[0], classes: topBatch[1] } : null,
+    recentTopics: topicsTaught.slice(0, 8),
+    upcomingClasses: upcoming.slice(0, 6),
+  };
+}
+
+export async function listTopicPlans(batchCode) {
+  const filter = batchCode ? { batchCode } : {};
+  return JobTopicPlan.find(filter).sort({ batchCode: 1, order: 1, createdAt: 1 }).lean();
+}
+
+export async function createTopicPlan({ batchCode, title }) {
+  const last = await JobTopicPlan.findOne({ batchCode }).sort({ order: -1 }).lean();
+  const created = await JobTopicPlan.create({ batchCode: batchCode.trim(), title: title.trim(), order: (last?.order ?? -1) + 1 });
+  return created.toObject();
+}
+
+export async function updateTopicPlan(id, payload) {
+  const allowed = {};
+  if (payload.title !== undefined) allowed.title = payload.title;
+  if (payload.done !== undefined) allowed.done = payload.done;
+  if (payload.order !== undefined) allowed.order = payload.order;
+  const updated = await JobTopicPlan.findByIdAndUpdate(id, allowed, { new: true, runValidators: true }).lean();
+  if (!updated) throw new ApiError(404, 'Topic not found');
+  return updated;
+}
+
+export async function deleteTopicPlan(id) {
+  const deleted = await JobTopicPlan.findByIdAndDelete(id).lean();
+  if (!deleted) throw new ApiError(404, 'Topic not found');
+  return deleted;
 }

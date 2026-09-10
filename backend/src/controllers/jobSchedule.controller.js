@@ -70,6 +70,31 @@ export const getBatches = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, batches, { count: batches.length });
 });
 
+export const getDashboard = asyncHandler(async (req, res) => {
+  const data = await jobScheduleService.getDashboard();
+  return ApiResponse(res, 200, data);
+});
+
+export const listTopicPlans = asyncHandler(async (req, res) => {
+  const topics = await jobScheduleService.listTopicPlans(req.query.batchCode);
+  return ApiResponse(res, 200, topics, { count: topics.length });
+});
+
+export const createTopicPlan = asyncHandler(async (req, res) => {
+  const created = await jobScheduleService.createTopicPlan(req.body);
+  return ApiResponse(res, 201, created);
+});
+
+export const updateTopicPlan = asyncHandler(async (req, res) => {
+  const updated = await jobScheduleService.updateTopicPlan(req.params.id, req.body);
+  return ApiResponse(res, 200, updated);
+});
+
+export const deleteTopicPlan = asyncHandler(async (req, res) => {
+  await jobScheduleService.deleteTopicPlan(req.params.id);
+  return ApiResponse(res, 200, { deleted: true });
+});
+
 export const downloadScheduleFile = asyncHandler(async (req, res) => {
   const upload = await JobScheduleUpload.findById(req.params.id).lean();
   if (!upload) throw new ApiError(404, 'Schedule upload not found');
