@@ -1,0 +1,174 @@
+.wrap {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: var(--ap-space-md) 0;
+}
+.wrap h1 {
+  color: var(--ap-primary);
+  margin-bottom: 0.3rem;
+}
+.lede {
+  color: var(--ap-text-muted);
+  margin: 0 0 var(--ap-space-md);
+}
+
+.newPlan {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  border: 1px solid var(--ap-border);
+  background: var(--ap-bg);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: var(--ap-space-sm);
+}
+
+.input {
+  border: 1.5px solid var(--ap-border);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+  background: var(--ap-bg);
+  color: var(--ap-text);
+}
+.input:focus {
+  outline: 2px solid var(--ap-accent);
+  outline-offset: 1px;
+}
+.inputGrow {
+  flex: 1;
+  min-width: 180px;
+}
+.inputCode {
+  width: 120px;
+}
+
+.batch {
+  border: 1px solid var(--ap-border);
+  background: var(--ap-bg);
+  border-radius: 12px;
+  padding: 1.05rem 1.15rem;
+  margin-bottom: 0.7rem;
+  box-shadow: var(--ap-shadow-sm);
+}
+
+.batchHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--ap-border);
+  margin-bottom: 0.75rem;
+}
+.batchCode {
+  font-family: var(--ap-font-heading);
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--ap-text);
+}
+.batchStats {
+  font-size: 0.8rem;
+  color: var(--ap-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sectionLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ap-text-muted);
+  margin: 0 0 0.4rem;
+}
+
+.log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.9rem;
+}
+.logItem {
+  border-left: 3px solid var(--ap-border);
+  padding-left: 0.7rem;
+  font-size: 0.85rem;
+}
+.logMuted {
+  color: var(--ap-text-muted);
+  margin-top: 0.1rem;
+}
+
+/* topic plan */
+.progressWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.55rem;
+}
+.progress {
+  flex: 1;
+  height: 6px;
+  background: var(--ap-bg-muted);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progressFill {
+  height: 100%;
+  background: var(--ap-success);
+  transition: width 0.2s ease;
+}
+.progressText {
+  font-size: 0.78rem;
+  color: var(--ap-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.topics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.topic {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.88rem;
+}
+.topic input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.topicTitle {
+  flex: 1;
+}
+.topicDone {
+  text-decoration: line-through;
+  color: var(--ap-text-muted);
+}
+.topicRemove {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--ap-danger);
+  font-weight: 700;
+  padding: 0 0.2rem;
+  line-height: 1;
+}
+
+.addTopic {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.empty {
+  color: var(--ap-text-muted);
+}

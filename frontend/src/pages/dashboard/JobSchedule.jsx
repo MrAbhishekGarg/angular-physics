@@ -7,7 +7,7 @@ import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { jobScheduleService } from '../../services/jobScheduleService.js';
-import formStyles from './DashboardForm.module.css';
+import styles from './JobSchedule.module.css';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -15,12 +15,10 @@ function utcMidnight(dateStr) {
   const d = new Date(dateStr);
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
-
 function todayUtcMidnight() {
   const n = new Date();
   return Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate());
 }
-
 function relativeDay(dateStr) {
   const diff = Math.round((utcMidnight(dateStr) - todayUtcMidnight()) / DAY_MS);
   if (diff === 0) return 'Today';
@@ -28,7 +26,6 @@ function relativeDay(dateStr) {
   if (diff === -1) return 'Yesterday';
   return null;
 }
-
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-IN', {
     weekday: 'short',
@@ -39,8 +36,6 @@ function formatDate(dateStr) {
   });
 }
 
-// Existing rows may hold a bare "P" or a shouty "PHYSICS" from before the
-// backend started expanding the prefix — normalise both to "Physics".
 const SUBJECT_LABELS = { p: 'Physics', c: 'Chemistry', b: 'Biology', z: 'Zoology', m: 'Mathematics', mat: 'Mathematics' };
 function prettySubject(s) {
   if (!s) return '';
@@ -57,15 +52,17 @@ function groupByDate(classes) {
   return [...groups.entries()].sort((a, b) => new Date(b[0]) - new Date(a[0]));
 }
 
+function Field({ label, wide, children }) {
+  return (
+    <div className={`${styles.field} ${wide ? styles.fieldWide : ''}`}>
+      <span className={styles.fieldLabel}>{label}</span>
+      {children}
+    </div>
+  );
+}
+
 function ManualClassForm({ defaultDate, onCreated }) {
-  const [form, setForm] = useState({
-    date: defaultDate || '',
-    startTime: '',
-    endTime: '',
-    room: '',
-    batchCode: '',
-    topicsCovered: '',
-  });
+  const [form, setForm] = useState({ date: defaultDate || '', startTime: '', endTime: '', room: '', batchCode: '', topicsCovered: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -91,48 +88,38 @@ function ManualClassForm({ defaultDate, onCreated }) {
   };
 
   return (
-    <form className={formStyles.form} onSubmit={submit}>
-      <div className={formStyles.row}>
-        <label>
-          Date
-          <input type="date" required value={form.date} onChange={(e) => set({ date: e.target.value })} />
-        </label>
-        <label>
-          Batch code
-          <input required value={form.batchCode} onChange={(e) => set({ batchCode: e.target.value })} placeholder="e.g. DRE" />
-        </label>
+    <form onSubmit={submit}>
+      <div className={styles.fieldGrid}>
+        <Field label="Date">
+          <input className={styles.input} type="date" required value={form.date} onChange={(e) => set({ date: e.target.value })} />
+        </Field>
+        <Field label="Batch code">
+          <input className={styles.input} required value={form.batchCode} onChange={(e) => set({ batchCode: e.target.value })} placeholder="DRE" />
+        </Field>
+        <Field label="Start time">
+          <input className={styles.input} required value={form.startTime} onChange={(e) => set({ startTime: e.target.value })} placeholder="1:10" />
+        </Field>
+        <Field label="End time">
+          <input className={styles.input} value={form.endTime} onChange={(e) => set({ endTime: e.target.value })} placeholder="2:10" />
+        </Field>
+        <Field label="Room">
+          <input className={styles.input} value={form.room} onChange={(e) => set({ room: e.target.value })} placeholder="8" />
+        </Field>
+        <Field label="Topics covered (optional)" wide>
+          <input className={styles.input} value={form.topicsCovered} onChange={(e) => set({ topicsCovered: e.target.value })} />
+        </Field>
       </div>
-      <div className={formStyles.row}>
-        <label>
-          Start time
-          <input required value={form.startTime} onChange={(e) => set({ startTime: e.target.value })} placeholder="e.g. 1:10" />
-        </label>
-        <label>
-          End time
-          <input value={form.endTime} onChange={(e) => set({ endTime: e.target.value })} placeholder="e.g. 2:10" />
-        </label>
-      </div>
-      <div className={formStyles.row}>
-        <label>
-          Room
-          <input value={form.room} onChange={(e) => set({ room: e.target.value })} placeholder="e.g. 8" />
-        </label>
-        <label>
-          Topics covered (optional)
-          <input value={form.topicsCovered} onChange={(e) => set({ topicsCovered: e.target.value })} />
-        </label>
-      </div>
-      <div className={formStyles.actions}>
+      <div className={styles.formActions}>
         <Button type="submit" size="sm" disabled={busy}>
           {busy ? 'Adding…' : 'Add class'}
         </Button>
       </div>
-      {error && <p className={formStyles.errorMsg}>{error}</p>}
+      {error && <p className={styles.feedbackErr}>{error}</p>}
     </form>
   );
 }
 
-function ClassRow({ cls, onSaved, onDeleted }) {
+function ClassCard({ cls, onSaved, onDeleted }) {
   const [topicsCovered, setTopicsCovered] = useState(cls.topicsCovered || '');
   const [notes, setNotes] = useState(cls.notes || '');
   const [status, setStatus] = useState(''); // '' | 'saving' | 'saved'
@@ -156,40 +143,42 @@ function ClassRow({ cls, onSaved, onDeleted }) {
   };
 
   return (
-    <div className={formStyles.card} style={{ marginBottom: '0.6rem' }}>
-      <div className={formStyles.cardHeader}>
-        <strong>
-          {cls.startTime}
-          {cls.endTime ? `–${cls.endTime}` : ''} · Room {cls.room || '?'} · {cls.batchCode}
-          {cls.subjectPrefix && (
-            <span style={{ fontWeight: 400, color: 'var(--ap-text-muted)' }}> · {prettySubject(cls.subjectPrefix)}</span>
-          )}
-        </strong>
-        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-          {status === 'saving' && <span style={{ fontSize: '0.72rem', color: 'var(--ap-text-muted)' }}>Saving…</span>}
-          {status === 'saved' && <span style={{ fontSize: '0.72rem', color: 'var(--ap-success)' }}>Saved ✓</span>}
+    <div className={styles.class}>
+      <div className={styles.classHead}>
+        <div>
+          <span className={styles.classWhen}>
+            {cls.startTime}
+            {cls.endTime ? `–${cls.endTime}` : ''}
+            <span className={styles.meta}>
+              {' · '}Room {cls.room || '?'} · {cls.batchCode}
+            </span>
+          </span>
+          {cls.subjectPrefix && <p className={styles.classSub}>{prettySubject(cls.subjectPrefix)}</p>}
+        </div>
+        <div className={styles.classTags}>
+          {status === 'saving' && <span className={styles.tagMuted}>Saving…</span>}
+          {status === 'saved' && <span className={styles.tagOk}>Saved ✓</span>}
           {cls.needsReview && <Badge tone="default">Needs review</Badge>}
-          {cls.source === 'pdf' && (
-            <span style={{ fontSize: '0.72rem', color: 'var(--ap-text-muted)' }}>from PDF ({cls.rawText})</span>
-          )}
+          {cls.source === 'pdf' && cls.rawText && <span className={styles.tagMuted}>from PDF · {cls.rawText}</span>}
         </div>
       </div>
-      <div className={formStyles.row}>
-        <label>
-          Topics covered
+
+      <div className={styles.fieldGrid}>
+        <Field label="Topics covered">
           <input
+            className={styles.input}
             value={topicsCovered}
             onChange={(e) => setTopicsCovered(e.target.value)}
             onBlur={() => save()}
-            placeholder="e.g. Electric dipole in uniform field"
+            placeholder="e.g. Terminal velocity, Poiseuille's equation"
           />
-        </label>
-        <label>
-          Notes
-          <input value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => save()} placeholder="optional" />
-        </label>
+        </Field>
+        <Field label="Notes">
+          <input className={styles.input} value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => save()} placeholder="optional" />
+        </Field>
       </div>
-      <div className={formStyles.actions} style={{ marginTop: '0.4rem' }}>
+
+      <div className={styles.formActions}>
         {cls.needsReview && (
           <Button type="button" size="sm" variant="ghost" onClick={() => save({ needsReview: false })}>
             Looks good
@@ -249,7 +238,7 @@ export default function JobSchedule() {
     try {
       const { classes: created, warnings } = await jobScheduleService.uploadFile(file, fileIsImage ? imageDate : undefined);
       if (fileIsImage) {
-        setUploadMessage('Image saved. Add this day\'s classes below — it\'ll show alongside the form.');
+        setUploadMessage("Image saved — add this day's classes below; it stays on the page for reference.");
         setManualDefaultDate(imageDate);
         setShowManual(true);
       } else {
@@ -273,9 +262,6 @@ export default function JobSchedule() {
 
   const needsReviewCount = classes.filter((c) => c.needsReview).length;
 
-  // One block per date, newest first — merges classes (grouped by their
-  // date) with any upload for that date, so an image day with no classes
-  // added yet still shows up with its reference image.
   const dayBlocks = useMemo(() => {
     const byDate = new Map();
     groupByDate(classes).forEach(([date, dayClasses]) => byDate.set(new Date(date).toISOString(), { date, classes: dayClasses, upload: null }));
@@ -301,28 +287,28 @@ export default function JobSchedule() {
     <>
       <SEO title="My Job — Schedule" description="Personal Aakash class schedule tracking." path="/dashboard/mentor/admin/job-schedule" />
       <DashboardLayout role="mentor">
-        <div className={formStyles.wrap} style={{ maxWidth: 900 }}>
+        <div className={styles.wrap}>
           <h1>My Job — Schedule</h1>
-          <p style={{ color: 'var(--ap-text-muted)' }}>
-            Your Aakash classes, from the daily schedule. Not part of the Angular Physics business —{' '}
-            <Link to="/dashboard/mentor/admin/job-schedule/batches">see batch progress</Link>.
+          <p className={styles.lede}>
+            Your Aakash classes, day by day. See the <Link to="/dashboard/mentor/admin/job">overview</Link> or{' '}
+            <Link to="/dashboard/mentor/admin/job-schedule/batches">batch progress</Link>.
           </p>
 
           {!loading && !error && classes.length > 0 && (
-            <p style={{ fontSize: '0.9rem', color: 'var(--ap-text-muted)' }}>
+            <p className={styles.summary}>
               Around this week: <strong>{weekStats.count}</strong> class{weekStats.count === 1 ? '' : 'es'} across{' '}
               <strong>{weekStats.batches}</strong> batch{weekStats.batches === 1 ? '' : 'es'}.
             </p>
           )}
 
-          <div className={formStyles.card}>
-            <strong>Upload today's schedule</strong>
-            <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
+          <div className={styles.panel}>
+            <div className={styles.panelTitle}>Upload a schedule</div>
+            <p className={styles.panelHint}>
               A <strong>PDF</strong> is read automatically — best-effort against a dense grid, so check anything flagged
-              "Needs review". An <strong>image</strong> can't be auto-read: it's kept on this page as a reference while
-              you add that day's classes by hand. Set up the Zapier bridge to skip PDF uploads entirely.
+              “Needs review”. An <strong>image</strong> can’t be auto-read: it’s kept here as a reference while you add
+              that day’s classes by hand.
             </p>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className={styles.uploadRow}>
               <input
                 type="file"
                 accept=".pdf,image/png,image/jpeg,image/webp"
@@ -330,26 +316,25 @@ export default function JobSchedule() {
                   setFile(e.target.files[0] || null);
                   setImageDate('');
                 }}
-                style={{ flex: 1, minWidth: 200 }}
               />
               {fileIsImage && (
-                <label style={{ fontSize: '0.8rem' }}>
-                  Schedule date{' '}
-                  <input type="date" value={imageDate} onChange={(e) => setImageDate(e.target.value)} required />
-                </label>
+                <div className={styles.field}>
+                  <span className={styles.fieldLabel}>Schedule date</span>
+                  <input className={styles.input} type="date" value={imageDate} onChange={(e) => setImageDate(e.target.value)} required />
+                </div>
               )}
               <Button type="button" size="sm" disabled={!file || (fileIsImage && !imageDate) || uploadBusy} onClick={handleUpload}>
-                {uploadBusy ? 'Working…' : fileIsImage ? 'Save image' : 'Upload & Extract'}
+                {uploadBusy ? 'Working…' : fileIsImage ? 'Save image' : 'Upload & extract'}
               </Button>
             </div>
             {(uploadMessage || uploadWarnings.length > 0) && (
-              <div style={{ marginTop: '0.5rem' }}>
-                {uploadMessage && <p style={{ color: 'var(--ap-success)', fontSize: '0.85rem' }}>{uploadMessage}</p>}
+              <div className={styles.feedback}>
+                {uploadMessage && <p className={styles.feedbackOk}>{uploadMessage}</p>}
                 {uploadFailed ? (
-                  <p className={formStyles.errorMsg}>{uploadWarnings[0]}</p>
+                  <p className={styles.feedbackErr}>{uploadWarnings[0]}</p>
                 ) : (
                   uploadWarnings.length > 0 && (
-                    <ul style={{ color: 'var(--ap-warning)', fontSize: '0.8rem', paddingLeft: '1.2rem' }}>
+                    <ul className={styles.warnList}>
                       {uploadWarnings.map((w, i) => (
                         <li key={i}>{w}</li>
                       ))}
@@ -360,9 +345,9 @@ export default function JobSchedule() {
             )}
           </div>
 
-          <div className={formStyles.card}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <strong>Add a class manually</strong>
+          <div className={styles.panel}>
+            <div className={styles.panelHead}>
+              <div className={styles.panelTitle}>Add a class manually</div>
               <Button type="button" size="sm" variant="ghost" onClick={() => setShowManual((v) => !v)}>
                 {showManual ? 'Close' : 'Open'}
               </Button>
@@ -371,30 +356,29 @@ export default function JobSchedule() {
           </div>
 
           {needsReviewCount > 0 && (
-            <p style={{ color: 'var(--ap-warning)', fontWeight: 600, fontSize: '0.9rem' }}>
-              {needsReviewCount} class{needsReviewCount === 1 ? '' : 'es'} need review.
-            </p>
+            <div className={styles.reviewBanner}>
+              {needsReviewCount} class{needsReviewCount === 1 ? ' needs' : 'es need'} review — check the times, rooms and batches below.
+            </div>
           )}
 
           {loading && <Spinner />}
           {error && <ErrorState message={error} onRetry={refetch} />}
           {!loading && !error && dayBlocks.length === 0 && (
-            <p style={{ color: 'var(--ap-text-muted)' }}>Nothing yet — upload a schedule above, or add a class by hand.</p>
+            <p className={styles.empty}>Nothing yet — upload a schedule above, or add a class by hand.</p>
           )}
+
           {!loading &&
             !error &&
             dayBlocks.map(({ date, classes: dayClasses, upload }) => {
               const rel = relativeDay(date);
               return (
-                <div key={date} style={{ marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '0.4rem' }}>
-                    <h3 style={{ marginBottom: '0.4rem' }}>
-                      {rel && <span style={{ color: 'var(--ap-accent)' }}>{rel} · </span>}
+                <section key={date} className={styles.day}>
+                  <div className={styles.dayHead}>
+                    <h2 className={styles.dayTitle}>
+                      {rel && <span className={styles.dayRel}>{rel} · </span>}
                       {formatDate(date)}
-                      {dayClasses.length === 0 && (
-                        <span style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}> — no classes added yet</span>
-                      )}
-                    </h3>
+                      {dayClasses.length === 0 && <span className={styles.dayEmpty}> — no classes added yet</span>}
+                    </h2>
                     {upload && (
                       <Button
                         type="button"
@@ -406,23 +390,21 @@ export default function JobSchedule() {
                           await refetch();
                         }}
                       >
-                        Delete this upload
+                        Delete upload
                       </Button>
                     )}
                   </div>
+
                   {upload?.isImage && (
                     <a href={jobScheduleService.fileUrl(upload._id)} target="_blank" rel="noreferrer">
-                      <img
-                        src={jobScheduleService.fileUrl(upload._id)}
-                        alt="Schedule"
-                        style={{ maxWidth: '100%', border: '1px solid var(--ap-border)', borderRadius: 6, marginBottom: '0.6rem' }}
-                      />
+                      <img src={jobScheduleService.fileUrl(upload._id)} alt="Schedule" className={styles.refImg} />
                     </a>
                   )}
+
                   {dayClasses.map((cls) => (
-                    <ClassRow key={cls._id} cls={cls} onSaved={handleSaved} onDeleted={handleDeleted} />
+                    <ClassCard key={cls._id} cls={cls} onSaved={handleSaved} onDeleted={handleDeleted} />
                   ))}
-                </div>
+                </section>
               );
             })}
         </div>

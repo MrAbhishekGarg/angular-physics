@@ -24,23 +24,18 @@ function Tile({ value, label, sub, tone }) {
 function WeekBars({ data }) {
   const max = Math.max(1, ...data.map((d) => d.classes));
   return (
-    <>
-      <div className={styles.chart}>
-        {data.map((d) => (
-          <div key={d.weekStart} className={styles.bar} title={`Week of ${fmtDate(d.weekStart)} — ${d.classes} classes, ${d.hours}h`}>
-            <div
-              className={styles.barFill}
-              style={{ height: `${(d.classes / max) * 100}%` }}
-              aria-hidden="true"
-            >
+    <div className={styles.chart}>
+      {data.map((d) => (
+        <div key={d.weekStart} className={styles.barCol} title={`Week of ${fmtDate(d.weekStart)} — ${d.classes} classes, ${d.hours} h`}>
+          <div className={styles.barTrack}>
+            <div className={styles.barFill} style={{ height: `${(d.classes / max) * 100}%` }}>
               {d.classes > 0 && <span className={styles.barValue}>{d.classes}</span>}
             </div>
-            <span className={styles.barLabel}>{fmtDate(d.weekStart)}</span>
           </div>
-        ))}
-      </div>
-      <div className={styles.chartAxis} />
-    </>
+          <span className={styles.barLabel}>{fmtDate(d.weekStart)}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 

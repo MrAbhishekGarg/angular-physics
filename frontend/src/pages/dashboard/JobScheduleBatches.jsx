@@ -6,7 +6,7 @@ import Button from '../../components/common/Button.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { jobScheduleService } from '../../services/jobScheduleService.js';
-import formStyles from './DashboardForm.module.css';
+import styles from './JobScheduleBatches.module.css';
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
@@ -20,6 +20,7 @@ function TopicPlan({ batchCode, plan, onChanged }) {
   useEffect(() => setItems(plan), [plan]);
 
   const covered = items.filter((i) => i.done).length;
+  const pct = items.length ? (covered / items.length) * 100 : 0;
 
   const add = async (e) => {
     e.preventDefault();
@@ -49,41 +50,35 @@ function TopicPlan({ batchCode, plan, onChanged }) {
   };
 
   return (
-    <div style={{ marginTop: '0.6rem' }}>
-      <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ap-text-muted)', marginBottom: '0.3rem' }}>
-        Topic plan — {covered}/{items.length} covered
-      </div>
+    <div>
+      <p className={styles.sectionLabel}>Topic plan</p>
       {items.length > 0 && (
-        <div
-          style={{ height: 6, background: 'var(--ap-bg-muted)', borderRadius: 3, overflow: 'hidden', marginBottom: '0.5rem' }}
-        >
-          <div style={{ height: '100%', width: `${(covered / items.length) * 100}%`, background: 'var(--ap-success)' }} />
+        <div className={styles.progressWrap}>
+          <div className={styles.progress}>
+            <div className={styles.progressFill} style={{ width: `${pct}%` }} />
+          </div>
+          <span className={styles.progressText}>
+            {covered}/{items.length} covered
+          </span>
         </div>
       )}
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+      <ul className={styles.topics}>
         {items.map((item) => (
-          <li key={item._id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+          <li key={item._id} className={styles.topic}>
             <input type="checkbox" checked={item.done} onChange={() => toggle(item)} />
-            <span style={{ flex: 1, textDecoration: item.done ? 'line-through' : 'none', color: item.done ? 'var(--ap-text-muted)' : 'var(--ap-text)' }}>
-              {item.title}
-            </span>
-            <button
-              type="button"
-              onClick={() => remove(item)}
-              aria-label="Remove topic"
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--ap-danger)', fontWeight: 700 }}
-            >
+            <span className={`${styles.topicTitle} ${item.done ? styles.topicDone : ''}`}>{item.title}</span>
+            <button type="button" onClick={() => remove(item)} aria-label="Remove topic" className={styles.topicRemove}>
               ✕
             </button>
           </li>
         ))}
       </ul>
-      <form onSubmit={add} style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem' }}>
+      <form onSubmit={add} className={styles.addTopic}>
         <input
+          className={`${styles.input} ${styles.inputGrow}`}
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           placeholder="Add a topic to cover…"
-          style={{ flex: 1, border: '1.5px solid var(--ap-border)', borderRadius: 8, padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
         />
         <Button type="submit" size="sm" variant="ghost" disabled={busy || !newTitle.trim()}>
           Add
@@ -113,18 +108,13 @@ function NewBatchPlan({ onCreated }) {
   };
 
   return (
-    <form onSubmit={submit} className={formStyles.card} style={{ marginBottom: '0.6rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+    <form onSubmit={submit} className={styles.newPlan}>
+      <input className={`${styles.input} ${styles.inputCode}`} value={batchCode} onChange={(e) => setBatchCode(e.target.value)} placeholder="Batch code" />
       <input
-        value={batchCode}
-        onChange={(e) => setBatchCode(e.target.value)}
-        placeholder="Batch code"
-        style={{ border: '1.5px solid var(--ap-border)', borderRadius: 8, padding: '0.4rem 0.6rem', fontSize: '0.85rem', width: 120 }}
-      />
-      <input
+        className={`${styles.input} ${styles.inputGrow}`}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="First topic to cover…"
-        style={{ flex: 1, minWidth: 180, border: '1.5px solid var(--ap-border)', borderRadius: 8, padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+        placeholder="First topic to cover for a batch you haven't taught yet…"
       />
       <Button type="submit" size="sm" variant="ghost" disabled={busy || !batchCode.trim() || !title.trim()}>
         Start a plan
@@ -158,11 +148,11 @@ export default function JobScheduleBatches() {
     <>
       <SEO title="My Job — Batch Progress" description="Per-batch teaching log and topic plan for Aakash classes." path="/dashboard/mentor/admin/job-schedule/batches" />
       <DashboardLayout role="mentor">
-        <div className={formStyles.wrap} style={{ maxWidth: 900 }}>
+        <div className={styles.wrap}>
           <h1>My Job — Batch Progress</h1>
-          <p style={{ color: 'var(--ap-text-muted)' }}>
-            Per batch: what you've taught, and a topic plan for what's left — back to{' '}
-            <Link to="/dashboard/mentor/admin/job-schedule">the schedule</Link> or the{' '}
+          <p className={styles.lede}>
+            Per batch: what you’ve taught, and a topic plan for what’s left. Back to the{' '}
+            <Link to="/dashboard/mentor/admin/job-schedule">schedule</Link> or the{' '}
             <Link to="/dashboard/mentor/admin/job">overview</Link>.
           </p>
 
@@ -171,34 +161,38 @@ export default function JobScheduleBatches() {
           {loading && <Spinner />}
           {error && <ErrorState message={error} onRetry={refetch} />}
           {!loading && !error && batches.length === 0 && (
-            <p style={{ color: 'var(--ap-text-muted)' }}>No batches yet — classes and topic plans will group here.</p>
+            <p className={styles.empty}>No batches yet — classes and topic plans will group here.</p>
           )}
+
           {!loading &&
             !error &&
             batches.map((batch) => (
-              <div key={batch.batchCode} className={formStyles.card} style={{ marginBottom: '0.6rem' }}>
-                <div className={formStyles.cardHeader}>
-                  <strong>{batch.batchCode}</strong>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}>
+              <section key={batch.batchCode} className={styles.batch}>
+                <div className={styles.batchHead}>
+                  <span className={styles.batchCode}>{batch.batchCode}</span>
+                  <span className={styles.batchStats}>
                     {batch.classCount} class{batch.classCount === 1 ? '' : 'es'} · {batch.hours} h
                     {batch.lastTaught ? ` · last taught ${formatDate(batch.lastTaught)}` : ''}
                   </span>
                 </div>
 
                 {batch.classes.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    {batch.classes.map((c) => (
-                      <div key={c._id} style={{ borderLeft: '3px solid var(--ap-border)', paddingLeft: '0.6rem', fontSize: '0.85rem' }}>
-                        <strong>{formatDate(c.date)}</strong> · {c.startTime}
-                        {c.endTime ? `–${c.endTime}` : ''} · Room {c.room || '?'}
-                        {c.topicsCovered && <div style={{ color: 'var(--ap-text-muted)' }}>{c.topicsCovered}</div>}
-                      </div>
-                    ))}
-                  </div>
+                  <>
+                    <p className={styles.sectionLabel}>Class log</p>
+                    <div className={styles.log}>
+                      {batch.classes.map((c) => (
+                        <div key={c._id} className={styles.logItem}>
+                          <strong>{formatDate(c.date)}</strong> · {c.startTime}
+                          {c.endTime ? `–${c.endTime}` : ''} · Room {c.room || '?'}
+                          {c.topicsCovered && <div className={styles.logMuted}>{c.topicsCovered}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
 
                 <TopicPlan batchCode={batch.batchCode} plan={batch.plan || []} onChanged={refetch} />
-              </div>
+              </section>
             ))}
         </div>
       </DashboardLayout>
