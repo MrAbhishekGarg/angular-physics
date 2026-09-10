@@ -2,15 +2,16 @@ import { Router } from 'express';
 import {
   ingestSchedule,
   listClasses,
+  listUploads,
   createClass,
   updateClass,
   deleteClass,
   deleteUpload,
   getBatches,
-  downloadSchedulePdf,
+  downloadScheduleFile,
 } from '../controllers/jobSchedule.controller.js';
 import { authenticate, authorize } from '../middleware/auth.js';
-import { uploadJobSchedulePdf } from '../middleware/upload.js';
+import { uploadJobScheduleFile } from '../middleware/upload.js';
 import { validateBody } from '../middleware/validate.js';
 import { ApiError } from '../utils/ApiError.js';
 import { env } from '../config/env.js';
@@ -31,7 +32,7 @@ function requireIngestSecret(req, res, next) {
   next();
 }
 
-router.post('/ingest', requireIngestSecret, uploadJobSchedulePdf, ingestSchedule);
+router.post('/ingest', requireIngestSecret, uploadJobScheduleFile, ingestSchedule);
 
 // Everything else is the mentor's own admin-only view of his day job —
 // same authorize('admin') gate as the existing /dashboard/mentor/admin/*
@@ -43,9 +44,10 @@ router.get('/classes', listClasses);
 router.post('/classes', validateBody(['date', 'startTime', 'batchCode']), createClass);
 router.patch('/classes/:id', updateClass);
 router.delete('/classes/:id', deleteClass);
-router.post('/upload', uploadJobSchedulePdf, ingestSchedule);
-router.get('/batches', getBatches);
-router.get('/uploads/:id/pdf', downloadSchedulePdf);
+router.get('/uploads', listUploads);
+router.post('/upload', uploadJobScheduleFile, ingestSchedule);
+router.get('/uploads/:id/file', downloadScheduleFile);
 router.delete('/uploads/:id', deleteUpload);
+router.get('/batches', getBatches);
 
 export default router;

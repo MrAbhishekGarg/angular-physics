@@ -394,25 +394,30 @@ export function uploadDoubtImage(req, res, next) {
   });
 }
 
-// The daily Aakash schedule PDF — memory storage since the buffer is parsed
-// (scheduleGridParser.js) before being written to disk under its own
-// generated filename, same reasoning as the question-screenshot uploaders
-// above. Used by both the manual "My Job" upload button and the
-// unauthenticated Zapier ingestion webhook — see jobSchedule.routes.js.
-const jobSchedulePdfUploader = multer({
+// The daily Aakash schedule — a PDF (auto-parsed by scheduleGridParser.js)
+// or, on the days it arrives as one, an image (kept only as an on-screen
+// reference for manual entry — an image has no text layer to parse).
+// Memory storage since a PDF buffer is parsed before being written to disk
+// under its own generated filename, same as the question-screenshot
+// uploaders above. Used by the manual "My Job" upload button and the
+// unauthenticated Zapier webhook — see jobSchedule.routes.js.
+const JOB_SCHEDULE_MIME_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg', 'image/webp']);
+const JOB_SCHEDULE_EXTS = new Set(['.pdf', '.png', '.jpg', '.jpeg', '.webp']);
+
+const jobScheduleUploader = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const isPdf = file.mimetype === 'application/pdf' || path.extname(file.originalname).toLowerCase() === '.pdf';
-    if (!isPdf) return cb(new ApiError(400, 'Only .pdf files are allowed'));
+    const ok = JOB_SCHEDULE_MIME_TYPES.has(file.mimetype) || JOB_SCHEDULE_EXTS.has(path.extname(file.originalname).toLowerCase());
+    if (!ok) return cb(new ApiError(400, 'Upload a PDF or an image (PNG/JPG/WEBP)'));
     cb(null, true);
   },
 });
 
-export function uploadJobSchedulePdf(req, res, next) {
-  jobSchedulePdfUploader.single('pdf')(req, res, (err) => {
+export function uploadJobScheduleFile(req, res, next) {
+  jobScheduleUploader.single('pdf')(req, res, (err) => {
     if (!err) {
-      if (!req.file) return next(new ApiError(400, 'A .pdf file is required (field name "pdf")'));
+      if (!req.file) return next(new ApiError(400, 'A file is required (field name "pdf")'));
       return next();
     }
     if (err instanceof ApiError) return next(err);

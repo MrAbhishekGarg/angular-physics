@@ -7,8 +7,20 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 
+const CONTENT_TYPE_BY_EXT = {
+  '.pdf': 'application/pdf',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+};
+
+function isImagePath(storedPath) {
+  return path.extname(storedPath).toLowerCase() !== '.pdf';
+}
+
 export const ingestSchedule = asyncHandler(async (req, res) => {
-  const { upload, classes, warnings } = await jobScheduleService.ingestSchedulePdf(req.file.buffer, req.file.originalname);
+  const { upload, classes, warnings } = await jobScheduleService.ingestScheduleFile(req.file, { date: req.body.date });
   return ApiResponse(res, 201, { upload, classes, warnings }, { extracted: classes.length });
 });
 
@@ -21,6 +33,16 @@ export const listClasses = asyncHandler(async (req, res) => {
     needsReview: needsReview === undefined ? undefined : needsReview === 'true',
   });
   return ApiResponse(res, 200, classes, { count: classes.length });
+});
+
+export const listUploads = asyncHandler(async (req, res) => {
+  const uploads = await JobScheduleUpload.find().sort({ date: -1 }).lean();
+  return ApiResponse(
+    res,
+    200,
+    uploads.map((u) => ({ ...u, isImage: isImagePath(u.storedPath) })),
+    { count: uploads.length }
+  );
 });
 
 export const createClass = asyncHandler(async (req, res) => {
@@ -48,14 +70,15 @@ export const getBatches = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, batches, { count: batches.length });
 });
 
-export const downloadSchedulePdf = asyncHandler(async (req, res) => {
+export const downloadScheduleFile = asyncHandler(async (req, res) => {
   const upload = await JobScheduleUpload.findById(req.params.id).lean();
   if (!upload) throw new ApiError(404, 'Schedule upload not found');
 
   const absolutePath = path.join(JOB_SCHEDULE_UPLOADS_DIR, upload.storedPath);
   if (!fs.existsSync(absolutePath)) throw new ApiError(404, 'File not found on server');
 
-  res.setHeader('Content-Type', 'application/pdf');
+  const ext = path.extname(upload.storedPath).toLowerCase();
+  res.setHeader('Content-Type', CONTENT_TYPE_BY_EXT[ext] || 'application/octet-stream');
   res.setHeader('Content-Disposition', `inline; filename="${upload.originalFilename || upload.storedPath}"`);
   fs.createReadStream(absolutePath).pipe(res);
 });

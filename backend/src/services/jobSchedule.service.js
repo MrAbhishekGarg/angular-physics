@@ -11,36 +11,62 @@ function startOfDay(date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
+const EXT_BY_MIME = { 'application/pdf': '.pdf', 'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp' };
+
 /**
- * Saves the raw PDF (audit trail + "open the original" in the review UI),
- * runs the position-aware grid parser, and inserts one JobClass per
- * extracted cell, all flagged needsReview since the parser is a best-effort
- * heuristic against a complex, human-formatted document (see
- * scheduleGridParser.js's own doc comment). Rejects outright if this date
- * was already ingested — protects against a duplicate Zapier fire or an
+ * Ingests the day's schedule file.
+ *
+ * A PDF is parsed by the position-aware grid parser (scheduleGridParser.js)
+ * — one JobClass per extracted cell, all flagged needsReview since that
+ * parser is a best-effort heuristic against a complex human-formatted
+ * document — with the date read from the PDF's own title.
+ *
+ * An image has no text layer to parse, so it's stored as an on-screen
+ * reference only: no classes are created, and the caller must pass the
+ * date explicitly (the mentor picks it in the UI) since it can't be read
+ * off the pixels.
+ *
+ * Either way the raw file is archived, and a date that already has an
+ * upload is rejected — protects against a duplicate Zapier fire or an
  * accidental re-upload silently overwriting notes already typed onto that
  * day's classes.
  */
-export async function ingestSchedulePdf(buffer, originalFilename) {
-  const { date, dayOfWeek, classes, warnings } = await extractMyClassesFromPdf(buffer, env.mentorFacultyCode);
+export async function ingestScheduleFile(file, { date: explicitDate } = {}) {
+  const isImage = file.mimetype !== 'application/pdf';
 
-  if (!date) {
-    throw new ApiError(400, `Could not find a schedule date in this PDF. ${warnings.join(' ')}`.trim());
+  let day;
+  let dayOfWeek = '';
+  let classes = [];
+  let warnings = [];
+
+  if (isImage) {
+    if (!explicitDate) throw new ApiError(400, "Pick the schedule's date — it can't be read from an image.");
+    day = startOfDay(new Date(explicitDate));
+    if (Number.isNaN(day.getTime())) throw new ApiError(400, 'That date is not valid.');
+    warnings = ["Image upload — classes can't be auto-extracted from an image. Add this day's classes with the form below; the image stays on this page for reference."];
+  } else {
+    const parsed = await extractMyClassesFromPdf(file.buffer, env.mentorFacultyCode);
+    if (!parsed.date) {
+      throw new ApiError(400, `Could not find a schedule date in this PDF. ${parsed.warnings.join(' ')}`.trim());
+    }
+    day = startOfDay(parsed.date);
+    dayOfWeek = parsed.dayOfWeek || '';
+    classes = parsed.classes;
+    warnings = parsed.warnings;
   }
 
-  const day = startOfDay(date);
   const existing = await JobScheduleUpload.findOne({ date: day }).lean();
   if (existing) {
-    throw new ApiError(409, `A schedule for ${day.toISOString().slice(0, 10)} was already ingested — delete its classes first if you want to re-ingest.`);
+    throw new ApiError(409, `A schedule for ${day.toISOString().slice(0, 10)} was already uploaded — delete it first if you want to re-upload.`);
   }
 
-  const filename = `${day.toISOString().slice(0, 10)}-${Date.now()}.pdf`;
-  const storedPath = path.join(JOB_SCHEDULE_UPLOADS_DIR, filename);
-  fs.writeFileSync(storedPath, buffer);
+  const ext = EXT_BY_MIME[file.mimetype] || path.extname(file.originalname).toLowerCase() || '.bin';
+  const filename = `${day.toISOString().slice(0, 10)}-${Date.now()}${ext}`;
+  fs.writeFileSync(path.join(JOB_SCHEDULE_UPLOADS_DIR, filename), file.buffer);
 
   const upload = await JobScheduleUpload.create({
     date: day,
-    originalFilename: originalFilename || '',
+    originalFilename: file.originalname || '',
     storedPath: filename, // relative — JOB_SCHEDULE_UPLOADS_DIR may differ across environments
     extractedCount: classes.length,
     warnings,
@@ -49,7 +75,7 @@ export async function ingestSchedulePdf(buffer, originalFilename) {
   const created = await JobClass.insertMany(
     classes.map((c) => ({
       date: day,
-      dayOfWeek: dayOfWeek || '',
+      dayOfWeek,
       startTime: c.startTime,
       endTime: c.endTime,
       room: c.room,
@@ -113,10 +139,10 @@ export async function updateClass(id, payload) {
 
 /**
  * Deleting the last class tied to a given upload also removes that upload
- * row (and its stored PDF) — otherwise the date stays permanently blocked
- * from re-ingestion by ingestSchedulePdf's duplicate guard even after every
- * class from it is gone, which would silently contradict the "delete its
- * classes first if you want to re-ingest" error that guard gives.
+ * row (and its stored file) — otherwise the date stays permanently blocked
+ * from re-upload by ingestScheduleFile's duplicate guard even after every
+ * class from it is gone, which would silently contradict the "delete it
+ * first if you want to re-upload" error that guard gives.
  */
 export async function deleteClass(id) {
   const deleted = await JobClass.findByIdAndDelete(id).lean();
