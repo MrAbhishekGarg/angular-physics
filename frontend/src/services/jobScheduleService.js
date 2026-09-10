@@ -7,6 +7,7 @@ export const jobScheduleService = {
   updateClass: (id, payload) => api.patch(`/job-schedule/classes/${id}`, payload),
   removeClass: (id) => api.delete(`/job-schedule/classes/${id}`),
   removeUpload: (uploadId) => api.delete(`/job-schedule/uploads/${uploadId}`),
+  getBatches: () => api.get('/job-schedule/batches'),
   fileUrl: (uploadId) => `${api.defaults.baseURL}/job-schedule/uploads/${uploadId}/file`,
   uploadFile: (file, date) => {
     const formData = new FormData();

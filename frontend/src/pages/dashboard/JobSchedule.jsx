@@ -55,7 +55,6 @@ function ManualClassForm({ defaultDate, onCreated }) {
     endTime: '',
     room: '',
     batchCode: '',
-    subjectPrefix: 'P',
     topicsCovered: '',
   });
   const [busy, setBusy] = useState(false);
@@ -110,14 +109,10 @@ function ManualClassForm({ defaultDate, onCreated }) {
           <input value={form.room} onChange={(e) => set({ room: e.target.value })} placeholder="e.g. 8" />
         </label>
         <label>
-          Subject
-          <input value={form.subjectPrefix} onChange={(e) => set({ subjectPrefix: e.target.value })} placeholder="e.g. P" />
+          Topics covered (optional)
+          <input value={form.topicsCovered} onChange={(e) => set({ topicsCovered: e.target.value })} />
         </label>
       </div>
-      <label>
-        Topics covered (optional)
-        <input value={form.topicsCovered} onChange={(e) => set({ topicsCovered: e.target.value })} />
-      </label>
       <div className={formStyles.actions}>
         <Button type="submit" size="sm" disabled={busy}>
           {busy ? 'Adding…' : 'Add class'}
@@ -157,7 +152,6 @@ function ClassRow({ cls, onSaved, onDeleted }) {
         <strong>
           {cls.startTime}
           {cls.endTime ? `–${cls.endTime}` : ''} · Room {cls.room || '?'} · {cls.batchCode}
-          {cls.subjectPrefix ? ` · ${cls.subjectPrefix}` : ''}
         </strong>
         <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
           {status === 'saving' && <span style={{ fontSize: '0.72rem', color: 'var(--ap-text-muted)' }}>Saving…</span>}
