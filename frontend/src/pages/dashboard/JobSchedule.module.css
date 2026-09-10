@@ -255,3 +255,61 @@
 .empty {
   color: var(--ap-text-muted);
 }
+
+/* ---- done / upcoming split ---- */
+.phaseSection {
+  margin-top: var(--ap-space-lg);
+}
+
+.phaseHead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid var(--ap-border);
+  margin-bottom: 0.9rem;
+}
+.phaseHeadTitle {
+  font-family: var(--ap-font-heading);
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+.phaseHeadUpcoming .phaseHeadTitle {
+  color: var(--ap-secondary-accent);
+}
+.phaseHeadDone .phaseHeadTitle {
+  color: var(--ap-text-muted);
+}
+.phaseHeadCount {
+  font-size: 0.8rem;
+  color: var(--ap-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.classDone {
+  opacity: 0.72;
+}
+
+.phaseDone,
+.phaseToday,
+.phaseUpcoming {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+}
+.phaseDone {
+  color: var(--ap-text-muted);
+  background: var(--ap-bg-muted);
+  border: 1px solid var(--ap-border);
+}
+.phaseUpcoming {
+  color: #fff;
+  background: var(--ap-secondary-accent);
+}
+.phaseToday {
+  color: #fff;
+  background: var(--ap-accent);
+}

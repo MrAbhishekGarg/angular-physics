@@ -7,6 +7,7 @@ import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { jobScheduleService } from '../../services/jobScheduleService.js';
 import { batchColor, batchOrder } from '../../data/batchColors.js';
+import { formatTimeRange } from '../../data/classTime.js';
 import styles from './JobScheduleBatches.module.css';
 
 function formatDate(dateStr) {
@@ -177,8 +178,10 @@ export default function JobScheduleBatches() {
                     {batch.batchCode}
                   </span>
                   <span className={styles.batchStats}>
-                    {batch.classCount} class{batch.classCount === 1 ? '' : 'es'} · {batch.hours} h
+                    {batch.doneCount ?? batch.classCount} done
+                    {batch.upcomingCount ? ` · ${batch.upcomingCount} upcoming` : ''} · {batch.hours} h
                     {batch.lastTaught ? ` · last taught ${formatDate(batch.lastTaught)}` : ''}
+                    {batch.nextClass ? ` · next ${formatDate(batch.nextClass)}` : ''}
                   </span>
                 </div>
 
@@ -188,8 +191,7 @@ export default function JobScheduleBatches() {
                     <div className={styles.log}>
                       {batch.classes.map((c) => (
                         <div key={c._id} className={styles.logItem}>
-                          <strong>{formatDate(c.date)}</strong> · {c.startTime}
-                          {c.endTime ? `–${c.endTime}` : ''} · Room {c.room || '?'}
+                          <strong>{formatDate(c.date)}</strong> · {formatTimeRange(c.startTime, c.endTime)} · Room {c.room || '?'}
                           {c.topicsCovered && <div className={styles.logMuted}>{c.topicsCovered}</div>}
                         </div>
                       ))}

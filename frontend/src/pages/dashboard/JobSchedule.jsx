@@ -8,6 +8,7 @@ import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import BatchChip from '../../components/dashboard/BatchChip.jsx';
 import { batchColor, batchOrder } from '../../data/batchColors.js';
+import { formatTimeRange } from '../../data/classTime.js';
 import { jobScheduleService } from '../../services/jobScheduleService.js';
 import styles from './JobSchedule.module.css';
 
@@ -27,6 +28,12 @@ function relativeDay(dateStr) {
   if (diff === 1) return 'Tomorrow';
   if (diff === -1) return 'Yesterday';
   return null;
+}
+function classPhase(dateStr) {
+  const diff = utcMidnight(dateStr) - todayUtcMidnight();
+  if (diff < 0) return 'done';
+  if (diff === 0) return 'today';
+  return 'upcoming';
 }
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-IN', {
@@ -144,13 +151,17 @@ function ClassCard({ cls, order, onSaved, onDeleted }) {
     onDeleted(cls._id);
   };
 
+  const phase = classPhase(cls.date);
+
   return (
-    <div className={styles.class} style={{ borderLeft: `4px solid ${batchColor(cls.batchCode, order)}` }}>
+    <div
+      className={`${styles.class} ${phase === 'done' ? styles.classDone : ''}`}
+      style={{ borderLeft: `4px solid ${batchColor(cls.batchCode, order)}` }}
+    >
       <div className={styles.classHead}>
         <div className={styles.classWhenWrap}>
           <span className={styles.classWhen}>
-            {cls.startTime}
-            {cls.endTime ? `–${cls.endTime}` : ''}
+            {formatTimeRange(cls.startTime, cls.endTime)}
             <span className={styles.meta}>{' · '}Room {cls.room || '?'}</span>
           </span>
           <BatchChip code={cls.batchCode} order={order} />
@@ -159,6 +170,13 @@ function ClassCard({ cls, order, onSaved, onDeleted }) {
         <div className={styles.classTags}>
           {status === 'saving' && <span className={styles.tagMuted}>Saving…</span>}
           {status === 'saved' && <span className={styles.tagOk}>Saved ✓</span>}
+          {phase === 'done' ? (
+            <span className={styles.phaseDone}>Done</span>
+          ) : phase === 'today' ? (
+            <span className={styles.phaseToday}>Today</span>
+          ) : (
+            <span className={styles.phaseUpcoming}>Upcoming</span>
+          )}
           {cls.needsReview && <Badge tone="default">Needs review</Badge>}
           {cls.source === 'pdf' && cls.rawText && <span className={styles.tagMuted}>from PDF · {cls.rawText}</span>}
         </div>
@@ -272,8 +290,15 @@ export default function JobSchedule() {
       if (byDate.has(key)) byDate.get(key).upload = u;
       else byDate.set(key, { date: u.date, classes: [], upload: u });
     });
-    return [...byDate.values()].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const all = [...byDate.values()];
+    return {
+      upcoming: all.filter((b) => classPhase(b.date) !== 'done').sort((a, b) => new Date(a.date) - new Date(b.date)),
+      done: all.filter((b) => classPhase(b.date) === 'done').sort((a, b) => new Date(b.date) - new Date(a.date)),
+    };
   }, [classes, uploads]);
+
+  const upcomingCount = classes.filter((c) => classPhase(c.date) !== 'done').length;
+  const doneCount = classes.length - upcomingCount;
 
   const weekStats = useMemo(() => {
     const start = todayUtcMidnight() - 3 * DAY_MS;
@@ -284,6 +309,58 @@ export default function JobSchedule() {
     });
     return { count: inWindow.length, batches: new Set(inWindow.map((c) => c.batchCode)).size };
   }, [classes]);
+
+  const renderPhaseBlocks = (title, count, blocks) => {
+    if (blocks.length === 0) return null;
+    return (
+      <div className={styles.phaseSection}>
+        <div className={`${styles.phaseHead} ${title === 'Done' ? styles.phaseHeadDone : styles.phaseHeadUpcoming}`}>
+          <span className={styles.phaseHeadTitle}>{title}</span>
+          <span className={styles.phaseHeadCount}>
+            {count} class{count === 1 ? '' : 'es'}
+          </span>
+        </div>
+        {blocks.map(({ date, classes: dayClasses, upload }) => {
+          const rel = relativeDay(date);
+          return (
+            <section key={date} className={styles.day}>
+              <div className={styles.dayHead}>
+                <h3 className={styles.dayTitle}>
+                  {rel && <span className={styles.dayRel}>{rel} · </span>}
+                  {formatDate(date)}
+                  {dayClasses.length === 0 && <span className={styles.dayEmpty}> — no classes added yet</span>}
+                </h3>
+                {upload && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={async () => {
+                      if (!window.confirm("Delete this day's upload and every class from it?")) return;
+                      await jobScheduleService.removeUpload(upload._id);
+                      await refetch();
+                    }}
+                  >
+                    Delete upload
+                  </Button>
+                )}
+              </div>
+
+              {upload?.isImage && (
+                <a href={jobScheduleService.fileUrl(upload._id)} target="_blank" rel="noreferrer">
+                  <img src={jobScheduleService.fileUrl(upload._id)} alt="Schedule" className={styles.refImg} />
+                </a>
+              )}
+
+              {dayClasses.map((cls) => (
+                <ClassCard key={cls._id} cls={cls} order={order} onSaved={handleSaved} onDeleted={handleDeleted} />
+              ))}
+            </section>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -365,50 +442,12 @@ export default function JobSchedule() {
 
           {loading && <Spinner />}
           {error && <ErrorState message={error} onRetry={refetch} />}
-          {!loading && !error && dayBlocks.length === 0 && (
+          {!loading && !error && dayBlocks.upcoming.length === 0 && dayBlocks.done.length === 0 && (
             <p className={styles.empty}>Nothing yet — upload a schedule above, or add a class by hand.</p>
           )}
 
-          {!loading &&
-            !error &&
-            dayBlocks.map(({ date, classes: dayClasses, upload }) => {
-              const rel = relativeDay(date);
-              return (
-                <section key={date} className={styles.day}>
-                  <div className={styles.dayHead}>
-                    <h2 className={styles.dayTitle}>
-                      {rel && <span className={styles.dayRel}>{rel} · </span>}
-                      {formatDate(date)}
-                      {dayClasses.length === 0 && <span className={styles.dayEmpty}> — no classes added yet</span>}
-                    </h2>
-                    {upload && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={async () => {
-                          if (!window.confirm("Delete this day's upload and every class from it?")) return;
-                          await jobScheduleService.removeUpload(upload._id);
-                          await refetch();
-                        }}
-                      >
-                        Delete upload
-                      </Button>
-                    )}
-                  </div>
-
-                  {upload?.isImage && (
-                    <a href={jobScheduleService.fileUrl(upload._id)} target="_blank" rel="noreferrer">
-                      <img src={jobScheduleService.fileUrl(upload._id)} alt="Schedule" className={styles.refImg} />
-                    </a>
-                  )}
-
-                  {dayClasses.map((cls) => (
-                    <ClassCard key={cls._id} cls={cls} order={order} onSaved={handleSaved} onDeleted={handleDeleted} />
-                  ))}
-                </section>
-              );
-            })}
+          {!loading && !error && renderPhaseBlocks('Upcoming', upcomingCount, dayBlocks.upcoming)}
+          {!loading && !error && renderPhaseBlocks('Done', doneCount, dayBlocks.done)}
         </div>
       </DashboardLayout>
     </>

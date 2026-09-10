@@ -6,6 +6,7 @@ import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import BatchChip from '../../components/dashboard/BatchChip.jsx';
 import { batchColor, batchOrder } from '../../data/batchColors.js';
+import { formatTimeRange } from '../../data/classTime.js';
 import { jobScheduleService } from '../../services/jobScheduleService.js';
 import styles from './JobDashboard.module.css';
 
@@ -147,11 +148,11 @@ export default function JobDashboard() {
                       <thead>
                         <tr>
                           <th>Batch</th>
-                          <th>Classes</th>
+                          <th>Done</th>
+                          <th>Upcoming</th>
                           <th>Hours</th>
-                          <th>Topics logged</th>
                           <th>Plan</th>
-                          <th>Last taught</th>
+                          <th>Last / next</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -170,9 +171,9 @@ export default function JobDashboard() {
                                   <strong>{b.batchCode}</strong>
                                 </span>
                               </td>
-                              <td>{b.classCount}</td>
+                              <td>{b.doneCount ?? b.classCount}</td>
+                              <td>{b.upcomingCount ?? 0}</td>
                               <td>{b.hours}</td>
-                              <td>{b.topicsLogged}</td>
                               <td style={{ minWidth: 90 }}>
                                 {b.planned > 0 ? (
                                   <>
@@ -187,7 +188,10 @@ export default function JobDashboard() {
                                   <span className={styles.tileSub}>—</span>
                                 )}
                               </td>
-                              <td>{b.lastTaught ? fmtDate(b.lastTaught) : '—'}</td>
+                              <td className={styles.tileSub}>
+                                {b.lastTaught ? fmtDate(b.lastTaught) : '—'}
+                                {b.nextClass ? ` → ${fmtDate(b.nextClass)}` : ''}
+                              </td>
                             </tr>
                           ))
                         )}
@@ -210,8 +214,7 @@ export default function JobDashboard() {
                               <BatchChip code={c.batchCode} order={order} size="sm" />
                             </div>
                             <span className={styles.muted}>
-                              {c.startTime}
-                              {c.endTime ? `–${c.endTime}` : ''} · Room {c.room || '?'}
+                              {formatTimeRange(c.startTime, c.endTime)} · Room {c.room || '?'}
                             </span>
                           </li>
                         ))}

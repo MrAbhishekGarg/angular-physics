@@ -196,6 +196,7 @@ export async function deleteUpload(id) {
 }
 
 export async function getBatchSummaries() {
+  const today = startOfDay(new Date());
   const [classes, plans] = await Promise.all([
     JobClass.find().sort({ date: -1, startTime: -1 }).lean(),
     JobTopicPlan.find().sort({ order: 1, createdAt: 1 }).lean(),
@@ -220,11 +221,18 @@ export async function getBatchSummaries() {
       const cs = byBatch.get(code) || [];
       const plan = plansByBatch.get(code) || [];
       const minutes = cs.reduce((sum, c) => sum + durationMinutes(c.startTime, c.endTime), 0);
+      const past = cs.filter((c) => new Date(c.date) < today);
+      const future = cs.filter((c) => new Date(c.date) >= today);
       return {
         batchCode: code,
         classCount: cs.length,
+        doneCount: past.length,
+        upcomingCount: future.length,
         hours: Math.round((minutes / 60) * 10) / 10,
-        lastTaught: cs.length ? cs.reduce((max, c) => (c.date > max ? c.date : max), cs[0].date) : null,
+        // most-recent past class, and soonest upcoming — never conflate the
+        // two (a future class isn't something that was "taught").
+        lastTaught: past.length ? past.reduce((mx, c) => (c.date > mx ? c.date : mx), past[0].date) : null,
+        nextClass: future.length ? future.reduce((mn, c) => (c.date < mn ? c.date : mn), future[0].date) : null,
         topicsLogged: cs.filter((c) => c.topicsCovered?.trim()).length,
         plan,
         planned: plan.length,
@@ -242,9 +250,11 @@ export async function getBatchSummaries() {
       };
     })
     .sort((a, b) => {
-      if (!a.lastTaught) return 1;
-      if (!b.lastTaught) return -1;
-      return new Date(b.lastTaught) - new Date(a.lastTaught);
+      // Most recently active batch first — a batch with an upcoming class
+      // but no past one still ranks by that upcoming date.
+      const aT = new Date(a.lastTaught || a.nextClass || 0).getTime();
+      const bT = new Date(b.lastTaught || b.nextClass || 0).getTime();
+      return bT - aT;
     });
 }
 
