@@ -20,7 +20,8 @@
   margin: 0 0 var(--ap-space-md);
 }
 .summary strong {
-  color: var(--ap-text);
+  color: var(--ap-accent);
+  font-weight: 800;
 }
 
 /* ---- panels (upload / manual add) ---- */
@@ -42,9 +43,10 @@
 }
 
 .panelTitle {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--ap-text);
+  font-family: var(--ap-font-heading);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--ap-primary);
 }
 
 .panelHint {
@@ -209,6 +211,13 @@
   flex-wrap: wrap;
 }
 
+.classWhenWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
 .classWhen {
   font-family: var(--ap-font-heading);
   font-weight: 800;
@@ -241,7 +250,6 @@
 .classSub {
   font-size: 0.78rem;
   color: var(--ap-text-muted);
-  margin: 0.15rem 0 0;
 }
 
 .empty {

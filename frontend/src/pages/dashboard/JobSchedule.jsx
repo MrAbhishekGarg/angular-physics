@@ -6,6 +6,8 @@ import Button from '../../components/common/Button.jsx';
 import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
+import BatchChip from '../../components/dashboard/BatchChip.jsx';
+import { batchColor, batchOrder } from '../../data/batchColors.js';
 import { jobScheduleService } from '../../services/jobScheduleService.js';
 import styles from './JobSchedule.module.css';
 
@@ -119,7 +121,7 @@ function ManualClassForm({ defaultDate, onCreated }) {
   );
 }
 
-function ClassCard({ cls, onSaved, onDeleted }) {
+function ClassCard({ cls, order, onSaved, onDeleted }) {
   const [topicsCovered, setTopicsCovered] = useState(cls.topicsCovered || '');
   const [notes, setNotes] = useState(cls.notes || '');
   const [status, setStatus] = useState(''); // '' | 'saving' | 'saved'
@@ -143,17 +145,16 @@ function ClassCard({ cls, onSaved, onDeleted }) {
   };
 
   return (
-    <div className={styles.class}>
+    <div className={styles.class} style={{ borderLeft: `4px solid ${batchColor(cls.batchCode, order)}` }}>
       <div className={styles.classHead}>
-        <div>
+        <div className={styles.classWhenWrap}>
           <span className={styles.classWhen}>
             {cls.startTime}
             {cls.endTime ? `–${cls.endTime}` : ''}
-            <span className={styles.meta}>
-              {' · '}Room {cls.room || '?'} · {cls.batchCode}
-            </span>
+            <span className={styles.meta}>{' · '}Room {cls.room || '?'}</span>
           </span>
-          {cls.subjectPrefix && <p className={styles.classSub}>{prettySubject(cls.subjectPrefix)}</p>}
+          <BatchChip code={cls.batchCode} order={order} />
+          {cls.subjectPrefix && <span className={styles.classSub}>{prettySubject(cls.subjectPrefix)}</span>}
         </div>
         <div className={styles.classTags}>
           {status === 'saving' && <span className={styles.tagMuted}>Saving…</span>}
@@ -261,6 +262,7 @@ export default function JobSchedule() {
   const handleCreated = (created) => setClasses((prev) => [...prev, created]);
 
   const needsReviewCount = classes.filter((c) => c.needsReview).length;
+  const order = useMemo(() => batchOrder(classes.map((c) => c.batchCode)), [classes]);
 
   const dayBlocks = useMemo(() => {
     const byDate = new Map();
@@ -402,7 +404,7 @@ export default function JobSchedule() {
                   )}
 
                   {dayClasses.map((cls) => (
-                    <ClassCard key={cls._id} cls={cls} onSaved={handleSaved} onDeleted={handleDeleted} />
+                    <ClassCard key={cls._id} cls={cls} order={order} onSaved={handleSaved} onDeleted={handleDeleted} />
                   ))}
                 </section>
               );

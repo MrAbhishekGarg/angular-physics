@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../../components/seo/SEO.jsx';
 import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
+import BatchChip from '../../components/dashboard/BatchChip.jsx';
+import { batchColor, batchOrder } from '../../data/batchColors.js';
 import { jobScheduleService } from '../../services/jobScheduleService.js';
 import styles from './JobDashboard.module.css';
 
@@ -14,9 +16,31 @@ function fmtDate(d) {
 function Tile({ value, label, sub, tone }) {
   return (
     <div className={`${styles.tile} ${tone ? styles[tone] : ''}`}>
-      <span className={styles.tileValue}>{value}</span>
+      <span className={`${styles.tileValue} ${tone ? styles[`v_${tone}`] : ''}`}>{value}</span>
       <span className={styles.tileLabel}>{label}</span>
       {sub != null && <span className={styles.tileSub}>{sub}</span>}
+    </div>
+  );
+}
+
+function HoursByBatch({ batches, order }) {
+  const rows = [...batches].filter((b) => b.hours > 0).sort((a, b) => b.hours - a.hours).slice(0, 8);
+  if (rows.length === 0) return null;
+  const max = Math.max(...rows.map((b) => b.hours));
+  return (
+    <div className={styles.card}>
+      <h2>Hours by batch</h2>
+      <div className={styles.hbb}>
+        {rows.map((b) => (
+          <div key={b.batchCode} className={styles.hbbRow}>
+            <span className={styles.hbbLabel}>{b.batchCode}</span>
+            <div className={styles.hbbTrack}>
+              <div className={styles.hbbFill} style={{ width: `${(b.hours / max) * 100}%`, background: batchColor(b.batchCode, order) }} />
+            </div>
+            <span className={styles.hbbVal}>{b.hours} h</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -41,6 +65,7 @@ function WeekBars({ data }) {
 
 export default function JobDashboard() {
   const [data, setData] = useState(null);
+  const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -48,7 +73,9 @@ export default function JobDashboard() {
     setLoading(true);
     setError('');
     try {
-      setData(await jobScheduleService.getDashboard());
+      const [d, b] = await Promise.all([jobScheduleService.getDashboard(), jobScheduleService.getBatches()]);
+      setData(d);
+      setBatches(b);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -59,6 +86,8 @@ export default function JobDashboard() {
   useEffect(() => {
     refetch();
   }, []);
+
+  const order = useMemo(() => batchOrder(batches.map((b) => b.batchCode)), [batches]);
 
   return (
     <>
@@ -108,6 +137,8 @@ export default function JobDashboard() {
                 <WeekBars data={data.byWeek} />
               </div>
 
+              <HoursByBatch batches={batches} order={order} />
+
               <div className={styles.cols}>
                 <div className={styles.card}>
                   <h2>By batch</h2>
@@ -124,7 +155,42 @@ export default function JobDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        <BatchRows />
+                        {batches.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className={styles.tileSub}>
+                              No batches yet.
+                            </td>
+                          </tr>
+                        ) : (
+                          batches.map((b) => (
+                            <tr key={b.batchCode}>
+                              <td>
+                                <span className={styles.batchCell}>
+                                  <span className={styles.batchDot} style={{ background: batchColor(b.batchCode, order) }} />
+                                  <strong>{b.batchCode}</strong>
+                                </span>
+                              </td>
+                              <td>{b.classCount}</td>
+                              <td>{b.hours}</td>
+                              <td>{b.topicsLogged}</td>
+                              <td style={{ minWidth: 90 }}>
+                                {b.planned > 0 ? (
+                                  <>
+                                    <div className={styles.progress}>
+                                      <div className={styles.progressFill} style={{ width: `${(b.planCovered / b.planned) * 100}%` }} />
+                                    </div>
+                                    <span className={styles.tileSub}>
+                                      {b.planCovered}/{b.planned}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className={styles.tileSub}>—</span>
+                                )}
+                              </td>
+                              <td>{b.lastTaught ? fmtDate(b.lastTaught) : '—'}</td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -138,10 +204,15 @@ export default function JobDashboard() {
                     ) : (
                       <ul className={styles.list}>
                         {data.upcomingClasses.map((c) => (
-                          <li key={c._id} className={styles.listItem}>
-                            <strong>{fmtDate(c.date)}</strong> · {c.startTime}
-                            {c.endTime ? `–${c.endTime}` : ''} · {c.batchCode}
-                            <span className={styles.muted}> · Room {c.room || '?'}</span>
+                          <li key={c._id} className={styles.listItem} style={{ borderLeftColor: batchColor(c.batchCode, order) }}>
+                            <div className={styles.listTop}>
+                              <strong>{fmtDate(c.date)}</strong>
+                              <BatchChip code={c.batchCode} order={order} size="sm" />
+                            </div>
+                            <span className={styles.muted}>
+                              {c.startTime}
+                              {c.endTime ? `–${c.endTime}` : ''} · Room {c.room || '?'}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -155,8 +226,11 @@ export default function JobDashboard() {
                     ) : (
                       <ul className={styles.list}>
                         {data.recentTopics.map((t) => (
-                          <li key={t._id} className={styles.listItem}>
-                            <strong>{t.batchCode}</strong> <span className={styles.muted}>· {fmtDate(t.date)}</span>
+                          <li key={t._id} className={styles.listItem} style={{ borderLeftColor: batchColor(t.batchCode, order) }}>
+                            <div className={styles.listTop}>
+                              <BatchChip code={t.batchCode} order={order} size="sm" />
+                              <span className={styles.muted}>{fmtDate(t.date)}</span>
+                            </div>
                             <div>{t.topicsCovered}</div>
                           </li>
                         ))}
@@ -193,57 +267,4 @@ export default function JobDashboard() {
       </DashboardLayout>
     </>
   );
-}
-
-// Separate fetch so the batch table can pull the richer per-batch summary
-// (hours, plan progress) without bloating the dashboard aggregate.
-function BatchRows() {
-  const [batches, setBatches] = useState(null);
-  useEffect(() => {
-    jobScheduleService.getBatches().then(setBatches).catch(() => setBatches([]));
-  }, []);
-
-  if (!batches) {
-    return (
-      <tr>
-        <td colSpan={6} className={styles.tileSub}>
-          Loading…
-        </td>
-      </tr>
-    );
-  }
-  if (batches.length === 0) {
-    return (
-      <tr>
-        <td colSpan={6} className={styles.tileSub}>
-          No batches yet.
-        </td>
-      </tr>
-    );
-  }
-  return batches.map((b) => (
-    <tr key={b.batchCode}>
-      <td>
-        <strong>{b.batchCode}</strong>
-      </td>
-      <td>{b.classCount}</td>
-      <td>{b.hours}</td>
-      <td>{b.topicsLogged}</td>
-      <td style={{ minWidth: 90 }}>
-        {b.planned > 0 ? (
-          <>
-            <div className={styles.progress}>
-              <div className={styles.progressFill} style={{ width: `${(b.planCovered / b.planned) * 100}%` }} />
-            </div>
-            <span className={styles.tileSub}>
-              {b.planCovered}/{b.planned}
-            </span>
-          </>
-        ) : (
-          <span className={styles.tileSub}>—</span>
-        )}
-      </td>
-      <td>{b.lastTaught ? fmtDate(b.lastTaught) : '—'}</td>
-    </tr>
-  ));
 }

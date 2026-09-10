@@ -6,6 +6,7 @@ import Button from '../../components/common/Button.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { jobScheduleService } from '../../services/jobScheduleService.js';
+import { batchColor, batchOrder } from '../../data/batchColors.js';
 import styles from './JobScheduleBatches.module.css';
 
 function formatDate(dateStr) {
@@ -144,6 +145,8 @@ export default function JobScheduleBatches() {
     refetch();
   }, []);
 
+  const order = batchOrder(batches.map((b) => b.batchCode));
+
   return (
     <>
       <SEO title="My Job — Batch Progress" description="Per-batch teaching log and topic plan for Aakash classes." path="/dashboard/mentor/admin/job-schedule/batches" />
@@ -167,9 +170,12 @@ export default function JobScheduleBatches() {
           {!loading &&
             !error &&
             batches.map((batch) => (
-              <section key={batch.batchCode} className={styles.batch}>
+              <section key={batch.batchCode} className={styles.batch} style={{ borderLeft: `4px solid ${batchColor(batch.batchCode, order)}` }}>
                 <div className={styles.batchHead}>
-                  <span className={styles.batchCode}>{batch.batchCode}</span>
+                  <span className={styles.batchCode}>
+                    <span className={styles.batchDot} style={{ background: batchColor(batch.batchCode, order) }} />
+                    {batch.batchCode}
+                  </span>
                   <span className={styles.batchStats}>
                     {batch.classCount} class{batch.classCount === 1 ? '' : 'es'} · {batch.hours} h
                     {batch.lastTaught ? ` · last taught ${formatDate(batch.lastTaught)}` : ''}
