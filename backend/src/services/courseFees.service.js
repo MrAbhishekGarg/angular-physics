@@ -1,7 +1,12 @@
+import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import CourseFeeBatch from '../models/CourseFeeBatch.js';
 import CourseFeeStudent from '../models/CourseFeeStudent.js';
 import Course from '../models/Course.js';
+import User from '../models/User.js';
 import { ApiError } from '../utils/ApiError.js';
+
+const SALT_ROUNDS = 10;
 
 /**
  * feePaid/feeDue/securityDue are always derived, never stored — a one-time
@@ -214,4 +219,45 @@ export async function removeMonthPayment(studentId, monthEntryId) {
   if (student.monthlyPayments.length === before) throw new ApiError(404, 'Month entry not found');
   await student.save();
   return withFeeTotals(student.toObject());
+}
+
+function generatePassword() {
+  // 10 URL-safe characters — short enough to read/type back to a student
+  // over WhatsApp, random enough not to guess.
+  return crypto.randomBytes(8).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
+}
+
+/**
+ * Gives a fee-tracked student an actual login account — a real User
+ * (role: 'student'), linked back via `userId`, kept deliberately separate
+ * from course enrollment: this only creates the account, it doesn't grant
+ * access to any course. There's no email infrastructure in this app (same
+ * situation as password resets — see auth.service.js), so when the caller
+ * doesn't supply their own password, one is generated and returned once for
+ * the mentor to relay out of band.
+ */
+export async function registerStudentAccount(feeStudentId, { email, phone, password }) {
+  const feeStudent = await CourseFeeStudent.findById(feeStudentId);
+  if (!feeStudent) throw new ApiError(404, 'Student not found');
+  if (feeStudent.userId) throw new ApiError(409, 'This student already has a login account.');
+
+  const normalizedEmail = String(email || '').toLowerCase().trim();
+  const existing = await User.findOne({ email: normalizedEmail }).lean();
+  if (existing) throw new ApiError(409, 'A user with this email already exists.');
+
+  const finalPassword = password || generatePassword();
+  const passwordHash = await bcrypt.hash(finalPassword, SALT_ROUNDS);
+
+  let user;
+  try {
+    user = await User.create({ name: feeStudent.name, email: normalizedEmail, phone, passwordHash, role: 'student' });
+  } catch (err) {
+    if (err.code === 11000) throw new ApiError(409, 'A user with this email already exists.');
+    throw err;
+  }
+
+  feeStudent.userId = user._id;
+  await feeStudent.save();
+
+  return { student: withFeeTotals(feeStudent.toObject()), generatedPassword: password ? null : finalPassword };
 }

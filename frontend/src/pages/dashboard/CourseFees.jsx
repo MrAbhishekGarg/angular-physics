@@ -559,6 +559,61 @@ function MonthRow({ studentId, entry, onChanged }) {
   );
 }
 
+function RegisterAccountForm({ studentId, onRegistered, onDone }) {
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [ownPassword, setOwnPassword] = useState(false);
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!email.trim() || !phone.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      const result = await courseFeesService.registerStudentAccount(studentId, {
+        email: email.trim(),
+        phone: phone.trim(),
+        password: ownPassword ? password : undefined,
+      });
+      onRegistered(result.generatedPassword);
+      onDone();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className={styles.studentForm}>
+      <input className={`${styles.input} ${styles.inputSm}`} type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <input className={`${styles.input} ${styles.inputSm}`} required placeholder="10-digit phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+      <label className={styles.checkboxLabel}>
+        <input type="checkbox" checked={ownPassword} onChange={(e) => setOwnPassword(e.target.checked)} /> Set password myself
+      </label>
+      {ownPassword && (
+        <input
+          className={`${styles.input} ${styles.inputSm}`}
+          required
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      )}
+      <Button type="submit" size="sm" disabled={busy || !email.trim() || !phone.trim() || (ownPassword && !password)}>
+        {busy ? 'Registering…' : 'Register account'}
+      </Button>
+      <Button type="button" size="sm" variant="ghost" onClick={onDone} disabled={busy}>
+        Cancel
+      </Button>
+      {error && <p className={styles.feedbackErr}>{error}</p>}
+    </form>
+  );
+}
+
 function StudentRow({ student, onChanged }) {
   const [expanded, setExpanded] = useState(false);
   const [addingPayment, setAddingPayment] = useState(false);
@@ -572,6 +627,8 @@ function StudentRow({ student, onChanged }) {
     securityPaid: student.securityPaid,
   });
   const [busy, setBusy] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  const [justRegisteredPassword, setJustRegisteredPassword] = useState(null);
   const isMonthly = student.feeType === 'monthly';
 
   const saveEdit = async (e) => {
@@ -669,11 +726,38 @@ function StudentRow({ student, onChanged }) {
               Security {money(student.securityPaid)}/{money(student.securityAmount)}
             </span>
           )}
+          {student.userId ? (
+            <Badge tone="success">Registered</Badge>
+          ) : (
+            <button type="button" className={styles.editLink} onClick={() => setRegistering((v) => !v)}>
+              {registering ? 'Cancel registration' : 'Register account'}
+            </button>
+          )}
           <button type="button" className={styles.editLink} onClick={() => setEditing(true)}>
             Edit
           </button>
           <button type="button" className={styles.editLink} onClick={removeStudent}>
             Remove
+          </button>
+        </div>
+      )}
+
+      {registering && !editing && (
+        <RegisterAccountForm
+          studentId={student._id}
+          onRegistered={(pwd) => setJustRegisteredPassword(pwd)}
+          onDone={() => {
+            setRegistering(false);
+            onChanged();
+          }}
+        />
+      )}
+
+      {justRegisteredPassword && (
+        <div className={styles.passwordReveal}>
+          Account created. Password: <strong>{justRegisteredPassword}</strong> — save this now, it won't be shown again.
+          <button type="button" className={styles.editLink} onClick={() => setJustRegisteredPassword(null)}>
+            Dismiss
           </button>
         </div>
       )}

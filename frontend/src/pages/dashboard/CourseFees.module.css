@@ -356,3 +356,22 @@
   padding: 0.75rem;
   margin-bottom: 0.5rem;
 }
+
+.passwordReveal {
+  margin-top: 0.5rem;
+  background: var(--ap-bg-muted);
+  border: 1px solid var(--ap-success);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.85rem;
+  color: var(--ap-text);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.passwordReveal strong {
+  font-family: var(--ap-font-heading);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}

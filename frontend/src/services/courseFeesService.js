@@ -16,4 +16,6 @@ export const courseFeesService = {
   addMonth: (studentId, payload) => api.post(`/course-fees/students/${studentId}/months`, payload),
   updateMonth: (studentId, monthId, payload) => api.patch(`/course-fees/students/${studentId}/months/${monthId}`, payload),
   removeMonth: (studentId, monthId) => api.delete(`/course-fees/students/${studentId}/months/${monthId}`),
+
+  registerStudentAccount: (studentId, payload) => api.post(`/course-fees/students/${studentId}/register`, payload),
 };
