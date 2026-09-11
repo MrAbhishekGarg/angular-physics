@@ -79,7 +79,9 @@ const ADMIN_NAV_GROUP = {
   ],
 };
 
-// A personal Aakash-job tracker, not part of the Angular Physics business —
+// The mentor's own personal admin tools — the Aakash day-job tracker, plus
+// manual bookkeeping (like course fees) that doesn't run through the site's
+// automated systems. Not part of the Angular Physics business itself —
 // deliberately its own nav group (not folded into ADMIN_NAV_GROUP above) so
 // it reads as a distinct thing, visible only to the real admin account.
 const MY_JOB_NAV_GROUP = {
@@ -88,6 +90,7 @@ const MY_JOB_NAV_GROUP = {
     { to: '/dashboard/mentor/admin/job', label: 'Overview', end: true },
     { to: '/dashboard/mentor/admin/job-schedule', label: 'Schedule', end: true },
     { to: '/dashboard/mentor/admin/job-schedule/batches', label: 'Batch Progress' },
+    { to: '/dashboard/mentor/admin/job-fees', label: 'Course Fees' },
   ],
 };
 

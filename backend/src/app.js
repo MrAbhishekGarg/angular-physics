@@ -32,6 +32,7 @@ import topperRoutes from './routes/topper.routes.js';
 import testimonialRoutes from './routes/testimonial.routes.js';
 import questionOfDayRoutes from './routes/questionOfDay.routes.js';
 import jobScheduleRoutes from './routes/jobSchedule.routes.js';
+import jobFeesRoutes from './routes/jobFees.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -73,6 +74,7 @@ app.use('/api/toppers', topperRoutes);
 app.use('/api/testimonials', testimonialRoutes);
 app.use('/api/question-of-day', questionOfDayRoutes);
 app.use('/api/job-schedule', jobScheduleRoutes);
+app.use('/api/job-fees', jobFeesRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -14,6 +14,75 @@
   margin-bottom: var(--ap-space-md);
 }
 
+/* tomorrow's classes highlight strip */
+.tomorrowCard {
+  border: 1px solid var(--ap-accent);
+  background: var(--ap-bg);
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  margin-bottom: var(--ap-space-md);
+  box-shadow: var(--ap-shadow-sm);
+}
+.tomorrowHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.7rem;
+}
+.tomorrowHead h2 {
+  font-family: var(--ap-font-heading);
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--ap-accent);
+  margin: 0;
+}
+.tomorrowLink {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ap-accent);
+  white-space: nowrap;
+}
+.tomorrowList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.tomorrowItem {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  border-left: 3px solid var(--ap-border);
+  padding-left: 0.65rem;
+  font-size: 0.85rem;
+}
+.tomorrowTime {
+  font-family: var(--ap-font-heading);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ap-text);
+  white-space: nowrap;
+}
+.tomorrowTopics {
+  color: var(--ap-text-muted);
+  font-size: 0.8rem;
+}
+.tomorrowDoubt {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ap-accent);
+  border: 1px solid var(--ap-accent);
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+}
+
 /* KPI tiles */
 .tiles {
   display: grid;

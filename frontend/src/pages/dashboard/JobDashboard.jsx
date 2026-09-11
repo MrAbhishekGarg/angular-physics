@@ -24,6 +24,34 @@ function Tile({ value, label, sub, tone }) {
   );
 }
 
+function TomorrowStrip({ classes, order }) {
+  return (
+    <div className={styles.tomorrowCard}>
+      <div className={styles.tomorrowHead}>
+        <h2>Tomorrow’s classes</h2>
+        <Link to="/dashboard/mentor/admin/job-schedule" className={styles.tomorrowLink}>
+          Full schedule →
+        </Link>
+      </div>
+      {classes.length === 0 ? (
+        <p className={styles.tileSub}>Nothing scheduled for tomorrow.</p>
+      ) : (
+        <ul className={styles.tomorrowList}>
+          {classes.map((c) => (
+            <li key={c._id} className={styles.tomorrowItem} style={{ borderLeftColor: batchColor(c.batchCode, order) }}>
+              <span className={styles.tomorrowTime}>{formatTimeRange(c.startTime, c.endTime)}</span>
+              <BatchChip code={c.batchCode} order={order} size="sm" />
+              <span className={styles.tileSub}>Room {c.room || '?'}</span>
+              {c.isDoubt && <span className={styles.tomorrowDoubt}>Doubt</span>}
+              {c.plannedTopics && <span className={styles.tomorrowTopics}>{c.plannedTopics}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function HoursByBatch({ batches, order }) {
   const rows = [...batches].filter((b) => b.hours > 0).sort((a, b) => b.hours - a.hours).slice(0, 8);
   if (rows.length === 0) return null;
@@ -107,6 +135,8 @@ export default function JobDashboard() {
 
           {!loading && !error && data && (
             <>
+              <TomorrowStrip classes={data.tomorrowClasses} order={order} />
+
               <div className={styles.tiles}>
                 <Tile value={data.counts.done} label="Classes done" sub={`${data.hours.done} h taught`} tone="ok" />
                 <Tile value={data.counts.upcoming} label="Upcoming classes" sub={`${data.hours.upcoming} h scheduled`} tone="accent" />

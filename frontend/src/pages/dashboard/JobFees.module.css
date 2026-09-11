@@ -1,0 +1,296 @@
+.wrap {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: var(--ap-space-md) 0;
+}
+.wrap h1 {
+  color: var(--ap-primary);
+  margin-bottom: 0.3rem;
+}
+.lede {
+  color: var(--ap-text-muted);
+  margin: 0 0 var(--ap-space-md);
+}
+
+/* summary tiles */
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: var(--ap-space-md);
+}
+.summaryTile {
+  border: 1px solid var(--ap-border);
+  background: var(--ap-bg);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  box-shadow: var(--ap-shadow-sm);
+}
+.summaryOk {
+  border-left: 3px solid var(--ap-success);
+}
+.summaryWarn {
+  border-left: 3px solid var(--ap-warning);
+}
+.summaryValue {
+  font-family: var(--ap-font-heading);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--ap-text);
+  font-variant-numeric: tabular-nums;
+}
+.tileLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ap-text-muted);
+}
+.tileSub {
+  font-size: 0.78rem;
+  color: var(--ap-text-muted);
+}
+
+/* panel (add batch) */
+.panel {
+  border: 1px solid var(--ap-border);
+  background: var(--ap-bg);
+  border-radius: 12px;
+  padding: 1.05rem 1.15rem;
+  margin-bottom: 0.75rem;
+  box-shadow: var(--ap-shadow-sm);
+}
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.panelTitle {
+  font-family: var(--ap-font-heading);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--ap-primary);
+}
+
+/* fields */
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.fieldWide {
+  grid-column: 1 / -1;
+}
+.fieldLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ap-text-muted);
+}
+.input {
+  width: 100%;
+  border: 1.5px solid var(--ap-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  background: var(--ap-bg);
+  color: var(--ap-text);
+}
+.input:focus {
+  outline: 2px solid var(--ap-accent);
+  outline-offset: 1px;
+}
+.inputSm {
+  width: auto;
+  min-width: 130px;
+}
+.inputXs {
+  width: auto;
+  min-width: 90px;
+}
+.formActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+.feedbackErr {
+  color: var(--ap-danger);
+  font-size: 0.85rem;
+  margin: 0.4rem 0 0;
+}
+
+/* batch card */
+.batch {
+  border: 1px solid var(--ap-border);
+  background: var(--ap-bg);
+  border-radius: 12px;
+  padding: 1.05rem 1.15rem;
+  margin-bottom: 0.9rem;
+  box-shadow: var(--ap-shadow-sm);
+}
+.batchHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--ap-border);
+  margin-bottom: 0.7rem;
+}
+.batchName {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--ap-font-heading);
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--ap-text);
+}
+.batchStats {
+  font-size: 0.8rem;
+  color: var(--ap-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.editLink {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--ap-font-body);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ap-accent);
+  padding: 0;
+}
+
+.opsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  font-size: 0.82rem;
+  color: var(--ap-text-muted);
+  margin-bottom: 0.5rem;
+}
+.opsRow strong {
+  color: var(--ap-text);
+  font-variant-numeric: tabular-nums;
+}
+.batchNotes {
+  font-size: 0.82rem;
+  color: var(--ap-text-muted);
+  margin: 0 0 0.6rem;
+}
+
+.sectionLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ap-text-muted);
+  margin: 0 0 0.4rem;
+}
+
+.empty {
+  color: var(--ap-text-muted);
+}
+
+/* students */
+.students {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.studentRow {
+  border: 1px solid var(--ap-border);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+}
+.studentSummary {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+.studentName {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ap-text);
+  padding: 0;
+  font-size: 0.85rem;
+}
+.studentFee {
+  color: var(--ap-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.studentPaid {
+  color: var(--ap-success);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.studentDue {
+  color: var(--ap-warning);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.studentDueClear {
+  color: var(--ap-success);
+  font-weight: 700;
+}
+
+.studentForm {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.paymentLog {
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--ap-border);
+}
+.payments {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.paymentItem {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+}
+.paymentAmount {
+  font-weight: 700;
+  color: var(--ap-text);
+  font-variant-numeric: tabular-nums;
+}
+.paymentForm {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}

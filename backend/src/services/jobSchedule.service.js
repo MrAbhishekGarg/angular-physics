@@ -400,6 +400,10 @@ export async function getDashboard() {
 
   const done = classes.filter((c) => new Date(c.date) < tomorrow);
   const upcoming = classes.filter((c) => new Date(c.date) >= tomorrow);
+  // `classes` is already date/startTime-sorted from the query above, so a
+  // plain filter keeps that order without re-sorting.
+  const dayAfterTomorrow = new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000);
+  const tomorrowClasses = classes.filter((c) => new Date(c.date) >= tomorrow && new Date(c.date) < dayAfterTomorrow);
   const doneMinutes = done.reduce((s, c) => s + durationMinutes(c.startTime, c.endTime), 0);
   const upcomingMinutes = upcoming.reduce((s, c) => s + durationMinutes(c.startTime, c.endTime), 0);
   const toReview = done.filter((c) => !c.reviewed);
@@ -485,6 +489,7 @@ export async function getDashboard() {
     topBatch: topBatch ? { batchCode: topBatch[0], classes: topBatch[1] } : null,
     recentTopics: topicsTaught.slice(0, 8),
     upcomingClasses: upcoming.slice(0, 6),
+    tomorrowClasses,
   };
 }
 
