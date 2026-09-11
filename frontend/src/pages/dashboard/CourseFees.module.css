@@ -294,3 +294,65 @@
   flex-wrap: wrap;
   margin-top: 0.4rem;
 }
+
+.studentAddForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.months {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.monthItem {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+.monthLabel {
+  font-weight: 700;
+  color: var(--ap-text);
+  min-width: 110px;
+}
+.monthBadgePaid {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ap-success);
+  border: 1px solid var(--ap-success);
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+}
+.monthBadgePending {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: var(--ap-warning);
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+}
+
+.checkboxLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--ap-text);
+}
+
+.miniForm {
+  border: 1px dashed var(--ap-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}

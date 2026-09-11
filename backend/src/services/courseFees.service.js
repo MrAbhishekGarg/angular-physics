@@ -3,12 +3,26 @@ import CourseFeeStudent from '../models/CourseFeeStudent.js';
 import Course from '../models/Course.js';
 import { ApiError } from '../utils/ApiError.js';
 
+/**
+ * feePaid/feeDue/securityDue are always derived, never stored — a one-time
+ * payer's totals come from `payments`, a monthly payer's from whichever
+ * months in `monthlyPayments` are marked paid vs still pending.
+ */
 function withFeeTotals(student) {
-  const feePaid = student.payments.reduce((sum, p) => sum + p.amount, 0);
+  let feePaid;
+  let feeTotal;
+  if (student.feeType === 'monthly') {
+    feeTotal = student.monthlyPayments.reduce((sum, m) => sum + m.amount, 0);
+    feePaid = student.monthlyPayments.filter((m) => m.paid).reduce((sum, m) => sum + m.amount, 0);
+  } else {
+    feeTotal = student.totalFee;
+    feePaid = student.payments.reduce((sum, p) => sum + p.amount, 0);
+  }
   return {
     ...student,
+    feeTotal,
     feePaid,
-    feeDue: student.totalFee - feePaid,
+    feeDue: feeTotal - feePaid,
     securityDue: (student.securityAmount || 0) - (student.securityPaid || 0),
   };
 }
@@ -39,7 +53,7 @@ export async function listBatches() {
 
   const result = batches.map((b) => {
     const batchStudents = studentsByBatch.get(String(b._id)) || [];
-    const batchFees = batchStudents.reduce((s, st) => s + st.totalFee, 0);
+    const batchFees = batchStudents.reduce((s, st) => s + st.feeTotal, 0);
     const batchPaid = batchStudents.reduce((s, st) => s + st.feePaid, 0);
     totalFees += batchFees;
     totalPaid += batchPaid;
@@ -67,8 +81,7 @@ export async function createBatch(payload) {
 
   const created = await CourseFeeBatch.create({
     courseId: payload.courseId,
-    feeType: payload.feeType === 'monthly' ? 'monthly' : 'one-time',
-    monthlyAmount: payload.monthlyAmount || 0,
+    standardFee: payload.standardFee === '' || payload.standardFee === undefined || payload.standardFee === null ? null : Number(payload.standardFee),
     classHoursPerWeek: payload.classHoursPerWeek || 0,
     doubtsPerWeek: payload.doubtsPerWeek || 0,
     testsConducted: payload.testsConducted || 0,
@@ -85,11 +98,12 @@ export async function updateBatch(id, payload) {
   }
 
   const allowed = {};
-  ['courseId', 'feeType', 'monthlyAmount', 'classHoursPerWeek', 'doubtsPerWeek', 'testsConducted', 'sheetsNotesProvided', 'notes'].forEach(
-    (key) => {
-      if (payload[key] !== undefined) allowed[key] = payload[key];
-    }
-  );
+  ['courseId', 'classHoursPerWeek', 'doubtsPerWeek', 'testsConducted', 'sheetsNotesProvided', 'notes'].forEach((key) => {
+    if (payload[key] !== undefined) allowed[key] = payload[key];
+  });
+  if (payload.standardFee !== undefined) {
+    allowed.standardFee = payload.standardFee === '' || payload.standardFee === null ? null : Number(payload.standardFee);
+  }
   const updated = await CourseFeeBatch.findByIdAndUpdate(id, allowed, { new: true, runValidators: true }).lean();
   if (!updated) throw new ApiError(404, 'Batch not found');
   return updated;
@@ -106,11 +120,14 @@ export async function createStudent(batchId, payload) {
   const batch = await CourseFeeBatch.findById(batchId).lean();
   if (!batch) throw new ApiError(404, 'Batch not found');
 
+  const feeType = payload.feeType === 'monthly' ? 'monthly' : 'one-time';
   const created = await CourseFeeStudent.create({
     batchId,
     name: payload.name,
     contact: payload.contact || '',
-    totalFee: payload.totalFee || 0,
+    feeType,
+    totalFee: feeType === 'one-time' ? payload.totalFee || 0 : 0,
+    monthlyFee: feeType === 'monthly' ? payload.monthlyFee || 0 : 0,
     securityAmount: payload.securityAmount || 0,
     securityPaid: payload.securityPaid || 0,
     notes: payload.notes || '',
@@ -120,7 +137,7 @@ export async function createStudent(batchId, payload) {
 
 export async function updateStudent(id, payload) {
   const allowed = {};
-  ['name', 'contact', 'totalFee', 'securityAmount', 'securityPaid', 'notes'].forEach((key) => {
+  ['name', 'contact', 'feeType', 'totalFee', 'monthlyFee', 'securityAmount', 'securityPaid', 'notes'].forEach((key) => {
     if (payload[key] !== undefined) allowed[key] = payload[key];
   });
   const updated = await CourseFeeStudent.findByIdAndUpdate(id, allowed, { new: true, runValidators: true }).lean();
@@ -133,6 +150,8 @@ export async function deleteStudent(id) {
   if (!deleted) throw new ApiError(404, 'Student not found');
   return deleted;
 }
+
+// ---- one-time payers: a free-form payments log ----
 
 export async function addPayment(studentId, { amount, date, note }) {
   if (!amount || Number(amount) <= 0) throw new ApiError(400, 'Payment amount must be greater than zero.');
@@ -149,6 +168,50 @@ export async function removePayment(studentId, paymentId) {
   const before = student.payments.length;
   student.payments = student.payments.filter((p) => String(p._id) !== String(paymentId));
   if (student.payments.length === before) throw new ApiError(404, 'Payment not found');
+  await student.save();
+  return withFeeTotals(student.toObject());
+}
+
+// ---- monthly payers: an explicit month-by-month ledger ----
+
+export async function addMonthPayment(studentId, { month, amount, paid, paidDate, note }) {
+  if (!month) throw new ApiError(400, 'Month is required.');
+  const student = await CourseFeeStudent.findById(studentId);
+  if (!student) throw new ApiError(404, 'Student not found');
+  student.monthlyPayments.push({
+    month,
+    amount: Number(amount) || 0,
+    paid: !!paid,
+    paidDate: paid && paidDate ? new Date(paidDate) : null,
+    note: note || '',
+  });
+  await student.save();
+  return withFeeTotals(student.toObject());
+}
+
+export async function updateMonthPayment(studentId, monthEntryId, payload) {
+  const student = await CourseFeeStudent.findById(studentId);
+  if (!student) throw new ApiError(404, 'Student not found');
+  const entry = student.monthlyPayments.id(monthEntryId);
+  if (!entry) throw new ApiError(404, 'Month entry not found');
+  if (payload.amount !== undefined) entry.amount = Number(payload.amount) || 0;
+  if (payload.paid !== undefined) entry.paid = !!payload.paid;
+  if (payload.paidDate !== undefined) entry.paidDate = payload.paidDate ? new Date(payload.paidDate) : null;
+  if (payload.note !== undefined) entry.note = payload.note;
+  // Marking paid without ever giving a date defaults to today — the mentor
+  // is confirming payment right now if they don't say otherwise.
+  if (entry.paid && !entry.paidDate) entry.paidDate = new Date();
+  if (!entry.paid) entry.paidDate = null;
+  await student.save();
+  return withFeeTotals(student.toObject());
+}
+
+export async function removeMonthPayment(studentId, monthEntryId) {
+  const student = await CourseFeeStudent.findById(studentId);
+  if (!student) throw new ApiError(404, 'Student not found');
+  const before = student.monthlyPayments.length;
+  student.monthlyPayments = student.monthlyPayments.filter((m) => String(m._id) !== String(monthEntryId));
+  if (student.monthlyPayments.length === before) throw new ApiError(404, 'Month entry not found');
   await student.save();
   return withFeeTotals(student.toObject());
 }

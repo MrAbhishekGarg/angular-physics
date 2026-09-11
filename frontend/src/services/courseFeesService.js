@@ -12,4 +12,8 @@ export const courseFeesService = {
 
   addPayment: (studentId, payload) => api.post(`/course-fees/students/${studentId}/payments`, payload),
   removePayment: (studentId, paymentId) => api.delete(`/course-fees/students/${studentId}/payments/${paymentId}`),
+
+  addMonth: (studentId, payload) => api.post(`/course-fees/students/${studentId}/months`, payload),
+  updateMonth: (studentId, monthId, payload) => api.patch(`/course-fees/students/${studentId}/months/${monthId}`, payload),
+  removeMonth: (studentId, monthId) => api.delete(`/course-fees/students/${studentId}/months/${monthId}`),
 };

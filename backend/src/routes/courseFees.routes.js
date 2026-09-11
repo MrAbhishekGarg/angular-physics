@@ -9,6 +9,9 @@ import {
   deleteStudent,
   addPayment,
   removePayment,
+  addMonthPayment,
+  updateMonthPayment,
+  removeMonthPayment,
 } from '../controllers/courseFees.controller.js';
 import { authenticate, authorize, requireSection } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
@@ -34,5 +37,9 @@ router.delete('/students/:id', deleteStudent);
 
 router.post('/students/:id/payments', validateBody(['amount']), addPayment);
 router.delete('/students/:id/payments/:paymentId', removePayment);
+
+router.post('/students/:id/months', validateBody(['month']), addMonthPayment);
+router.patch('/students/:id/months/:monthId', updateMonthPayment);
+router.delete('/students/:id/months/:monthId', removeMonthPayment);
 
 export default router;

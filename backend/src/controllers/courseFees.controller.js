@@ -46,3 +46,18 @@ export const removePayment = asyncHandler(async (req, res) => {
   const updated = await courseFeesService.removePayment(req.params.id, req.params.paymentId);
   return ApiResponse(res, 200, updated);
 });
+
+export const addMonthPayment = asyncHandler(async (req, res) => {
+  const updated = await courseFeesService.addMonthPayment(req.params.id, req.body);
+  return ApiResponse(res, 201, updated);
+});
+
+export const updateMonthPayment = asyncHandler(async (req, res) => {
+  const updated = await courseFeesService.updateMonthPayment(req.params.id, req.params.monthId, req.body);
+  return ApiResponse(res, 200, updated);
+});
+
+export const removeMonthPayment = asyncHandler(async (req, res) => {
+  const updated = await courseFeesService.removeMonthPayment(req.params.id, req.params.monthId);
+  return ApiResponse(res, 200, updated);
+});

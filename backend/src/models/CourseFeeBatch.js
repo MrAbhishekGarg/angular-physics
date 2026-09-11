@@ -8,15 +8,17 @@ import mongoose from 'mongoose';
  * always tied to something real in the catalog. A course can be re-run as
  * more than one live cohort over time, so `courseId` is not unique — several
  * batches may point at the same course.
+ *
+ * Fee cadence (one-time vs monthly) lives per-student, not here — different
+ * students in the same batch can pay differently. `standardFee` is just an
+ * optional reference amount (the course's usual price) the mentor may or may
+ * not bother setting; when set, it pre-fills a new student's fee so most
+ * students don't need it typed in individually.
  */
 const courseFeeBatchSchema = new mongoose.Schema(
   {
     courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
-    // How this batch collects fees — per-student totalFee/payments (see
-    // CourseFeeStudent) works the same either way, this is mainly what the
-    // mentor sees when deciding what to charge next.
-    feeType: { type: String, enum: ['one-time', 'monthly'], default: 'one-time' },
-    monthlyAmount: { type: Number, default: 0 },
+    standardFee: { type: Number, default: null },
     classHoursPerWeek: { type: Number, default: 0 },
     doubtsPerWeek: { type: Number, default: 0 },
     testsConducted: { type: Number, default: 0 },

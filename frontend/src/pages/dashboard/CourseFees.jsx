@@ -8,6 +8,7 @@ import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { courseFeesService } from '../../services/courseFeesService.js';
 import { courseService } from '../../services/courseService.js';
+import { EXAM_TRACKS } from '../../data/examTracks.js';
 import styles from './CourseFees.module.css';
 
 function money(n) {
@@ -15,6 +16,22 @@ function money(n) {
 }
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function formatMonth(monthStr) {
+  const [y, m] = monthStr.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+function currentMonth() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+function slugify(text) {
+  return text
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 function Field({ label, wide, children }) {
@@ -41,12 +58,109 @@ function CourseSelect({ courses, value, onChange }) {
   );
 }
 
-function NewBatchForm({ courses, onCreated }) {
+function NewCourseMiniForm({ onCreated, onCancel }) {
+  const [form, setForm] = useState({ title: '', track: EXAM_TRACKS[0].key, tagline: '', description: '', price: '', durationWeeks: '' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+
+  // A plain button + onClick, not a <form onSubmit>, since this renders
+  // inside NewBatchForm/BatchEditForm's own <form> — a nested <form> is
+  // invalid HTML and silently misroutes the native submit to the outer one.
+  const submit = async () => {
+    if (!form.title.trim() || !form.tagline.trim() || !form.description.trim() || !form.price || !form.durationWeeks) return;
+    setBusy(true);
+    setError('');
+    try {
+      const created = await courseService.create({
+        slug: slugify(form.title) || `course-${Date.now()}`,
+        title: form.title.trim(),
+        track: form.track,
+        tagline: form.tagline.trim(),
+        description: form.description.trim(),
+        price: Number(form.price),
+        durationWeeks: Number(form.durationWeeks),
+      });
+      onCreated(created);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className={styles.miniForm}>
+      <div className={styles.fieldGrid}>
+        <Field label="Course title" wide>
+          <input className={styles.input} required value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder="e.g. NEET 2028 Live Batch" />
+        </Field>
+        <Field label="Track">
+          <select className={styles.input} value={form.track} onChange={(e) => set({ track: e.target.value })}>
+            {EXAM_TRACKS.map((t) => (
+              <option key={t.key} value={t.key}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Price">
+          <input className={styles.input} required type="number" min="0" value={form.price} onChange={(e) => set({ price: e.target.value })} />
+        </Field>
+        <Field label="Duration (weeks)">
+          <input className={styles.input} required type="number" min="1" value={form.durationWeeks} onChange={(e) => set({ durationWeeks: e.target.value })} />
+        </Field>
+        <Field label="Tagline" wide>
+          <input className={styles.input} required value={form.tagline} onChange={(e) => set({ tagline: e.target.value })} placeholder="One line describing the course" />
+        </Field>
+        <Field label="Description" wide>
+          <textarea className={styles.input} required rows={2} value={form.description} onChange={(e) => set({ description: e.target.value })} />
+        </Field>
+      </div>
+      <div className={styles.formActions}>
+        <Button type="button" size="sm" disabled={busy} onClick={submit}>
+          {busy ? 'Creating…' : 'Create course'}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={onCancel} disabled={busy}>
+          Cancel
+        </Button>
+      </div>
+      {error && <p className={styles.feedbackErr}>{error}</p>}
+    </div>
+  );
+}
+
+function CoursePicker({ courses, value, onChange, onCourseCreated }) {
+  const [creating, setCreating] = useState(false);
+
+  if (creating) {
+    return (
+      <NewCourseMiniForm
+        onCreated={(course) => {
+          onCourseCreated(course);
+          onChange(course._id);
+          setCreating(false);
+        }}
+        onCancel={() => setCreating(false)}
+      />
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+      <CourseSelect courses={courses} value={value} onChange={onChange} />
+      <Button type="button" size="sm" variant="ghost" onClick={() => setCreating(true)}>
+        + New course
+      </Button>
+    </div>
+  );
+}
+
+function NewBatchForm({ courses, onCourseCreated, onCreated }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     courseId: '',
-    feeType: 'one-time',
-    monthlyAmount: '',
+    standardFee: '',
     classHoursPerWeek: '',
     doubtsPerWeek: '',
     testsConducted: '',
@@ -65,22 +179,12 @@ function NewBatchForm({ courses, onCreated }) {
     try {
       await courseFeesService.createBatch({
         ...form,
-        monthlyAmount: Number(form.monthlyAmount) || 0,
         classHoursPerWeek: Number(form.classHoursPerWeek) || 0,
         doubtsPerWeek: Number(form.doubtsPerWeek) || 0,
         testsConducted: Number(form.testsConducted) || 0,
         sheetsNotesProvided: Number(form.sheetsNotesProvided) || 0,
       });
-      setForm({
-        courseId: '',
-        feeType: 'one-time',
-        monthlyAmount: '',
-        classHoursPerWeek: '',
-        doubtsPerWeek: '',
-        testsConducted: '',
-        sheetsNotesProvided: '',
-        notes: '',
-      });
+      setForm({ courseId: '', standardFee: '', classHoursPerWeek: '', doubtsPerWeek: '', testsConducted: '', sheetsNotesProvided: '', notes: '' });
       setOpen(false);
       onCreated();
     } catch (err) {
@@ -98,28 +202,22 @@ function NewBatchForm({ courses, onCreated }) {
           {open ? 'Close' : 'Open'}
         </Button>
       </div>
-      {open && courses.length === 0 && (
-        <p className={styles.tileSub}>
-          No courses in the catalog yet — add one under <Link to="/dashboard/mentor">Manage Courses</Link> first.
-        </p>
-      )}
-      {open && courses.length > 0 && (
+      {open && (
         <form onSubmit={submit}>
-          <div className={styles.fieldGrid}>
-            <Field label="Course" wide>
-              <CourseSelect courses={courses} value={form.courseId} onChange={(courseId) => set({ courseId })} />
+          <Field label="Course" wide>
+            <CoursePicker courses={courses} value={form.courseId} onChange={(courseId) => set({ courseId })} onCourseCreated={onCourseCreated} />
+          </Field>
+          <div className={styles.fieldGrid} style={{ marginTop: '0.75rem' }}>
+            <Field label="Standard course fee (optional)">
+              <input
+                className={styles.input}
+                type="number"
+                min="0"
+                placeholder="leave blank if it varies"
+                value={form.standardFee}
+                onChange={(e) => set({ standardFee: e.target.value })}
+              />
             </Field>
-            <Field label="Fee type">
-              <select className={styles.input} value={form.feeType} onChange={(e) => set({ feeType: e.target.value })}>
-                <option value="one-time">One-time</option>
-                <option value="monthly">Monthly</option>
-              </select>
-            </Field>
-            {form.feeType === 'monthly' && (
-              <Field label="Monthly amount">
-                <input className={styles.input} type="number" min="0" value={form.monthlyAmount} onChange={(e) => set({ monthlyAmount: e.target.value })} />
-              </Field>
-            )}
             <Field label="Class hours / week">
               <input className={styles.input} type="number" min="0" value={form.classHoursPerWeek} onChange={(e) => set({ classHoursPerWeek: e.target.value })} />
             </Field>
@@ -148,11 +246,10 @@ function NewBatchForm({ courses, onCreated }) {
   );
 }
 
-function BatchEditForm({ batch, courses, onSaved, onCancel }) {
+function BatchEditForm({ batch, courses, onCourseCreated, onSaved, onCancel }) {
   const [form, setForm] = useState({
     courseId: batch.courseId,
-    feeType: batch.feeType,
-    monthlyAmount: batch.monthlyAmount,
+    standardFee: batch.standardFee ?? '',
     classHoursPerWeek: batch.classHoursPerWeek,
     doubtsPerWeek: batch.doubtsPerWeek,
     testsConducted: batch.testsConducted,
@@ -170,7 +267,6 @@ function BatchEditForm({ batch, courses, onSaved, onCancel }) {
     try {
       await courseFeesService.updateBatch(batch._id, {
         ...form,
-        monthlyAmount: Number(form.monthlyAmount) || 0,
         classHoursPerWeek: Number(form.classHoursPerWeek) || 0,
         doubtsPerWeek: Number(form.doubtsPerWeek) || 0,
         testsConducted: Number(form.testsConducted) || 0,
@@ -184,37 +280,31 @@ function BatchEditForm({ batch, courses, onSaved, onCancel }) {
   };
 
   return (
-    <form onSubmit={submit} className={styles.fieldGrid} style={{ marginBottom: '0.75rem' }}>
+    <form onSubmit={submit}>
       <Field label="Course" wide>
-        <CourseSelect courses={courses} value={form.courseId} onChange={(courseId) => set({ courseId })} />
+        <CoursePicker courses={courses} value={form.courseId} onChange={(courseId) => set({ courseId })} onCourseCreated={onCourseCreated} />
       </Field>
-      <Field label="Fee type">
-        <select className={styles.input} value={form.feeType} onChange={(e) => set({ feeType: e.target.value })}>
-          <option value="one-time">One-time</option>
-          <option value="monthly">Monthly</option>
-        </select>
-      </Field>
-      {form.feeType === 'monthly' && (
-        <Field label="Monthly amount">
-          <input className={styles.input} type="number" min="0" value={form.monthlyAmount} onChange={(e) => set({ monthlyAmount: e.target.value })} />
+      <div className={styles.fieldGrid} style={{ marginTop: '0.75rem', marginBottom: '0.75rem' }}>
+        <Field label="Standard course fee (optional)">
+          <input className={styles.input} type="number" min="0" placeholder="leave blank if it varies" value={form.standardFee} onChange={(e) => set({ standardFee: e.target.value })} />
         </Field>
-      )}
-      <Field label="Class hours / week">
-        <input className={styles.input} type="number" min="0" value={form.classHoursPerWeek} onChange={(e) => set({ classHoursPerWeek: e.target.value })} />
-      </Field>
-      <Field label="Doubt sessions / week">
-        <input className={styles.input} type="number" min="0" value={form.doubtsPerWeek} onChange={(e) => set({ doubtsPerWeek: e.target.value })} />
-      </Field>
-      <Field label="Tests conducted">
-        <input className={styles.input} type="number" min="0" value={form.testsConducted} onChange={(e) => set({ testsConducted: e.target.value })} />
-      </Field>
-      <Field label="Sheets & notes provided">
-        <input className={styles.input} type="number" min="0" value={form.sheetsNotesProvided} onChange={(e) => set({ sheetsNotesProvided: e.target.value })} />
-      </Field>
-      <Field label="Notes" wide>
-        <input className={styles.input} value={form.notes} onChange={(e) => set({ notes: e.target.value })} />
-      </Field>
-      <div className={styles.fieldWide} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <Field label="Class hours / week">
+          <input className={styles.input} type="number" min="0" value={form.classHoursPerWeek} onChange={(e) => set({ classHoursPerWeek: e.target.value })} />
+        </Field>
+        <Field label="Doubt sessions / week">
+          <input className={styles.input} type="number" min="0" value={form.doubtsPerWeek} onChange={(e) => set({ doubtsPerWeek: e.target.value })} />
+        </Field>
+        <Field label="Tests conducted">
+          <input className={styles.input} type="number" min="0" value={form.testsConducted} onChange={(e) => set({ testsConducted: e.target.value })} />
+        </Field>
+        <Field label="Sheets & notes provided">
+          <input className={styles.input} type="number" min="0" value={form.sheetsNotesProvided} onChange={(e) => set({ sheetsNotesProvided: e.target.value })} />
+        </Field>
+        <Field label="Notes" wide>
+          <input className={styles.input} value={form.notes} onChange={(e) => set({ notes: e.target.value })} />
+        </Field>
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
         <Button type="submit" size="sm" disabled={busy}>
           {busy ? 'Saving…' : 'Save changes'}
         </Button>
@@ -227,9 +317,16 @@ function BatchEditForm({ batch, courses, onSaved, onCancel }) {
   );
 }
 
-function AddStudentForm({ batchId, onCreated }) {
+function AddStudentForm({ batchId, standardFee, onCreated }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', contact: '', totalFee: '', securityAmount: '', notes: '' });
+  const [form, setForm] = useState({
+    feeType: 'one-time',
+    name: '',
+    contact: '',
+    totalFee: standardFee != null ? String(standardFee) : '',
+    monthlyFee: '',
+    securityAmount: '',
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
@@ -243,9 +340,10 @@ function AddStudentForm({ batchId, onCreated }) {
       await courseFeesService.createStudent(batchId, {
         ...form,
         totalFee: Number(form.totalFee) || 0,
+        monthlyFee: Number(form.monthlyFee) || 0,
         securityAmount: Number(form.securityAmount) || 0,
       });
-      setForm({ name: '', contact: '', totalFee: '', securityAmount: '', notes: '' });
+      setForm({ feeType: 'one-time', name: '', contact: '', totalFee: standardFee != null ? String(standardFee) : '', monthlyFee: '', securityAmount: '' });
       setOpen(false);
       onCreated();
     } catch (err) {
@@ -264,31 +362,50 @@ function AddStudentForm({ batchId, onCreated }) {
   }
 
   return (
-    <form onSubmit={submit} className={styles.studentForm}>
-      <input className={`${styles.input} ${styles.inputSm}`} required placeholder="Student name" value={form.name} onChange={(e) => set({ name: e.target.value })} />
-      <input className={`${styles.input} ${styles.inputSm}`} placeholder="Contact (optional)" value={form.contact} onChange={(e) => set({ contact: e.target.value })} />
-      <input
-        className={`${styles.input} ${styles.inputXs}`}
-        type="number"
-        min="0"
-        placeholder="Total fee"
-        value={form.totalFee}
-        onChange={(e) => set({ totalFee: e.target.value })}
-      />
-      <input
-        className={`${styles.input} ${styles.inputXs}`}
-        type="number"
-        min="0"
-        placeholder="Security amount"
-        value={form.securityAmount}
-        onChange={(e) => set({ securityAmount: e.target.value })}
-      />
-      <Button type="submit" size="sm" disabled={busy || !form.name.trim()}>
-        {busy ? 'Adding…' : 'Add'}
-      </Button>
-      <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
-        Cancel
-      </Button>
+    <form onSubmit={submit} className={styles.studentAddForm}>
+      <div className={styles.studentForm}>
+        <select className={styles.input} value={form.feeType} onChange={(e) => set({ feeType: e.target.value })}>
+          <option value="one-time">Pays one-time</option>
+          <option value="monthly">Pays monthly</option>
+        </select>
+        <input className={`${styles.input} ${styles.inputSm}`} required placeholder="Student name" value={form.name} onChange={(e) => set({ name: e.target.value })} />
+        <input className={`${styles.input} ${styles.inputSm}`} placeholder="Contact (optional)" value={form.contact} onChange={(e) => set({ contact: e.target.value })} />
+      </div>
+      <div className={styles.studentForm}>
+        {form.feeType === 'one-time' ? (
+          <input
+            className={`${styles.input} ${styles.inputXs}`}
+            type="number"
+            min="0"
+            placeholder="Total fee"
+            value={form.totalFee}
+            onChange={(e) => set({ totalFee: e.target.value })}
+          />
+        ) : (
+          <input
+            className={`${styles.input} ${styles.inputXs}`}
+            type="number"
+            min="0"
+            placeholder="Fee per month"
+            value={form.monthlyFee}
+            onChange={(e) => set({ monthlyFee: e.target.value })}
+          />
+        )}
+        <input
+          className={`${styles.input} ${styles.inputXs}`}
+          type="number"
+          min="0"
+          placeholder="Security amount"
+          value={form.securityAmount}
+          onChange={(e) => set({ securityAmount: e.target.value })}
+        />
+        <Button type="submit" size="sm" disabled={busy || !form.name.trim()}>
+          {busy ? 'Adding…' : 'Add'}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
+          Cancel
+        </Button>
+      </div>
       {error && <p className={styles.feedbackErr}>{error}</p>}
     </form>
   );
@@ -335,6 +452,113 @@ function AddPaymentForm({ studentId, onAdded, onDone }) {
   );
 }
 
+function AddMonthForm({ studentId, defaultAmount, onAdded, onDone }) {
+  const [month, setMonth] = useState(currentMonth());
+  const [amount, setAmount] = useState(defaultAmount ? String(defaultAmount) : '');
+  const [paid, setPaid] = useState(false);
+  const [paidDate, setPaidDate] = useState(new Date().toISOString().slice(0, 10));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!month) return;
+    setBusy(true);
+    setError('');
+    try {
+      await courseFeesService.addMonth(studentId, { month, amount: Number(amount) || 0, paid, paidDate: paid ? paidDate : undefined });
+      onAdded();
+      onDone();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className={styles.paymentForm}>
+      <input className={`${styles.input} ${styles.inputSm}`} type="month" value={month} onChange={(e) => setMonth(e.target.value)} required />
+      <input className={`${styles.input} ${styles.inputXs}`} type="number" min="0" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+      <label className={styles.checkboxLabel}>
+        <input type="checkbox" checked={paid} onChange={(e) => setPaid(e.target.checked)} /> Already paid
+      </label>
+      {paid && <input className={`${styles.input} ${styles.inputSm}`} type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} />}
+      <Button type="submit" size="sm" disabled={busy}>
+        {busy ? 'Saving…' : 'Add month'}
+      </Button>
+      <Button type="button" size="sm" variant="ghost" onClick={onDone} disabled={busy}>
+        Cancel
+      </Button>
+      {error && <p className={styles.feedbackErr}>{error}</p>}
+    </form>
+  );
+}
+
+function MonthRow({ studentId, entry, onChanged }) {
+  const [markingPaid, setMarkingPaid] = useState(false);
+  const [paidDate, setPaidDate] = useState(new Date().toISOString().slice(0, 10));
+  const [busy, setBusy] = useState(false);
+
+  const confirmPaid = async () => {
+    setBusy(true);
+    try {
+      await courseFeesService.updateMonth(studentId, entry._id, { paid: true, paidDate });
+      onChanged();
+    } finally {
+      setBusy(false);
+      setMarkingPaid(false);
+    }
+  };
+
+  const revertToPending = async () => {
+    if (!window.confirm(`Mark ${formatMonth(entry.month)} back as pending?`)) return;
+    await courseFeesService.updateMonth(studentId, entry._id, { paid: false });
+    onChanged();
+  };
+
+  const remove = async () => {
+    if (!window.confirm(`Remove the ${formatMonth(entry.month)} entry?`)) return;
+    await courseFeesService.removeMonth(studentId, entry._id);
+    onChanged();
+  };
+
+  return (
+    <li className={styles.monthItem}>
+      <span className={styles.monthLabel}>{formatMonth(entry.month)}</span>
+      <span className={styles.paymentAmount}>{money(entry.amount)}</span>
+      {entry.paid ? (
+        <>
+          <span className={styles.monthBadgePaid}>Paid {formatDate(entry.paidDate)}</span>
+          <button type="button" className={styles.editLink} onClick={revertToPending}>
+            Undo
+          </button>
+        </>
+      ) : markingPaid ? (
+        <>
+          <input className={`${styles.input} ${styles.inputSm}`} type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} />
+          <Button type="button" size="sm" disabled={busy} onClick={confirmPaid}>
+            Confirm
+          </Button>
+          <button type="button" className={styles.editLink} onClick={() => setMarkingPaid(false)}>
+            Cancel
+          </button>
+        </>
+      ) : (
+        <>
+          <span className={styles.monthBadgePending}>Pending</span>
+          <button type="button" className={styles.editLink} onClick={() => setMarkingPaid(true)}>
+            Mark paid
+          </button>
+        </>
+      )}
+      <button type="button" className={styles.editLink} onClick={remove}>
+        Remove
+      </button>
+    </li>
+  );
+}
+
 function StudentRow({ student, onChanged }) {
   const [expanded, setExpanded] = useState(false);
   const [addingPayment, setAddingPayment] = useState(false);
@@ -343,10 +567,12 @@ function StudentRow({ student, onChanged }) {
     name: student.name,
     contact: student.contact || '',
     totalFee: student.totalFee,
+    monthlyFee: student.monthlyFee,
     securityAmount: student.securityAmount,
     securityPaid: student.securityPaid,
   });
   const [busy, setBusy] = useState(false);
+  const isMonthly = student.feeType === 'monthly';
 
   const saveEdit = async (e) => {
     e.preventDefault();
@@ -355,6 +581,7 @@ function StudentRow({ student, onChanged }) {
       await courseFeesService.updateStudent(student._id, {
         ...editForm,
         totalFee: Number(editForm.totalFee) || 0,
+        monthlyFee: Number(editForm.monthlyFee) || 0,
         securityAmount: Number(editForm.securityAmount) || 0,
         securityPaid: Number(editForm.securityPaid) || 0,
       });
@@ -383,14 +610,25 @@ function StudentRow({ student, onChanged }) {
         <form onSubmit={saveEdit} className={styles.studentForm}>
           <input className={`${styles.input} ${styles.inputSm}`} required value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
           <input className={`${styles.input} ${styles.inputSm}`} value={editForm.contact} onChange={(e) => setEditForm((f) => ({ ...f, contact: e.target.value }))} placeholder="Contact" />
-          <input
-            className={`${styles.input} ${styles.inputXs}`}
-            type="number"
-            min="0"
-            placeholder="Total fee"
-            value={editForm.totalFee}
-            onChange={(e) => setEditForm((f) => ({ ...f, totalFee: e.target.value }))}
-          />
+          {isMonthly ? (
+            <input
+              className={`${styles.input} ${styles.inputXs}`}
+              type="number"
+              min="0"
+              placeholder="Fee per month"
+              value={editForm.monthlyFee}
+              onChange={(e) => setEditForm((f) => ({ ...f, monthlyFee: e.target.value }))}
+            />
+          ) : (
+            <input
+              className={`${styles.input} ${styles.inputXs}`}
+              type="number"
+              min="0"
+              placeholder="Total fee"
+              value={editForm.totalFee}
+              onChange={(e) => setEditForm((f) => ({ ...f, totalFee: e.target.value }))}
+            />
+          )}
           <input
             className={`${styles.input} ${styles.inputXs}`}
             type="number"
@@ -420,7 +658,8 @@ function StudentRow({ student, onChanged }) {
             {expanded ? '▾' : '▸'} {student.name}
           </button>
           {student.contact && <span className={styles.tileSub}>{student.contact}</span>}
-          <span className={styles.studentFee}>{money(student.totalFee)}</span>
+          <Badge tone={isMonthly ? 'accent' : 'default'}>{isMonthly ? `${money(student.monthlyFee)}/mo` : 'One-time'}</Badge>
+          <span className={styles.studentFee}>{money(student.feeTotal)}</span>
           <span className={styles.studentPaid}>{money(student.feePaid)} paid</span>
           <span className={student.feeDue > 0 ? styles.studentDue : styles.studentDueClear}>
             {student.feeDue > 0 ? `${money(student.feeDue)} due` : 'Cleared'}
@@ -441,28 +680,53 @@ function StudentRow({ student, onChanged }) {
 
       {expanded && !editing && (
         <div className={styles.paymentLog}>
-          {student.payments.length === 0 ? (
-            <p className={styles.tileSub}>No payments recorded yet.</p>
+          {isMonthly ? (
+            <>
+              {student.monthlyPayments.length === 0 ? (
+                <p className={styles.tileSub}>No months added yet.</p>
+              ) : (
+                <ul className={styles.months}>
+                  {[...student.monthlyPayments]
+                    .sort((a, b) => a.month.localeCompare(b.month))
+                    .map((m) => (
+                      <MonthRow key={m._id} studentId={student._id} entry={m} onChanged={onChanged} />
+                    ))}
+                </ul>
+              )}
+              {addingPayment ? (
+                <AddMonthForm studentId={student._id} defaultAmount={student.monthlyFee} onAdded={onChanged} onDone={() => setAddingPayment(false)} />
+              ) : (
+                <Button type="button" size="sm" variant="ghost" onClick={() => setAddingPayment(true)}>
+                  + Add month
+                </Button>
+              )}
+            </>
           ) : (
-            <ul className={styles.payments}>
-              {student.payments.map((p) => (
-                <li key={p._id} className={styles.paymentItem}>
-                  <span>{formatDate(p.date)}</span>
-                  <span className={styles.paymentAmount}>{money(p.amount)}</span>
-                  {p.note && <span className={styles.tileSub}>{p.note}</span>}
-                  <button type="button" className={styles.editLink} onClick={() => removePayment(p._id)}>
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {addingPayment ? (
-            <AddPaymentForm studentId={student._id} onAdded={onChanged} onDone={() => setAddingPayment(false)} />
-          ) : (
-            <Button type="button" size="sm" variant="ghost" onClick={() => setAddingPayment(true)}>
-              + Record payment
-            </Button>
+            <>
+              {student.payments.length === 0 ? (
+                <p className={styles.tileSub}>No payments recorded yet.</p>
+              ) : (
+                <ul className={styles.payments}>
+                  {student.payments.map((p) => (
+                    <li key={p._id} className={styles.paymentItem}>
+                      <span>{formatDate(p.date)}</span>
+                      <span className={styles.paymentAmount}>{money(p.amount)}</span>
+                      {p.note && <span className={styles.tileSub}>{p.note}</span>}
+                      <button type="button" className={styles.editLink} onClick={() => removePayment(p._id)}>
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {addingPayment ? (
+                <AddPaymentForm studentId={student._id} onAdded={onChanged} onDone={() => setAddingPayment(false)} />
+              ) : (
+                <Button type="button" size="sm" variant="ghost" onClick={() => setAddingPayment(true)}>
+                  + Record payment
+                </Button>
+              )}
+            </>
           )}
         </div>
       )}
@@ -470,7 +734,7 @@ function StudentRow({ student, onChanged }) {
   );
 }
 
-function BatchCard({ batch, courses, onChanged }) {
+function BatchCard({ batch, courses, onCourseCreated, onChanged }) {
   const [editing, setEditing] = useState(false);
   const courseTitle = batch.course?.title || 'Unknown course';
 
@@ -486,6 +750,7 @@ function BatchCard({ batch, courses, onChanged }) {
         <BatchEditForm
           batch={batch}
           courses={courses}
+          onCourseCreated={onCourseCreated}
           onSaved={() => {
             setEditing(false);
             onChanged();
@@ -497,9 +762,7 @@ function BatchCard({ batch, courses, onChanged }) {
           <div className={styles.batchHead}>
             <span className={styles.batchName}>
               {courseTitle}
-              <Badge tone={batch.feeType === 'monthly' ? 'accent' : 'default'}>
-                {batch.feeType === 'monthly' ? `Monthly · ${money(batch.monthlyAmount)}/mo` : 'One-time'}
-              </Badge>
+              {batch.standardFee != null && <Badge tone="default">Standard {money(batch.standardFee)}</Badge>}
               <button type="button" className={styles.editLink} onClick={() => setEditing(true)}>
                 Edit
               </button>
@@ -542,7 +805,7 @@ function BatchCard({ batch, courses, onChanged }) {
         </div>
       )}
       <div style={{ marginTop: '0.5rem' }}>
-        <AddStudentForm batchId={batch._id} onCreated={onChanged} />
+        <AddStudentForm batchId={batch._id} standardFee={batch.standardFee} onCreated={onChanged} />
       </div>
     </section>
   );
@@ -571,6 +834,8 @@ export default function CourseFees() {
   useEffect(() => {
     refetch();
   }, []);
+
+  const handleCourseCreated = (course) => setCourses((prev) => [...prev, course]);
 
   return (
     <>
@@ -604,13 +869,17 @@ export default function CourseFees() {
             </div>
           )}
 
-          <NewBatchForm courses={courses} onCreated={refetch} />
+          <NewBatchForm courses={courses} onCourseCreated={handleCourseCreated} onCreated={refetch} />
 
           {loading && <Spinner />}
           {error && <ErrorState message={error} onRetry={refetch} />}
           {!loading && !error && data?.batches.length === 0 && <p className={styles.empty}>No course batches yet — add one above.</p>}
 
-          {!loading && !error && data?.batches.map((batch) => <BatchCard key={batch._id} batch={batch} courses={courses} onChanged={refetch} />)}
+          {!loading &&
+            !error &&
+            data?.batches.map((batch) => (
+              <BatchCard key={batch._id} batch={batch} courses={courses} onCourseCreated={handleCourseCreated} onChanged={refetch} />
+            ))}
         </div>
       </DashboardLayout>
     </>
