@@ -70,6 +70,16 @@ export const getBatches = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, batches, { count: batches.length });
 });
 
+export const updateBatch = asyncHandler(async (req, res) => {
+  const updated = await jobScheduleService.updateBatch(req.params.code, req.body);
+  return ApiResponse(res, 200, updated);
+});
+
+export const deleteBatch = asyncHandler(async (req, res) => {
+  await jobScheduleService.deleteBatch(req.params.code);
+  return ApiResponse(res, 200, { deleted: true });
+});
+
 export const getDashboard = asyncHandler(async (req, res) => {
   const data = await jobScheduleService.getDashboard();
   return ApiResponse(res, 200, data);

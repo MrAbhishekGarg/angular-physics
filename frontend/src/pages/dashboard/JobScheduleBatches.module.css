@@ -73,6 +73,27 @@
   font-size: 1.05rem;
   color: var(--ap-text);
 }
+.editLink {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--ap-font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ap-accent);
+  padding: 0;
+}
+.editForm {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--ap-border);
+  margin-bottom: 0.75rem;
+}
 .batchDot {
   width: 10px;
   height: 10px;
@@ -131,6 +152,10 @@
 .logTag_upcoming {
   color: #fff;
   background: var(--ap-secondary-accent);
+}
+.logTag_doubt {
+  color: var(--ap-accent);
+  border: 1px solid var(--ap-accent);
 }
 
 /* topic plan */

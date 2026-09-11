@@ -23,6 +23,8 @@ const DATE_RE = /Class Schedule on (\d{2})\.(\d{2})\.(\d{4})/;
 const DAY_RE = /^(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)$/;
 const TIME_RANGE_RE = /^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/;
 const PAREN_TIME_RE = /\((\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})\)/;
+const GENERIC_PAREN_RE = /\(([^)]+)\)/;
+const PAREN_LOOKS_LIKE_TIME_RE = /^\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}$/;
 
 // Aakash writes a cell as "<subject letter>/<faculty code>" — expand the
 // letter to the full subject name so "P/AGP" reads as Physics, not "P".
@@ -48,6 +50,20 @@ const ROW_Y_TOLERANCE = 3;
 // How close (in x) a standalone "(H:MM-H:MM)" override must sit next to its
 // own cell to count as belonging to it, rather than the next cell over.
 const PAREN_X_TOLERANCE = 60;
+// Under a "Doubt" column, the real batch prints as its own text run just
+// below the faculty-code cell (e.g. "C/SDC" on one line, "(DRA+E)" printed
+// ~16pt directly under it) rather than inline in the same string — a
+// same-cell two-line layout, not a same-row neighbour like the time override
+// above, so it needs its own (tighter-x, taller-y) search window.
+const DOUBT_PAREN_Y_TOLERANCE = 20;
+const DOUBT_PAREN_X_TOLERANCE = 15;
+// A Doubt column's faculty-code cell sits a few points off the row's own
+// time-label baseline (observed ~7.6-7.9pt in a real sample — evidently a
+// different vertical alignment inside that one sub-table), enough to land in
+// a separate row cluster under ROW_Y_TOLERANCE. This lets such a row borrow
+// the time label from the nearest row that has one, still well short of the
+// ~40pt+ gap between actual consecutive time slots.
+const TIME_ROW_Y_TOLERANCE = 10;
 
 function buildHitRegex(facultyCode) {
   const escaped = String(facultyCode).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -74,9 +90,55 @@ function clusterRows(items) {
   return rows;
 }
 
+/**
+ * Falls back to the nearest OTHER row's time-range label when a row's own
+ * leftmost item isn't one — see TIME_ROW_Y_TOLERANCE.
+ */
+function findNearbyTimeRange(rows, y) {
+  let best = null;
+  let bestDist = Infinity;
+  for (const r of rows) {
+    const m = TIME_RANGE_RE.exec(r.items[0]?.text || '');
+    if (!m) continue;
+    const dist = Math.abs(r.y - y);
+    if (dist <= TIME_ROW_Y_TOLERANCE && dist < bestDist) {
+      bestDist = dist;
+      best = m;
+    }
+  }
+  return best;
+}
+
 function closestByX(candidates, x) {
   if (candidates.length === 0) return null;
   return candidates.reduce((best, c) => (Math.abs(c.x - x) < Math.abs(best.x - x) ? c : best));
+}
+
+/**
+ * Under a "Doubt" column, finds the real batch code printed just below the
+ * hit cell — the closest (by x, then y) parenthetical text run on a row
+ * beneath it that doesn't itself look like a time range (a time-override
+ * paren belongs to a different, non-Doubt cell shape and is handled
+ * separately above).
+ */
+function findDoubtActualBatch(rows, hitY, hitX) {
+  let best = null;
+  let bestDist = Infinity;
+  for (const row of rows) {
+    if (row.y >= hitY || hitY - row.y > DOUBT_PAREN_Y_TOLERANCE) continue;
+    for (const it of row.items) {
+      const xDist = Math.abs(it.x - hitX);
+      if (xDist > DOUBT_PAREN_X_TOLERANCE) continue;
+      const m = GENERIC_PAREN_RE.exec(it.text);
+      if (!m || PAREN_LOOKS_LIKE_TIME_RE.test(m[1].trim())) continue;
+      const dist = xDist + (hitY - row.y);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = m[1].trim();
+      }
+    }
+  }
+  return best;
 }
 
 /**
@@ -129,7 +191,7 @@ export async function extractMyClassesFromPdf(buffer, facultyCode) {
   const classes = [];
 
   rows.forEach((row) => {
-    const timeMatch = TIME_RANGE_RE.exec(row.items[0]?.text || '');
+    const timeMatch = TIME_RANGE_RE.exec(row.items[0]?.text || '') || findNearbyTimeRange(rows, row.y);
 
     row.items.forEach((item, idxInRow) => {
       const hit = hitRegex.exec(item.text);
@@ -165,13 +227,31 @@ export async function extractMyClassesFromPdf(buffer, facultyCode) {
         warnings.push(`"${item.text}" at ${startTime}-${endTime} (${batchItem.text}): couldn't determine the room.`);
       }
 
+      // A "Doubt" column header means this slot is a doubt-clearing session,
+      // not a regular class for that column — the cell still names the real
+      // batch, printed just below the faculty code as its own line (e.g.
+      // "P/AGP" then "(DRC)" directly under it) rather than as the column's
+      // own header value.
+      let batchCode = batchItem.text;
+      let isDoubt = false;
+      if (/^doubt$/i.test(batchItem.text)) {
+        isDoubt = true;
+        const actual = findDoubtActualBatch(rows, row.y, item.x);
+        if (actual) {
+          batchCode = actual;
+        } else {
+          warnings.push(`"${item.text}" at ${startTime}-${endTime}: a doubt-class cell but couldn't find the actual batch printed beneath it — kept as "Doubt".`);
+        }
+      }
+
       classes.push({
         startTime,
         endTime,
         room: roomItem ? roomItem.text : '',
-        batchCode: batchItem.text,
+        batchCode,
         subjectPrefix: expandSubject(hit[1]),
         rawText: item.text,
+        isDoubt,
       });
     });
   });

@@ -25,3 +25,12 @@ export function durationMinutes(start, end) {
   const d = e - s;
   return d > 0 && d <= 8 * 60 ? d : 0;
 }
+
+// Buckets a class length for the "1 hr classes / 2 hr classes" stat — a
+// ±10 minute tolerance since a real period runs a few minutes short or long
+// of the nominal hour (and a double period is rarely exactly 120).
+export function classifyDuration(minutes) {
+  if (minutes >= 50 && minutes <= 70) return '1hr';
+  if (minutes >= 110 && minutes <= 130) return '2hr';
+  return 'other';
+}

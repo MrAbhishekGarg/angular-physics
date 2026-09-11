@@ -8,6 +8,8 @@ import {
   deleteClass,
   deleteUpload,
   getBatches,
+  updateBatch,
+  deleteBatch,
   getDashboard,
   listTopicPlans,
   createTopicPlan,
@@ -54,6 +56,8 @@ router.post('/upload', uploadJobScheduleFile, ingestSchedule);
 router.get('/uploads/:id/file', downloadScheduleFile);
 router.delete('/uploads/:id', deleteUpload);
 router.get('/batches', getBatches);
+router.patch('/batches/:code', updateBatch);
+router.delete('/batches/:code', deleteBatch);
 router.get('/dashboard', getDashboard);
 
 router.get('/topic-plan', listTopicPlans);

@@ -247,6 +247,31 @@
   color: var(--ap-success);
 }
 
+.editLink {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ap-accent);
+  padding: 0;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--ap-text);
+  margin: 0.4rem 0;
+}
+.checkboxRow input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+}
+
 .classSub {
   font-size: 0.78rem;
   color: var(--ap-text-muted);

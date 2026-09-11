@@ -92,18 +92,25 @@ function TopicPlan({ batchCode, plan, onChanged }) {
 
 function NewBatchPlan({ onCreated }) {
   const [batchCode, setBatchCode] = useState('');
+  const [type, setType] = useState('Regular');
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!batchCode.trim() || !title.trim()) return;
+    if (!batchCode.trim()) return;
     setBusy(true);
+    setError('');
     try {
-      await jobScheduleService.createTopicPlan(batchCode.trim(), title.trim());
+      await jobScheduleService.updateBatch(batchCode.trim(), { type });
+      if (title.trim()) await jobScheduleService.createTopicPlan(batchCode.trim(), title.trim());
       setBatchCode('');
+      setType('Regular');
       setTitle('');
       onCreated();
+    } catch (err) {
+      setError(err.message);
     } finally {
       setBusy(false);
     }
@@ -112,15 +119,61 @@ function NewBatchPlan({ onCreated }) {
   return (
     <form onSubmit={submit} className={styles.newPlan}>
       <input className={`${styles.input} ${styles.inputCode}`} value={batchCode} onChange={(e) => setBatchCode(e.target.value)} placeholder="Batch code" />
+      <select className={styles.input} value={type} onChange={(e) => setType(e.target.value)}>
+        <option value="Regular">Regular</option>
+        <option value="Doubt">Doubt</option>
+      </select>
       <input
         className={`${styles.input} ${styles.inputGrow}`}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="First topic to cover for a batch you haven't taught yet…"
+        placeholder="First topic to cover (optional)…"
       />
-      <Button type="submit" size="sm" variant="ghost" disabled={busy || !batchCode.trim() || !title.trim()}>
-        Start a plan
+      <Button type="submit" size="sm" variant="ghost" disabled={busy || !batchCode.trim()}>
+        Add batch
       </Button>
+      {error && <p className={styles.feedbackErr}>{error}</p>}
+    </form>
+  );
+}
+
+function BatchEditForm({ batch, onSaved, onCancel }) {
+  const [code, setCode] = useState(batch.batchCode);
+  const [type, setType] = useState(batch.type || 'Regular');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!code.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      await jobScheduleService.updateBatch(batch.batchCode, {
+        code: code.trim() !== batch.batchCode ? code.trim() : undefined,
+        type,
+      });
+      onSaved();
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className={styles.editForm}>
+      <input className={`${styles.input} ${styles.inputCode}`} value={code} onChange={(e) => setCode(e.target.value)} />
+      <select className={styles.input} value={type} onChange={(e) => setType(e.target.value)}>
+        <option value="Regular">Regular</option>
+        <option value="Doubt">Doubt</option>
+      </select>
+      <Button type="submit" size="sm" disabled={busy || !code.trim()}>
+        Save
+      </Button>
+      <Button type="button" size="sm" variant="ghost" onClick={onCancel} disabled={busy}>
+        Cancel
+      </Button>
+      {error && <p className={styles.feedbackErr}>{error}</p>}
     </form>
   );
 }
@@ -129,6 +182,7 @@ export default function JobScheduleBatches() {
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [editingCode, setEditingCode] = useState(null);
 
   const refetch = async () => {
     setLoading(true);
@@ -172,19 +226,34 @@ export default function JobScheduleBatches() {
             !error &&
             batches.map((batch) => (
               <section key={batch.batchCode} className={styles.batch} style={{ borderLeft: `4px solid ${batchColor(batch.batchCode, order)}` }}>
-                <div className={styles.batchHead}>
-                  <span className={styles.batchCode}>
-                    <span className={styles.batchDot} style={{ background: batchColor(batch.batchCode, order) }} />
-                    {batch.batchCode}
-                  </span>
-                  <span className={styles.batchStats}>
-                    {batch.doneCount ?? batch.classCount} done
-                    {batch.toReviewCount ? ` (${batch.toReviewCount} to review)` : ''}
-                    {batch.upcomingCount ? ` · ${batch.upcomingCount} upcoming` : ''} · {batch.hours} h
-                    {batch.lastTaught ? ` · last taught ${formatDate(batch.lastTaught)}` : ''}
-                    {batch.nextClass ? ` · next ${formatDate(batch.nextClass)}` : ''}
-                  </span>
-                </div>
+                {editingCode === batch.batchCode ? (
+                  <BatchEditForm
+                    batch={batch}
+                    onSaved={() => {
+                      setEditingCode(null);
+                      refetch();
+                    }}
+                    onCancel={() => setEditingCode(null)}
+                  />
+                ) : (
+                  <div className={styles.batchHead}>
+                    <span className={styles.batchCode}>
+                      <span className={styles.batchDot} style={{ background: batchColor(batch.batchCode, order) }} />
+                      {batch.batchCode}
+                      {batch.type === 'Doubt' && <span className={`${styles.logTag} ${styles.logTag_doubt}`}>Doubt</span>}
+                      <button type="button" className={styles.editLink} onClick={() => setEditingCode(batch.batchCode)}>
+                        Edit
+                      </button>
+                    </span>
+                    <span className={styles.batchStats}>
+                      {batch.doneCount ?? batch.classCount} done
+                      {batch.toReviewCount ? ` (${batch.toReviewCount} to review)` : ''}
+                      {batch.upcomingCount ? ` · ${batch.upcomingCount} upcoming` : ''} · {batch.hours} h
+                      {batch.lastTaught ? ` · last taught ${formatDate(batch.lastTaught)}` : ''}
+                      {batch.nextClass ? ` · next ${formatDate(batch.nextClass)}` : ''}
+                    </span>
+                  </div>
+                )}
 
                 {batch.classes.length > 0 && (
                   <>
@@ -198,6 +267,7 @@ export default function JobScheduleBatches() {
                           <div key={c._id} className={styles.logItem}>
                             <strong>{formatDate(c.date)}</strong> · {formatTimeRange(c.startTime, c.endTime)} · Room {c.room || '?'}
                             <span className={`${styles.logTag} ${styles[`logTag_${label.replace(' ', '')}`]}`}>{label}</span>
+                            {c.isDoubt && <span className={`${styles.logTag} ${styles.logTag_doubt}`}>Doubt</span>}
                             {topics && <div className={styles.logMuted}>{topics}</div>}
                           </div>
                         );

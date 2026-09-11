@@ -111,6 +111,8 @@ export default function JobDashboard() {
                 <Tile value={data.counts.done} label="Classes done" sub={`${data.hours.done} h taught`} tone="ok" />
                 <Tile value={data.counts.upcoming} label="Upcoming classes" sub={`${data.hours.upcoming} h scheduled`} tone="accent" />
                 <Tile value={`${data.hours.total} h`} label="Total class hours" sub={`${data.counts.total} classes`} />
+                <Tile value={data.counts.oneHourClasses} label="1 hr classes" sub={`${data.counts.twoHourClasses} of 2 hr`} />
+                <Tile value={data.counts.twoHourClasses} label="2 hr classes" sub={data.counts.doubtClasses ? `${data.counts.doubtClasses} doubt classes` : undefined} />
                 <Tile
                   value={data.counts.thisWeek}
                   label="This week"

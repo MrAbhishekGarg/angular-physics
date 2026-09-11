@@ -74,7 +74,7 @@ function Field({ label, wide, children }) {
 }
 
 function ManualClassForm({ defaultDate, onCreated }) {
-  const [form, setForm] = useState({ date: defaultDate || '', startTime: '', endTime: '', room: '', batchCode: '', plannedTopics: '' });
+  const [form, setForm] = useState({ date: defaultDate || '', startTime: '', endTime: '', room: '', batchCode: '', plannedTopics: '', isDoubt: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -91,7 +91,7 @@ function ManualClassForm({ defaultDate, onCreated }) {
     try {
       const created = await jobScheduleService.createClass(form);
       onCreated(created);
-      set({ startTime: '', endTime: '', room: '', batchCode: '', plannedTopics: '' });
+      set({ startTime: '', endTime: '', room: '', batchCode: '', plannedTopics: '', isDoubt: false });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -121,6 +121,10 @@ function ManualClassForm({ defaultDate, onCreated }) {
           <input className={styles.input} value={form.plannedTopics} onChange={(e) => set({ plannedTopics: e.target.value })} />
         </Field>
       </div>
+      <label className={styles.checkboxRow}>
+        <input type="checkbox" checked={form.isDoubt} onChange={(e) => set({ isDoubt: e.target.checked })} />
+        Doubt class
+      </label>
       <div className={styles.formActions}>
         <Button type="submit" size="sm" disabled={busy}>
           {busy ? 'Adding…' : 'Add class'}
@@ -140,6 +144,11 @@ function ClassCard({ cls, order, onSaved, onDeleted }) {
   const [notes, setNotes] = useState(cls.notes || '');
   const [status, setStatus] = useState(''); // '' | 'saving' | 'saved'
 
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState(null);
+  const [editError, setEditError] = useState('');
+  const [editBusy, setEditBusy] = useState(false);
+
   const save = async (extra = {}) => {
     setStatus('saving');
     try {
@@ -149,6 +158,34 @@ function ClassCard({ cls, order, onSaved, onDeleted }) {
       setTimeout(() => setStatus(''), 1500);
     } catch {
       setStatus('');
+    }
+  };
+
+  const startEdit = () => {
+    setEditError('');
+    setEditForm({
+      date: new Date(cls.date).toISOString().slice(0, 10),
+      batchCode: cls.batchCode,
+      startTime: cls.startTime,
+      endTime: cls.endTime || '',
+      room: cls.room || '',
+      isDoubt: !!cls.isDoubt,
+    });
+    setEditing(true);
+  };
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    setEditBusy(true);
+    setEditError('');
+    try {
+      const updated = await jobScheduleService.updateClass(cls._id, editForm);
+      onSaved(updated);
+      setEditing(false);
+    } catch (err) {
+      setEditError(err.message);
+    } finally {
+      setEditBusy(false);
     }
   };
 
@@ -170,6 +207,7 @@ function ClassCard({ cls, order, onSaved, onDeleted }) {
             <span className={styles.meta}>{' · '}Room {cls.room || '?'}</span>
           </span>
           <BatchChip code={cls.batchCode} order={order} />
+          {cls.isDoubt && <Badge tone="default">Doubt</Badge>}
           {cls.subjectPrefix && <span className={styles.classSub}>{prettySubject(cls.subjectPrefix)}</span>}
         </div>
         <div className={styles.classTags}>
@@ -181,8 +219,47 @@ function ClassCard({ cls, order, onSaved, onDeleted }) {
           {state === 'taught' && <span className={styles.phaseTaught}>✓ Taught</span>}
           {cls.needsReview && <Badge tone="default">Check details</Badge>}
           {cls.source === 'pdf' && cls.rawText && <span className={styles.tagMuted}>from PDF · {cls.rawText}</span>}
+          <button type="button" className={styles.editLink} onClick={() => (editing ? setEditing(false) : startEdit())}>
+            {editing ? 'Cancel' : 'Edit details'}
+          </button>
         </div>
       </div>
+
+      {editing && editForm && (
+        <form onSubmit={saveEdit} className={styles.fieldGrid} style={{ marginBottom: '0.75rem' }}>
+          <Field label="Date">
+            <input className={styles.input} type="date" required value={editForm.date} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} />
+          </Field>
+          <Field label="Batch code">
+            <input className={styles.input} required value={editForm.batchCode} onChange={(e) => setEditForm((f) => ({ ...f, batchCode: e.target.value }))} />
+          </Field>
+          <Field label="Start time">
+            <input className={styles.input} required value={editForm.startTime} onChange={(e) => setEditForm((f) => ({ ...f, startTime: e.target.value }))} />
+          </Field>
+          <Field label="End time">
+            <input className={styles.input} value={editForm.endTime} onChange={(e) => setEditForm((f) => ({ ...f, endTime: e.target.value }))} />
+          </Field>
+          <Field label="Room">
+            <input className={styles.input} value={editForm.room} onChange={(e) => setEditForm((f) => ({ ...f, room: e.target.value }))} />
+          </Field>
+          <Field label="Doubt class">
+            <label className={styles.checkboxRow}>
+              <input
+                type="checkbox"
+                checked={editForm.isDoubt}
+                onChange={(e) => setEditForm((f) => ({ ...f, isDoubt: e.target.checked }))}
+              />
+              Mark as a doubt class
+            </label>
+          </Field>
+          <div className={styles.fieldWide} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <Button type="submit" size="sm" disabled={editBusy}>
+              {editBusy ? 'Saving…' : 'Save changes'}
+            </Button>
+            {editError && <p className={styles.feedbackErr}>{editError}</p>}
+          </div>
+        </form>
+      )}
 
       {state === 'upcoming' ? (
         <div className={styles.fieldGrid}>

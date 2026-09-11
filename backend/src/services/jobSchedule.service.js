@@ -3,8 +3,9 @@ import path from 'path';
 import JobClass from '../models/JobClass.js';
 import JobScheduleUpload from '../models/JobScheduleUpload.js';
 import JobTopicPlan from '../models/JobTopicPlan.js';
+import JobBatch from '../models/JobBatch.js';
 import { extractMyClassesFromPdf } from '../utils/scheduleGridParser.js';
-import { durationMinutes } from '../utils/jobTime.js';
+import { durationMinutes, classifyDuration } from '../utils/jobTime.js';
 import { JOB_SCHEDULE_UPLOADS_DIR } from '../middleware/upload.js';
 import { ApiError } from '../utils/ApiError.js';
 import { env } from '../config/env.js';
@@ -66,25 +67,59 @@ export async function ingestScheduleFile(file, { date: explicitDate } = {}) {
     warnings = parsed.warnings;
   }
 
-  const existing = await JobScheduleUpload.findOne({ date: day }).lean();
-  if (existing) {
-    throw new ApiError(409, `A schedule for ${day.toISOString().slice(0, 10)} was already uploaded — delete it first if you want to re-upload.`);
-  }
-
   const ext = EXT_BY_MIME[file.mimetype] || path.extname(file.originalname).toLowerCase() || '.bin';
   const filename = `${day.toISOString().slice(0, 10)}-${Date.now()}${ext}`;
   fs.writeFileSync(path.join(JOB_SCHEDULE_UPLOADS_DIR, filename), file.buffer);
 
-  const upload = await JobScheduleUpload.create({
-    date: day,
-    originalFilename: file.originalname || '',
-    storedPath: filename, // relative — JOB_SCHEDULE_UPLOADS_DIR may differ across environments
-    extractedCount: classes.length,
-    warnings,
-  });
+  // Re-uploading a day (a corrected PDF, or the same one again) used to be
+  // rejected outright once that date already had an upload. Instead this
+  // upserts the upload row — replacing its stored file — and below, every
+  // class it re-extracts, matches against what's already there instead of
+  // duplicating it.
+  let upload = await JobScheduleUpload.findOne({ date: day });
+  const previousStoredPath = upload?.storedPath;
+  if (upload) {
+    upload.originalFilename = file.originalname || '';
+    upload.storedPath = filename;
+    upload.extractedCount = classes.length;
+    upload.warnings = warnings;
+    await upload.save();
+    if (previousStoredPath && previousStoredPath !== filename) {
+      fs.rm(path.join(JOB_SCHEDULE_UPLOADS_DIR, previousStoredPath), { force: true }, () => {});
+    }
+  } else {
+    upload = await JobScheduleUpload.create({
+      date: day,
+      originalFilename: file.originalname || '',
+      storedPath: filename, // relative — JOB_SCHEDULE_UPLOADS_DIR may differ across environments
+      extractedCount: classes.length,
+      warnings,
+    });
+  }
 
-  const created = await JobClass.insertMany(
-    classes.map((c) => ({
+  // De-dup key: a slot is "the same class" if it's the same day, same start
+  // time, same batch — regardless of source. A PDF-sourced match gets its
+  // room/time/subject refreshed (the corrected value) and reattached to this
+  // upload; a manual match is left completely alone (never overwrite an
+  // entry the mentor typed in by hand) and simply isn't duplicated.
+  const existingForDay = await JobClass.find({ date: day }).lean();
+  const existingByKey = new Map(existingForDay.map((c) => [`${c.startTime}|${c.batchCode}`, c]));
+
+  const toInsert = [];
+  let refreshed = 0;
+  for (const c of classes) {
+    const dup = existingByKey.get(`${c.startTime}|${c.batchCode}`);
+    if (dup) {
+      if (dup.source === 'pdf') {
+        await JobClass.updateOne(
+          { _id: dup._id },
+          { $set: { room: c.room, endTime: c.endTime, subjectPrefix: c.subjectPrefix, rawText: c.rawText, isDoubt: !!c.isDoubt, sourceUploadId: upload._id } }
+        );
+      }
+      refreshed += 1;
+      continue;
+    }
+    toInsert.push({
       date: day,
       dayOfWeek,
       startTime: c.startTime,
@@ -93,11 +128,17 @@ export async function ingestScheduleFile(file, { date: explicitDate } = {}) {
       batchCode: c.batchCode,
       subjectPrefix: c.subjectPrefix,
       rawText: c.rawText,
+      isDoubt: !!c.isDoubt,
       needsReview: true,
       source: 'pdf',
       sourceUploadId: upload._id,
-    }))
-  );
+    });
+  }
+
+  const created = toInsert.length ? await JobClass.insertMany(toInsert) : [];
+  if (refreshed > 0) {
+    warnings.push(`${refreshed} class${refreshed === 1 ? '' : 'es'} already existed for this day and ${refreshed === 1 ? 'was' : 'were'} matched instead of duplicated.`);
+  }
 
   return { upload, classes: created.map((c) => c.toObject()), warnings };
 }
@@ -117,6 +158,9 @@ export async function listClasses({ from, to, batchCode, needsReview } = {}) {
 
 export async function createClass(payload) {
   const day = startOfDay(new Date(payload.date));
+  const clash = await JobClass.findOne({ date: day, startTime: payload.startTime, batchCode: payload.batchCode }).lean();
+  if (clash) throw new ApiError(409, 'A class already exists for that batch at that date and time.');
+
   const created = await JobClass.create({
     date: day,
     dayOfWeek: payload.dayOfWeek || day.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }),
@@ -128,6 +172,7 @@ export async function createClass(payload) {
     plannedTopics: payload.plannedTopics || '',
     topicsCovered: payload.topicsCovered || '',
     notes: payload.notes || '',
+    isDoubt: !!payload.isDoubt,
     needsReview: false,
     source: 'manual',
   });
@@ -138,13 +183,32 @@ export async function createClass(payload) {
  * Editing a class always clears the extraction-review flag (the mentor
  * having looked at the row is what that flag exists to prompt). `reviewed`
  * — the separate post-class review state — is only touched when the caller
- * passes it explicitly (the "Mark as taught" action).
+ * passes it explicitly (the "Mark as taught" action). Every field is
+ * editable, including date/time/room/batch — moving a class or fixing a
+ * wrong batch shouldn't require deleting and re-adding it — except
+ * source/sourceUploadId, which track provenance rather than content.
  */
 export async function updateClass(id, payload) {
   const update = { ...payload, needsReview: false };
-  delete update.date; // date/source aren't editable after the fact — delete + re-add instead
   delete update.source;
   delete update.sourceUploadId;
+
+  if (update.date !== undefined) {
+    const day = startOfDay(new Date(update.date));
+    if (Number.isNaN(day.getTime())) throw new ApiError(400, 'That date is not valid.');
+    update.date = day;
+  }
+
+  if (update.date || update.startTime || update.batchCode) {
+    const current = await JobClass.findById(id).lean();
+    if (!current) throw new ApiError(404, 'Class not found');
+    const date = update.date || current.date;
+    const startTime = update.startTime ?? current.startTime;
+    const batchCode = update.batchCode ?? current.batchCode;
+    const clash = await JobClass.findOne({ _id: { $ne: id }, date, startTime, batchCode }).lean();
+    if (clash) throw new ApiError(409, 'Another class already exists for that batch at that date and time.');
+    if (update.date) update.dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+  }
 
   const updated = await JobClass.findByIdAndUpdate(id, update, { new: true, runValidators: true }).lean();
   if (!updated) throw new ApiError(404, 'Class not found');
@@ -198,11 +262,60 @@ export async function deleteUpload(id) {
   return upload;
 }
 
+/**
+ * Batches aren't a required entity — a code is a batch the moment any
+ * JobClass/JobTopicPlan references it — but the mentor also wants to
+ * rename a code, mark one as a "Doubt" batch, or register a batch before
+ * it's ever taught. This registry attaches those facts to a code without
+ * requiring one to exist first: editing a not-yet-registered code upserts
+ * it, and renaming cascades to every class/plan carrying the old code so
+ * the code stays the one join key across the module.
+ */
+export async function updateBatch(code, { code: newCode, type } = {}) {
+  let batch = await JobBatch.findOne({ code });
+  if (!batch) batch = new JobBatch({ code, type: 'Regular' });
+
+  if (type !== undefined) batch.type = type === 'Doubt' ? 'Doubt' : 'Regular';
+
+  const trimmedNew = newCode !== undefined ? String(newCode).trim() : null;
+  if (trimmedNew !== null) {
+    if (!trimmedNew) throw new ApiError(400, 'Batch code cannot be empty.');
+    if (trimmedNew !== code) {
+      const clash = await JobBatch.findOne({ code: trimmedNew }).lean();
+      if (clash) throw new ApiError(409, `Batch "${trimmedNew}" already exists.`);
+      batch.code = trimmedNew;
+    }
+  }
+
+  await batch.save();
+
+  if (batch.code !== code) {
+    await Promise.all([
+      JobClass.updateMany({ batchCode: code }, { $set: { batchCode: batch.code } }),
+      JobTopicPlan.updateMany({ batchCode: code }, { $set: { batchCode: batch.code } }),
+    ]);
+  }
+
+  return batch.toObject();
+}
+
+/**
+ * Removes only the registry row (the type, and the fact it was explicitly
+ * registered) — never the classes/plans under that code, which is what
+ * still makes it "a batch" if any exist.
+ */
+export async function deleteBatch(code) {
+  const deleted = await JobBatch.findOneAndDelete({ code }).lean();
+  if (!deleted) throw new ApiError(404, 'Batch not found');
+  return deleted;
+}
+
 export async function getBatchSummaries() {
   const tomorrow = new Date(startOfDay(new Date()).getTime() + 24 * 60 * 60 * 1000);
-  const [classes, plans] = await Promise.all([
+  const [classes, plans, registry] = await Promise.all([
     JobClass.find().sort({ date: -1, startTime: -1 }).lean(),
     JobTopicPlan.find().sort({ order: 1, createdAt: 1 }).lean(),
+    JobBatch.find().lean(),
   ]);
 
   const plansByBatch = new Map();
@@ -217,7 +330,9 @@ export async function getBatchSummaries() {
     byBatch.get(c.batchCode).push(c);
   });
 
-  const codes = new Set([...byBatch.keys(), ...plansByBatch.keys()]);
+  const typeByCode = new Map(registry.map((b) => [b.code, b.type]));
+
+  const codes = new Set([...byBatch.keys(), ...plansByBatch.keys(), ...typeByCode.keys()]);
 
   return [...codes]
     .map((code) => {
@@ -230,6 +345,7 @@ export async function getBatchSummaries() {
       const future = cs.filter((c) => new Date(c.date) >= tomorrow);
       return {
         batchCode: code,
+        type: typeByCode.get(code) || 'Regular',
         classCount: cs.length,
         doneCount: past.length,
         upcomingCount: future.length,
@@ -254,6 +370,7 @@ export async function getBatchSummaries() {
           notes: c.notes,
           reviewed: c.reviewed,
           needsReview: c.needsReview,
+          isDoubt: c.isDoubt,
         })),
       };
     })
@@ -324,6 +441,16 @@ export async function getDashboard() {
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .map((c) => ({ _id: c._id, date: c.date, batchCode: c.batchCode, topicsCovered: c.topicsCovered }));
 
+  // How the class load breaks down by length — "1 hr classes" vs "2 hr
+  // classes" — a ±10 min tolerance either side of the nominal length.
+  const durationCounts = { oneHour: 0, twoHour: 0, other: 0 };
+  classes.forEach((c) => {
+    const bucket = classifyDuration(durationMinutes(c.startTime, c.endTime));
+    if (bucket === '1hr') durationCounts.oneHour += 1;
+    else if (bucket === '2hr') durationCounts.twoHour += 1;
+    else durationCounts.other += 1;
+  });
+
   return {
     counts: {
       total: classes.length,
@@ -334,6 +461,10 @@ export async function getDashboard() {
       extractionReview: classes.filter((c) => c.needsReview).length,
       batches: new Set(classes.map((c) => c.batchCode)).size,
       uploads: uploadCount,
+      oneHourClasses: durationCounts.oneHour,
+      twoHourClasses: durationCounts.twoHour,
+      otherDurationClasses: durationCounts.other,
+      doubtClasses: classes.filter((c) => c.isDoubt).length,
     },
     hours: {
       done: Math.round((doneMinutes / 60) * 10) / 10,

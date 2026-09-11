@@ -29,6 +29,10 @@ const jobClassSchema = new mongoose.Schema(
     // and taught").
     topicsCovered: { type: String, default: '' },
     notes: { type: String, default: '' },
+    // A doubt-clearing session rather than a regular teaching slot — the
+    // Aakash grid sometimes lists these under a "Doubt" column whose cell
+    // still names the real batch in parentheses (see scheduleGridParser.js).
+    isDoubt: { type: Boolean, default: false },
     // Set once the mentor has done the post-class review (confirmed what
     // was actually taught). A past class that isn't reviewed yet shows as
     // "review pending".
