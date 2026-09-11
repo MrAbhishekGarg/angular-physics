@@ -21,10 +21,20 @@
 
 const DATE_RE = /Class Schedule on (\d{2})\.(\d{2})\.(\d{4})/;
 const DAY_RE = /^(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)$/;
-const TIME_RANGE_RE = /^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/;
-const PAREN_TIME_RE = /\((\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})\)/;
+// Most mini-tables write a slot as "H:MM-H:MM", but at least one observed
+// sub-table (an afternoon/evening block) uses periods instead — "4.00-5.00"
+// — for the exact same thing. Accept either separator and normalize to a
+// colon on capture (see normalizeTimeToken) so storage/downstream parsing
+// (jobTime.js) only ever sees "H:MM".
+const TIME_TOKEN = '\\d{1,2}[:.]\\d{2}';
+const TIME_RANGE_RE = new RegExp(`^(${TIME_TOKEN})\\s*-\\s*(${TIME_TOKEN})$`);
+const PAREN_TIME_RE = new RegExp(`\\((${TIME_TOKEN})\\s*-\\s*(${TIME_TOKEN})\\)`);
 const GENERIC_PAREN_RE = /\(([^)]+)\)/;
-const PAREN_LOOKS_LIKE_TIME_RE = /^\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}$/;
+const PAREN_LOOKS_LIKE_TIME_RE = new RegExp(`^${TIME_TOKEN}\\s*-\\s*${TIME_TOKEN}$`);
+
+function normalizeTimeToken(token) {
+  return token.replace('.', ':');
+}
 
 // Aakash writes a cell as "<subject letter>/<faculty code>" — expand the
 // letter to the full subject name so "P/AGP" reads as Physics, not "P".
@@ -197,8 +207,8 @@ export async function extractMyClassesFromPdf(buffer, facultyCode) {
       const hit = hitRegex.exec(item.text);
       if (!hit) return;
 
-      let startTime = timeMatch ? timeMatch[1] : null;
-      let endTime = timeMatch ? timeMatch[2] : null;
+      let startTime = timeMatch ? normalizeTimeToken(timeMatch[1]) : null;
+      let endTime = timeMatch ? normalizeTimeToken(timeMatch[2]) : null;
 
       // A cell's own text, or the very next cell in the same row, may carry
       // a parenthetical override time for a double period (e.g. "Z/MSR
@@ -209,7 +219,8 @@ export async function extractMyClassesFromPdf(buffer, facultyCode) {
         !inlineParen && nextInRow && nextInRow.x - item.x < PAREN_X_TOLERANCE ? PAREN_TIME_RE.exec(nextInRow.text) : null;
       const paren = inlineParen || nextParen;
       if (paren) {
-        [, startTime, endTime] = paren;
+        startTime = normalizeTimeToken(paren[1]);
+        endTime = normalizeTimeToken(paren[2]);
       }
 
       const batchItem = pickHeaderValue(batchRows, row.y, item.x);
