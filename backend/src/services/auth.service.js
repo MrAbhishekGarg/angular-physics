@@ -108,6 +108,19 @@ export async function removeMentor(id) {
 }
 
 /**
+ * Admin-only: deletes a student's login account outright. Deliberately
+ * doesn't touch their Enrollments/attempts/notes-access rows — those stay
+ * as historical records even if the login itself is removed, same as how
+ * a CourseFeeStudent row (see courseFees.service.js) can reference a
+ * userId that no longer resolves without that being treated as an error.
+ */
+export async function removeStudent(id) {
+  const user = await User.findOneAndDelete({ _id: id, role: 'student' }).lean();
+  if (!user) throw new ApiError(404, 'Student not found');
+  return user;
+}
+
+/**
  * Admin-only: sets everything about what a mentor can see/use in one call —
  * sections, student scope, and password-reset ability. Always a full
  * replace (matches how the admin form always sends its complete current

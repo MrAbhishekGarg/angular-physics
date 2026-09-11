@@ -12,6 +12,7 @@ import {
   updateMentorPermissions,
   resetStudentPassword,
   listStudents,
+  removeStudent,
 } from '../controllers/auth.controller.js';
 import { authenticate, authorize, requirePasswordResetPermission } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
@@ -49,5 +50,6 @@ router.post(
 // mentor directory above — a raw account list, distinct from AllStudents.jsx
 // (which is enrollment-centric and mentor-facing).
 router.get('/students', authenticate, authorize('admin'), listStudents);
+router.delete('/students/:id', authenticate, authorize('admin'), removeStudent);
 
 export default router;

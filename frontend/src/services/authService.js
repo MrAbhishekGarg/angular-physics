@@ -18,4 +18,5 @@ export const authService = {
 
   // Admin-only student login directory
   listStudents: () => api.get('/auth/students'),
+  removeStudent: (id) => api.delete(`/auth/students/${id}`),
 };

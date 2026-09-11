@@ -82,3 +82,8 @@ export const listStudents = asyncHandler(async (req, res) => {
   const students = await authService.listStudents();
   return ApiResponse(res, 200, students, { count: students.length });
 });
+
+export const removeStudent = asyncHandler(async (req, res) => {
+  await authService.removeStudent(req.params.id);
+  return ApiResponse(res, 200, { deleted: true });
+});
