@@ -20,4 +20,5 @@ export const MENTOR_SECTIONS = [
   'testimonials',
   'doubts',
   'courses',
+  'course-fees',
 ];

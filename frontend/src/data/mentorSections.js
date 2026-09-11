@@ -21,4 +21,5 @@ export const MENTOR_SECTIONS = [
   { key: 'testimonials', label: 'Testimonials' },
   { key: 'doubts', label: 'Doubts' },
   { key: 'courses', label: 'Manage Courses' },
+  { key: 'course-fees', label: 'Course Fees' },
 ];

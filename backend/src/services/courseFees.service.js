@@ -1,5 +1,5 @@
-import JobFeeBatch from '../models/JobFeeBatch.js';
-import JobFeeStudent from '../models/JobFeeStudent.js';
+import CourseFeeBatch from '../models/CourseFeeBatch.js';
+import CourseFeeStudent from '../models/CourseFeeStudent.js';
 import { ApiError } from '../utils/ApiError.js';
 
 function withFeeTotals(student) {
@@ -9,12 +9,12 @@ function withFeeTotals(student) {
 
 /**
  * Every batch with its students (fee totals derived, never stored) plus an
- * overall summary — the one call the Fees page needs.
+ * overall summary — the one call the Course Fees page needs.
  */
 export async function listBatches() {
   const [batches, students] = await Promise.all([
-    JobFeeBatch.find().sort({ createdAt: -1 }).lean(),
-    JobFeeStudent.find().sort({ name: 1 }).lean(),
+    CourseFeeBatch.find().sort({ createdAt: -1 }).lean(),
+    CourseFeeStudent.find().sort({ name: 1 }).lean(),
   ]);
 
   const studentsByBatch = new Map();
@@ -52,7 +52,7 @@ export async function listBatches() {
 }
 
 export async function createBatch(payload) {
-  const created = await JobFeeBatch.create({
+  const created = await CourseFeeBatch.create({
     name: payload.name,
     type: payload.type === 'recorded' ? 'recorded' : 'live',
     classHoursPerWeek: payload.classHoursPerWeek || 0,
@@ -69,23 +69,23 @@ export async function updateBatch(id, payload) {
   ['name', 'type', 'classHoursPerWeek', 'doubtsPerWeek', 'testsConducted', 'sheetsNotesProvided', 'notes'].forEach((key) => {
     if (payload[key] !== undefined) allowed[key] = payload[key];
   });
-  const updated = await JobFeeBatch.findByIdAndUpdate(id, allowed, { new: true, runValidators: true }).lean();
+  const updated = await CourseFeeBatch.findByIdAndUpdate(id, allowed, { new: true, runValidators: true }).lean();
   if (!updated) throw new ApiError(404, 'Batch not found');
   return updated;
 }
 
 export async function deleteBatch(id) {
-  const deleted = await JobFeeBatch.findByIdAndDelete(id).lean();
+  const deleted = await CourseFeeBatch.findByIdAndDelete(id).lean();
   if (!deleted) throw new ApiError(404, 'Batch not found');
-  await JobFeeStudent.deleteMany({ batchId: id });
+  await CourseFeeStudent.deleteMany({ batchId: id });
   return deleted;
 }
 
 export async function createStudent(batchId, payload) {
-  const batch = await JobFeeBatch.findById(batchId).lean();
+  const batch = await CourseFeeBatch.findById(batchId).lean();
   if (!batch) throw new ApiError(404, 'Batch not found');
 
-  const created = await JobFeeStudent.create({
+  const created = await CourseFeeStudent.create({
     batchId,
     name: payload.name,
     contact: payload.contact || '',
@@ -100,20 +100,20 @@ export async function updateStudent(id, payload) {
   ['name', 'contact', 'totalFee', 'notes'].forEach((key) => {
     if (payload[key] !== undefined) allowed[key] = payload[key];
   });
-  const updated = await JobFeeStudent.findByIdAndUpdate(id, allowed, { new: true, runValidators: true }).lean();
+  const updated = await CourseFeeStudent.findByIdAndUpdate(id, allowed, { new: true, runValidators: true }).lean();
   if (!updated) throw new ApiError(404, 'Student not found');
   return withFeeTotals(updated);
 }
 
 export async function deleteStudent(id) {
-  const deleted = await JobFeeStudent.findByIdAndDelete(id).lean();
+  const deleted = await CourseFeeStudent.findByIdAndDelete(id).lean();
   if (!deleted) throw new ApiError(404, 'Student not found');
   return deleted;
 }
 
 export async function addPayment(studentId, { amount, date, note }) {
   if (!amount || Number(amount) <= 0) throw new ApiError(400, 'Payment amount must be greater than zero.');
-  const student = await JobFeeStudent.findById(studentId);
+  const student = await CourseFeeStudent.findById(studentId);
   if (!student) throw new ApiError(404, 'Student not found');
   student.payments.push({ amount: Number(amount), date: date ? new Date(date) : new Date(), note: note || '' });
   await student.save();
@@ -121,7 +121,7 @@ export async function addPayment(studentId, { amount, date, note }) {
 }
 
 export async function removePayment(studentId, paymentId) {
-  const student = await JobFeeStudent.findById(studentId);
+  const student = await CourseFeeStudent.findById(studentId);
   if (!student) throw new ApiError(404, 'Student not found');
   const before = student.payments.length;
   student.payments = student.payments.filter((p) => String(p._id) !== String(paymentId));

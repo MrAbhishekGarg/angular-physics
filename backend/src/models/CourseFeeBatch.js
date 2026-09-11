@@ -4,11 +4,12 @@ import mongoose from 'mongoose';
  * One of the mentor's own live/recorded course batches — a manual
  * operations ledger (what the batch delivers, how many students, who owes
  * what) kept entirely by hand, since fee collection here doesn't run through
- * the site's automated Razorpay/enrollment flow. Isolated from every
- * Angular Physics business model, same as the rest of "My Job" — this is
- * the mentor's own bookkeeping, not the public course catalog.
+ * the site's automated Razorpay/enrollment flow. A real Angular Physics
+ * business model (these are the mentor's own courses, just tracked outside
+ * the automated checkout) — not part of the isolated "My Job" Aakash
+ * tracker, despite the two having been built in the same session.
  */
-const jobFeeBatchSchema = new mongoose.Schema(
+const courseFeeBatchSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     type: { type: String, enum: ['live', 'recorded'], default: 'live' },
@@ -21,4 +22,4 @@ const jobFeeBatchSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.models.JobFeeBatch || mongoose.model('JobFeeBatch', jobFeeBatchSchema);
+export default mongoose.models.CourseFeeBatch || mongoose.model('CourseFeeBatch', courseFeeBatchSchema);

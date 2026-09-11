@@ -6,8 +6,8 @@ import Button from '../../components/common/Button.jsx';
 import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
-import { jobFeesService } from '../../services/jobFeesService.js';
-import styles from './JobFees.module.css';
+import { courseFeesService } from '../../services/courseFeesService.js';
+import styles from './CourseFees.module.css';
 
 function money(n) {
   return `₹${Math.round(n || 0).toLocaleString('en-IN')}`;
@@ -46,7 +46,7 @@ function NewBatchForm({ onCreated }) {
     setBusy(true);
     setError('');
     try {
-      await jobFeesService.createBatch({
+      await courseFeesService.createBatch({
         ...form,
         classHoursPerWeek: Number(form.classHoursPerWeek) || 0,
         doubtsPerWeek: Number(form.doubtsPerWeek) || 0,
@@ -130,7 +130,7 @@ function BatchEditForm({ batch, onSaved, onCancel }) {
     setBusy(true);
     setError('');
     try {
-      await jobFeesService.updateBatch(batch._id, {
+      await courseFeesService.updateBatch(batch._id, {
         ...form,
         classHoursPerWeek: Number(form.classHoursPerWeek) || 0,
         doubtsPerWeek: Number(form.doubtsPerWeek) || 0,
@@ -196,7 +196,7 @@ function AddStudentForm({ batchId, onCreated }) {
     setBusy(true);
     setError('');
     try {
-      await jobFeesService.createStudent(batchId, { ...form, totalFee: Number(form.totalFee) || 0 });
+      await courseFeesService.createStudent(batchId, { ...form, totalFee: Number(form.totalFee) || 0 });
       setForm({ name: '', contact: '', totalFee: '', notes: '' });
       setOpen(false);
       onCreated();
@@ -251,7 +251,7 @@ function AddPaymentForm({ studentId, onAdded, onDone }) {
     setBusy(true);
     setError('');
     try {
-      await jobFeesService.addPayment(studentId, { amount: Number(amount), date, note });
+      await courseFeesService.addPayment(studentId, { amount: Number(amount), date, note });
       setAmount('');
       setNote('');
       onAdded();
@@ -290,7 +290,7 @@ function StudentRow({ student, onChanged }) {
     e.preventDefault();
     setBusy(true);
     try {
-      await jobFeesService.updateStudent(student._id, { ...editForm, totalFee: Number(editForm.totalFee) || 0 });
+      await courseFeesService.updateStudent(student._id, { ...editForm, totalFee: Number(editForm.totalFee) || 0 });
       setEditing(false);
       onChanged();
     } finally {
@@ -300,13 +300,13 @@ function StudentRow({ student, onChanged }) {
 
   const removeStudent = async () => {
     if (!window.confirm(`Remove ${student.name} from this batch?`)) return;
-    await jobFeesService.removeStudent(student._id);
+    await courseFeesService.removeStudent(student._id);
     onChanged();
   };
 
   const removePayment = async (paymentId) => {
     if (!window.confirm('Remove this payment record?')) return;
-    await jobFeesService.removePayment(student._id, paymentId);
+    await courseFeesService.removePayment(student._id, paymentId);
     onChanged();
   };
 
@@ -386,7 +386,7 @@ function BatchCard({ batch, onChanged }) {
 
   const removeBatch = async () => {
     if (!window.confirm(`Delete "${batch.name}" and every student/payment under it?`)) return;
-    await jobFeesService.removeBatch(batch._id);
+    await courseFeesService.removeBatch(batch._id);
     onChanged();
   };
 
@@ -455,7 +455,7 @@ function BatchCard({ batch, onChanged }) {
   );
 }
 
-export default function JobFees() {
+export default function CourseFees() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -464,7 +464,7 @@ export default function JobFees() {
     setLoading(true);
     setError('');
     try {
-      setData(await jobFeesService.listBatches());
+      setData(await courseFeesService.listBatches());
     } catch (err) {
       setError(err.message);
     } finally {
@@ -478,13 +478,13 @@ export default function JobFees() {
 
   return (
     <>
-      <SEO title="My Job — Course Fees" description="Manual fee tracking for the mentor's own live and recorded courses." path="/dashboard/mentor/admin/job-fees" />
+      <SEO title="Course Fees" description="Manual fee tracking for your own live and recorded Angular Physics courses." path="/dashboard/mentor/course-fees" />
       <DashboardLayout role="mentor">
         <div className={styles.wrap}>
-          <h1>My Job — Course Fees</h1>
+          <h1>Course Fees</h1>
           <p className={styles.lede}>
             Fee tracking for your own live/recorded courses — separate from the site's automated checkout. Back to the{' '}
-            <Link to="/dashboard/mentor/admin/job">overview</Link>.
+            <Link to="/dashboard/mentor">dashboard</Link>.
           </p>
 
           {!loading && !error && data && (
