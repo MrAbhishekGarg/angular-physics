@@ -7,6 +7,10 @@ import mongoose from 'mongoose';
  * not a single amount/date pair. feePaid/feeDue are always derived from
  * `payments` (see courseFees.service.js) rather than stored, so they can
  * never drift out of sync with the log.
+ *
+ * The security deposit is tracked separately from tuition fees — a
+ * refundable amount collected once, not an installment log — as a plain
+ * agreed amount vs. how much of it has actually been collected so far.
  */
 const paymentSchema = new mongoose.Schema(
   {
@@ -24,6 +28,8 @@ const courseFeeStudentSchema = new mongoose.Schema(
     contact: { type: String, default: '', trim: true },
     totalFee: { type: Number, required: true, default: 0 },
     payments: { type: [paymentSchema], default: [] },
+    securityAmount: { type: Number, default: 0 },
+    securityPaid: { type: Number, default: 0 },
     notes: { type: String, default: '' },
   },
   { timestamps: true }

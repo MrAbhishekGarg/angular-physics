@@ -7,6 +7,7 @@ import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { courseFeesService } from '../../services/courseFeesService.js';
+import { courseService } from '../../services/courseService.js';
 import styles from './CourseFees.module.css';
 
 function money(n) {
@@ -25,11 +26,27 @@ function Field({ label, wide, children }) {
   );
 }
 
-function NewBatchForm({ onCreated }) {
+function CourseSelect({ courses, value, onChange }) {
+  return (
+    <select className={styles.input} required value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="" disabled>
+        Select a course…
+      </option>
+      {courses.map((c) => (
+        <option key={c._id} value={c._id}>
+          {c.title}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function NewBatchForm({ courses, onCreated }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    name: '',
-    type: 'live',
+    courseId: '',
+    feeType: 'one-time',
+    monthlyAmount: '',
     classHoursPerWeek: '',
     doubtsPerWeek: '',
     testsConducted: '',
@@ -42,18 +59,28 @@ function NewBatchForm({ onCreated }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) return;
+    if (!form.courseId) return;
     setBusy(true);
     setError('');
     try {
       await courseFeesService.createBatch({
         ...form,
+        monthlyAmount: Number(form.monthlyAmount) || 0,
         classHoursPerWeek: Number(form.classHoursPerWeek) || 0,
         doubtsPerWeek: Number(form.doubtsPerWeek) || 0,
         testsConducted: Number(form.testsConducted) || 0,
         sheetsNotesProvided: Number(form.sheetsNotesProvided) || 0,
       });
-      setForm({ name: '', type: 'live', classHoursPerWeek: '', doubtsPerWeek: '', testsConducted: '', sheetsNotesProvided: '', notes: '' });
+      setForm({
+        courseId: '',
+        feeType: 'one-time',
+        monthlyAmount: '',
+        classHoursPerWeek: '',
+        doubtsPerWeek: '',
+        testsConducted: '',
+        sheetsNotesProvided: '',
+        notes: '',
+      });
       setOpen(false);
       onCreated();
     } catch (err) {
@@ -71,18 +98,28 @@ function NewBatchForm({ onCreated }) {
           {open ? 'Close' : 'Open'}
         </Button>
       </div>
-      {open && (
+      {open && courses.length === 0 && (
+        <p className={styles.tileSub}>
+          No courses in the catalog yet — add one under <Link to="/dashboard/mentor">Manage Courses</Link> first.
+        </p>
+      )}
+      {open && courses.length > 0 && (
         <form onSubmit={submit}>
           <div className={styles.fieldGrid}>
-            <Field label="Batch name">
-              <input className={styles.input} required value={form.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. NEET 2027 Live Batch" />
+            <Field label="Course" wide>
+              <CourseSelect courses={courses} value={form.courseId} onChange={(courseId) => set({ courseId })} />
             </Field>
-            <Field label="Type">
-              <select className={styles.input} value={form.type} onChange={(e) => set({ type: e.target.value })}>
-                <option value="live">Live</option>
-                <option value="recorded">Recorded</option>
+            <Field label="Fee type">
+              <select className={styles.input} value={form.feeType} onChange={(e) => set({ feeType: e.target.value })}>
+                <option value="one-time">One-time</option>
+                <option value="monthly">Monthly</option>
               </select>
             </Field>
+            {form.feeType === 'monthly' && (
+              <Field label="Monthly amount">
+                <input className={styles.input} type="number" min="0" value={form.monthlyAmount} onChange={(e) => set({ monthlyAmount: e.target.value })} />
+              </Field>
+            )}
             <Field label="Class hours / week">
               <input className={styles.input} type="number" min="0" value={form.classHoursPerWeek} onChange={(e) => set({ classHoursPerWeek: e.target.value })} />
             </Field>
@@ -100,7 +137,7 @@ function NewBatchForm({ onCreated }) {
             </Field>
           </div>
           <div className={styles.formActions}>
-            <Button type="submit" size="sm" disabled={busy || !form.name.trim()}>
+            <Button type="submit" size="sm" disabled={busy || !form.courseId}>
               {busy ? 'Adding…' : 'Add batch'}
             </Button>
           </div>
@@ -111,10 +148,11 @@ function NewBatchForm({ onCreated }) {
   );
 }
 
-function BatchEditForm({ batch, onSaved, onCancel }) {
+function BatchEditForm({ batch, courses, onSaved, onCancel }) {
   const [form, setForm] = useState({
-    name: batch.name,
-    type: batch.type,
+    courseId: batch.courseId,
+    feeType: batch.feeType,
+    monthlyAmount: batch.monthlyAmount,
     classHoursPerWeek: batch.classHoursPerWeek,
     doubtsPerWeek: batch.doubtsPerWeek,
     testsConducted: batch.testsConducted,
@@ -132,6 +170,7 @@ function BatchEditForm({ batch, onSaved, onCancel }) {
     try {
       await courseFeesService.updateBatch(batch._id, {
         ...form,
+        monthlyAmount: Number(form.monthlyAmount) || 0,
         classHoursPerWeek: Number(form.classHoursPerWeek) || 0,
         doubtsPerWeek: Number(form.doubtsPerWeek) || 0,
         testsConducted: Number(form.testsConducted) || 0,
@@ -146,15 +185,20 @@ function BatchEditForm({ batch, onSaved, onCancel }) {
 
   return (
     <form onSubmit={submit} className={styles.fieldGrid} style={{ marginBottom: '0.75rem' }}>
-      <Field label="Batch name">
-        <input className={styles.input} required value={form.name} onChange={(e) => set({ name: e.target.value })} />
+      <Field label="Course" wide>
+        <CourseSelect courses={courses} value={form.courseId} onChange={(courseId) => set({ courseId })} />
       </Field>
-      <Field label="Type">
-        <select className={styles.input} value={form.type} onChange={(e) => set({ type: e.target.value })}>
-          <option value="live">Live</option>
-          <option value="recorded">Recorded</option>
+      <Field label="Fee type">
+        <select className={styles.input} value={form.feeType} onChange={(e) => set({ feeType: e.target.value })}>
+          <option value="one-time">One-time</option>
+          <option value="monthly">Monthly</option>
         </select>
       </Field>
+      {form.feeType === 'monthly' && (
+        <Field label="Monthly amount">
+          <input className={styles.input} type="number" min="0" value={form.monthlyAmount} onChange={(e) => set({ monthlyAmount: e.target.value })} />
+        </Field>
+      )}
       <Field label="Class hours / week">
         <input className={styles.input} type="number" min="0" value={form.classHoursPerWeek} onChange={(e) => set({ classHoursPerWeek: e.target.value })} />
       </Field>
@@ -185,7 +229,7 @@ function BatchEditForm({ batch, onSaved, onCancel }) {
 
 function AddStudentForm({ batchId, onCreated }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', contact: '', totalFee: '', notes: '' });
+  const [form, setForm] = useState({ name: '', contact: '', totalFee: '', securityAmount: '', notes: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
@@ -196,8 +240,12 @@ function AddStudentForm({ batchId, onCreated }) {
     setBusy(true);
     setError('');
     try {
-      await courseFeesService.createStudent(batchId, { ...form, totalFee: Number(form.totalFee) || 0 });
-      setForm({ name: '', contact: '', totalFee: '', notes: '' });
+      await courseFeesService.createStudent(batchId, {
+        ...form,
+        totalFee: Number(form.totalFee) || 0,
+        securityAmount: Number(form.securityAmount) || 0,
+      });
+      setForm({ name: '', contact: '', totalFee: '', securityAmount: '', notes: '' });
       setOpen(false);
       onCreated();
     } catch (err) {
@@ -226,6 +274,14 @@ function AddStudentForm({ batchId, onCreated }) {
         placeholder="Total fee"
         value={form.totalFee}
         onChange={(e) => set({ totalFee: e.target.value })}
+      />
+      <input
+        className={`${styles.input} ${styles.inputXs}`}
+        type="number"
+        min="0"
+        placeholder="Security amount"
+        value={form.securityAmount}
+        onChange={(e) => set({ securityAmount: e.target.value })}
       />
       <Button type="submit" size="sm" disabled={busy || !form.name.trim()}>
         {busy ? 'Adding…' : 'Add'}
@@ -283,14 +339,25 @@ function StudentRow({ student, onChanged }) {
   const [expanded, setExpanded] = useState(false);
   const [addingPayment, setAddingPayment] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name: student.name, contact: student.contact || '', totalFee: student.totalFee });
+  const [editForm, setEditForm] = useState({
+    name: student.name,
+    contact: student.contact || '',
+    totalFee: student.totalFee,
+    securityAmount: student.securityAmount,
+    securityPaid: student.securityPaid,
+  });
   const [busy, setBusy] = useState(false);
 
   const saveEdit = async (e) => {
     e.preventDefault();
     setBusy(true);
     try {
-      await courseFeesService.updateStudent(student._id, { ...editForm, totalFee: Number(editForm.totalFee) || 0 });
+      await courseFeesService.updateStudent(student._id, {
+        ...editForm,
+        totalFee: Number(editForm.totalFee) || 0,
+        securityAmount: Number(editForm.securityAmount) || 0,
+        securityPaid: Number(editForm.securityPaid) || 0,
+      });
       setEditing(false);
       onChanged();
     } finally {
@@ -320,8 +387,25 @@ function StudentRow({ student, onChanged }) {
             className={`${styles.input} ${styles.inputXs}`}
             type="number"
             min="0"
+            placeholder="Total fee"
             value={editForm.totalFee}
             onChange={(e) => setEditForm((f) => ({ ...f, totalFee: e.target.value }))}
+          />
+          <input
+            className={`${styles.input} ${styles.inputXs}`}
+            type="number"
+            min="0"
+            placeholder="Security agreed"
+            value={editForm.securityAmount}
+            onChange={(e) => setEditForm((f) => ({ ...f, securityAmount: e.target.value }))}
+          />
+          <input
+            className={`${styles.input} ${styles.inputXs}`}
+            type="number"
+            min="0"
+            placeholder="Security collected"
+            value={editForm.securityPaid}
+            onChange={(e) => setEditForm((f) => ({ ...f, securityPaid: e.target.value }))}
           />
           <Button type="submit" size="sm" disabled={busy}>
             Save
@@ -341,6 +425,11 @@ function StudentRow({ student, onChanged }) {
           <span className={student.feeDue > 0 ? styles.studentDue : styles.studentDueClear}>
             {student.feeDue > 0 ? `${money(student.feeDue)} due` : 'Cleared'}
           </span>
+          {student.securityAmount > 0 && (
+            <span className={styles.tileSub}>
+              Security {money(student.securityPaid)}/{money(student.securityAmount)}
+            </span>
+          )}
           <button type="button" className={styles.editLink} onClick={() => setEditing(true)}>
             Edit
           </button>
@@ -381,11 +470,12 @@ function StudentRow({ student, onChanged }) {
   );
 }
 
-function BatchCard({ batch, onChanged }) {
+function BatchCard({ batch, courses, onChanged }) {
   const [editing, setEditing] = useState(false);
+  const courseTitle = batch.course?.title || 'Unknown course';
 
   const removeBatch = async () => {
-    if (!window.confirm(`Delete "${batch.name}" and every student/payment under it?`)) return;
+    if (!window.confirm(`Delete "${courseTitle}" and every student/payment under it?`)) return;
     await courseFeesService.removeBatch(batch._id);
     onChanged();
   };
@@ -395,6 +485,7 @@ function BatchCard({ batch, onChanged }) {
       {editing ? (
         <BatchEditForm
           batch={batch}
+          courses={courses}
           onSaved={() => {
             setEditing(false);
             onChanged();
@@ -405,8 +496,10 @@ function BatchCard({ batch, onChanged }) {
         <>
           <div className={styles.batchHead}>
             <span className={styles.batchName}>
-              {batch.name}
-              <Badge tone={batch.type === 'recorded' ? 'default' : 'success'}>{batch.type === 'recorded' ? 'Recorded' : 'Live'}</Badge>
+              {courseTitle}
+              <Badge tone={batch.feeType === 'monthly' ? 'accent' : 'default'}>
+                {batch.feeType === 'monthly' ? `Monthly · ${money(batch.monthlyAmount)}/mo` : 'One-time'}
+              </Badge>
               <button type="button" className={styles.editLink} onClick={() => setEditing(true)}>
                 Edit
               </button>
@@ -457,6 +550,7 @@ function BatchCard({ batch, onChanged }) {
 
 export default function CourseFees() {
   const [data, setData] = useState(null);
+  const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -464,7 +558,9 @@ export default function CourseFees() {
     setLoading(true);
     setError('');
     try {
-      setData(await courseFeesService.listBatches());
+      const [feeData, courseList] = await Promise.all([courseFeesService.listBatches(), courseService.getAllForMentor()]);
+      setData(feeData);
+      setCourses(courseList);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -478,13 +574,13 @@ export default function CourseFees() {
 
   return (
     <>
-      <SEO title="Course Fees" description="Manual fee tracking for your own live and recorded Angular Physics courses." path="/dashboard/mentor/course-fees" />
+      <SEO title="Course Fees" description="Manual fee tracking for your own live Angular Physics courses." path="/dashboard/mentor/course-fees" />
       <DashboardLayout role="mentor">
         <div className={styles.wrap}>
           <h1>Course Fees</h1>
           <p className={styles.lede}>
-            Fee tracking for your own live/recorded courses — separate from the site's automated checkout. Back to the{' '}
-            <Link to="/dashboard/mentor">dashboard</Link>.
+            Fee tracking for your own live courses — registration, one-time/monthly fees, and security deposits, kept separate from the
+            site's automated checkout. Back to the <Link to="/dashboard/mentor">dashboard</Link>.
           </p>
 
           {!loading && !error && data && (
@@ -508,13 +604,13 @@ export default function CourseFees() {
             </div>
           )}
 
-          <NewBatchForm onCreated={refetch} />
+          <NewBatchForm courses={courses} onCreated={refetch} />
 
           {loading && <Spinner />}
           {error && <ErrorState message={error} onRetry={refetch} />}
           {!loading && !error && data?.batches.length === 0 && <p className={styles.empty}>No course batches yet — add one above.</p>}
 
-          {!loading && !error && data?.batches.map((batch) => <BatchCard key={batch._id} batch={batch} onChanged={refetch} />)}
+          {!loading && !error && data?.batches.map((batch) => <BatchCard key={batch._id} batch={batch} courses={courses} onChanged={refetch} />)}
         </div>
       </DashboardLayout>
     </>
