@@ -27,7 +27,12 @@ const DAY_RE = /^(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)$/;
 // colon on capture (see normalizeTimeToken) so storage/downstream parsing
 // (jobTime.js) only ever sees "H:MM".
 const TIME_TOKEN = '\\d{1,2}[:.]\\d{2}';
-const TIME_RANGE_RE = new RegExp(`^(${TIME_TOKEN})\\s*-\\s*(${TIME_TOKEN})$`);
+// No trailing `$` — a row's own leading time label sometimes arrives fused
+// to its first data cell in one PDF text run with no space ("12:15-1:15
+// B/SKMS"), rather than as two separate runs like every other cell. Only
+// applied to a row's leftmost item, so matching just the time-range prefix
+// and ignoring whatever's glued after it is exactly what's wanted here.
+const TIME_RANGE_RE = new RegExp(`^(${TIME_TOKEN})\\s*-\\s*(${TIME_TOKEN})`);
 const PAREN_TIME_RE = new RegExp(`\\((${TIME_TOKEN})\\s*-\\s*(${TIME_TOKEN})\\)`);
 const GENERIC_PAREN_RE = /\(([^)]+)\)/;
 const PAREN_LOOKS_LIKE_TIME_RE = new RegExp(`^${TIME_TOKEN}\\s*-\\s*${TIME_TOKEN}$`);
