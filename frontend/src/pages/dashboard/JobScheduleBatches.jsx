@@ -7,7 +7,7 @@ import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { jobScheduleService } from '../../services/jobScheduleService.js';
 import { batchColor, batchOrder } from '../../data/batchColors.js';
-import { formatTimeRange } from '../../data/classTime.js';
+import { formatTimeRange, classLiveStatus } from '../../data/classTime.js';
 import styles from './JobScheduleBatches.module.css';
 
 function formatDate(dateStr) {
@@ -260,9 +260,10 @@ export default function JobScheduleBatches() {
                     <p className={styles.sectionLabel}>Class log</p>
                     <div className={styles.log}>
                       {batch.classes.map((c) => {
-                        const future = new Date(c.date) > new Date(new Date().toISOString().slice(0, 10));
-                        const label = future ? 'upcoming' : c.reviewed ? 'taught' : 'to review';
-                        const topics = c.reviewed || !future ? c.topicsCovered : c.plannedTopics;
+                        const status = classLiveStatus(c.date, c.startTime, c.endTime);
+                        const ended = status ? status.phase === 'ended' : new Date(c.date) < new Date(new Date().toISOString().slice(0, 10));
+                        const label = !ended ? 'upcoming' : c.reviewed ? 'taught' : 'to review';
+                        const topics = c.reviewed || ended ? c.topicsCovered : c.plannedTopics;
                         return (
                           <div key={c._id} className={styles.logItem}>
                             <strong>{formatDate(c.date)}</strong> · {formatTimeRange(c.startTime, c.endTime)} · Room {c.room || '?'}

@@ -34,3 +34,50 @@ export function classifyDuration(minutes) {
   if (minutes >= 110 && minutes <= 130) return '2hr';
   return 'other';
 }
+
+// This whole module treats every class as India wall-clock time (the
+// mentor's classes only ever happen in India), regardless of what timezone
+// the server process itself runs in — so "is this class over yet" has to
+// convert IST wall-clock minutes into a real UTC instant explicitly rather
+// than trusting the server's own local timezone.
+const IST_OFFSET_MINUTES = 5 * 60 + 30;
+
+/**
+ * The class's real start/end as absolute instants (JS Dates), not just
+ * minutes-of-day — needed to compare against "right now" for a live
+ * upcoming/ongoing/ended status. `date` is the UTC-midnight-stored calendar
+ * day (see startOfDay in jobSchedule.service.js); its Y/M/D read via the
+ * UTC getters is the intended Indian calendar date regardless of server TZ.
+ * Missing endTime (a manual entry might not have one) assumes a standard
+ * one-period ~1hr length rather than leaving the class "ongoing" forever.
+ * Returns null only if startTime itself can't be parsed at all.
+ */
+export function classInterval(date, startTime, endTime) {
+  const s = toMinutes(startTime);
+  if (s == null) return null;
+  let e = toMinutes(endTime);
+  if (e == null) e = s + 60;
+  else if (e <= s) e += 12 * 60;
+
+  const day = new Date(date);
+  const base = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), 0, 0, 0, 0);
+  return {
+    start: new Date(base + (s - IST_OFFSET_MINUTES) * 60000),
+    end: new Date(base + (e - IST_OFFSET_MINUTES) * 60000),
+  };
+}
+
+/**
+ * Whether a class's real end time has passed — the boundary "done" everyone
+ * downstream (dashboard counts, batch summaries, the schedule page) uses
+ * instead of the coarser "today counts as done at midnight" this replaced.
+ * Falls back to whole-day granularity only in the unlikely case startTime
+ * itself doesn't parse.
+ */
+export function isClassEnded(cls, now = new Date()) {
+  const interval = classInterval(cls.date, cls.startTime, cls.endTime);
+  if (interval) return now.getTime() >= interval.end.getTime();
+  const day = new Date(cls.date);
+  const nextDay = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() + 1, 0, 0, 0, 0) - IST_OFFSET_MINUTES * 60000;
+  return now.getTime() >= nextDay;
+}

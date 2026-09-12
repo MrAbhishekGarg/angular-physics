@@ -333,10 +333,10 @@
   letter-spacing: 0.04em;
 }
 
-.phaseToday,
 .phaseUpcoming,
 .phaseReview,
-.phaseTaught {
+.phaseTaught,
+.phaseOngoing {
   font-size: 0.68rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -349,10 +349,6 @@
   color: #fff;
   background: var(--ap-secondary-accent);
 }
-.phaseToday {
-  color: #fff;
-  background: var(--ap-accent);
-}
 .phaseReview {
   color: #fff;
   background: var(--ap-warning);
@@ -361,4 +357,23 @@
   color: var(--ap-success);
   background: var(--ap-bg-muted);
   border: 1px solid var(--ap-success);
+}
+.phaseOngoing {
+  color: #fff;
+  background: var(--ap-danger);
+  animation: ongoingPulse 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .phaseOngoing {
+    animation: none;
+  }
+}
+@keyframes ongoingPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }

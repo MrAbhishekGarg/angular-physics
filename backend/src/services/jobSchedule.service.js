@@ -5,7 +5,7 @@ import JobScheduleUpload from '../models/JobScheduleUpload.js';
 import JobTopicPlan from '../models/JobTopicPlan.js';
 import JobBatch from '../models/JobBatch.js';
 import { extractMyClassesFromPdf } from '../utils/scheduleGridParser.js';
-import { durationMinutes, classifyDuration } from '../utils/jobTime.js';
+import { durationMinutes, classifyDuration, isClassEnded } from '../utils/jobTime.js';
 import { JOB_SCHEDULE_UPLOADS_DIR } from '../middleware/upload.js';
 import { ApiError } from '../utils/ApiError.js';
 import { env } from '../config/env.js';
@@ -311,7 +311,7 @@ export async function deleteBatch(code) {
 }
 
 export async function getBatchSummaries() {
-  const tomorrow = new Date(startOfDay(new Date()).getTime() + 24 * 60 * 60 * 1000);
+  const now = new Date();
   const [classes, plans, registry] = await Promise.all([
     JobClass.find().sort({ date: -1, startTime: -1 }).lean(),
     JobTopicPlan.find().sort({ order: 1, createdAt: 1 }).lean(),
@@ -339,10 +339,10 @@ export async function getBatchSummaries() {
       const cs = byBatch.get(code) || [];
       const plan = plansByBatch.get(code) || [];
       const minutes = cs.reduce((sum, c) => sum + durationMinutes(c.startTime, c.endTime), 0);
-      // "Done" = the class day has arrived (today counts as done); upcoming
-      // is only strictly-future days.
-      const past = cs.filter((c) => new Date(c.date) < tomorrow);
-      const future = cs.filter((c) => new Date(c.date) >= tomorrow);
+      // "Done" = the class's actual end time has passed — not yet started
+      // and currently in progress both still count as upcoming.
+      const past = cs.filter((c) => isClassEnded(c, now));
+      const future = cs.filter((c) => !isClassEnded(c, now));
       return {
         batchCode: code,
         type: typeByCode.get(code) || 'Regular',
@@ -386,22 +386,25 @@ export async function getBatchSummaries() {
 /**
  * One aggregate call powering the "My Job" overview dashboard — every
  * headline number the mentor asked for, derived from the class log plus the
- * topic-plan checklist. A class counts as "done" once its day has arrived
- * (today included); "upcoming" is strictly-future days. "To review" is a
- * done class the mentor hasn't yet confirmed what was taught in.
+ * topic-plan checklist. A class counts as "done" once its real end time has
+ * passed (see isClassEnded) — not yet started and currently in progress
+ * both still count as "upcoming". "To review" is a done class the mentor
+ * hasn't yet confirmed what was taught in.
  */
 export async function getDashboard() {
-  const tomorrow = new Date(startOfDay(new Date()).getTime() + 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const tomorrow = new Date(startOfDay(now).getTime() + 24 * 60 * 60 * 1000);
   const [classes, plans, uploadCount] = await Promise.all([
     JobClass.find().sort({ date: 1, startTime: 1 }).lean(),
     JobTopicPlan.find().lean(),
     JobScheduleUpload.countDocuments(),
   ]);
 
-  const done = classes.filter((c) => new Date(c.date) < tomorrow);
-  const upcoming = classes.filter((c) => new Date(c.date) >= tomorrow);
+  const done = classes.filter((c) => isClassEnded(c, now));
+  const upcoming = classes.filter((c) => !isClassEnded(c, now));
   // `classes` is already date/startTime-sorted from the query above, so a
-  // plain filter keeps that order without re-sorting.
+  // plain filter keeps that order without re-sorting. "Tomorrow" here is a
+  // calendar-day question, not an ended/upcoming one, so it stays date-based.
   const dayAfterTomorrow = new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000);
   const tomorrowClasses = classes.filter((c) => new Date(c.date) >= tomorrow && new Date(c.date) < dayAfterTomorrow);
   const doneMinutes = done.reduce((s, c) => s + durationMinutes(c.startTime, c.endTime), 0);

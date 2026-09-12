@@ -8,34 +8,41 @@ import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import BatchChip from '../../components/dashboard/BatchChip.jsx';
 import { batchColor, batchOrder } from '../../data/batchColors.js';
-import { formatTimeRange } from '../../data/classTime.js';
+import { formatTimeRange, classLiveStatus, formatCountdown } from '../../data/classTime.js';
 import { jobScheduleService } from '../../services/jobScheduleService.js';
 import styles from './JobSchedule.module.css';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+// Matches classTime.js's own IST_OFFSET_MINUTES — "today" has to be read off
+// the IST wall-clock instant, not the viewer's own local timezone. A naive
+// `new Date().getUTC*()` reads the wrong calendar day for anyone viewing
+// between IST midnight and 5:30am, since that instant is still "yesterday"
+// in UTC.
+const IST_OFFSET_MINUTES = 5 * 60 + 30;
 
 function utcMidnight(dateStr) {
   const d = new Date(dateStr);
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
-function todayUtcMidnight() {
-  const n = new Date();
-  return Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate());
+function todayUtcMidnight(now = new Date()) {
+  const ist = new Date(now.getTime() + IST_OFFSET_MINUTES * 60000);
+  return Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate());
 }
-function relativeDay(dateStr) {
-  const diff = Math.round((utcMidnight(dateStr) - todayUtcMidnight()) / DAY_MS);
+function relativeDay(dateStr, now) {
+  const diff = Math.round((utcMidnight(dateStr) - todayUtcMidnight(now)) / DAY_MS);
   if (diff === 0) return 'Today';
   if (diff === 1) return 'Tomorrow';
   if (diff === -1) return 'Yesterday';
   return null;
 }
-function isToday(dateStr) {
-  return utcMidnight(dateStr) === todayUtcMidnight();
-}
-// A class's workflow state — the day arriving (today counts) makes it
-// "done", then the mentor's post-class review moves it to "taught".
-function classState(cls) {
-  if (utcMidnight(cls.date) > todayUtcMidnight()) return 'upcoming';
+// A class's workflow state — its real end time passing (not just the date
+// arriving) is what makes it "done"; a class still going on right now, or
+// not yet started, both stay "upcoming". Falls back to the coarser
+// date-only rule only if the time itself can't be parsed at all.
+function classState(cls, now) {
+  const status = classLiveStatus(cls.date, cls.startTime, cls.endTime, now);
+  const ended = status ? status.phase === 'ended' : utcMidnight(cls.date) < todayUtcMidnight(now);
+  if (!ended) return 'upcoming';
   return cls.reviewed ? 'taught' : 'toReview';
 }
 function formatDate(dateStr) {
@@ -135,8 +142,9 @@ function ManualClassForm({ defaultDate, onCreated }) {
   );
 }
 
-function ClassCard({ cls, order, onSaved, onDeleted }) {
-  const state = classState(cls); // 'upcoming' | 'toReview' | 'taught'
+function ClassCard({ cls, order, now, onSaved, onDeleted }) {
+  const state = classState(cls, now); // 'upcoming' | 'toReview' | 'taught'
+  const liveStatus = classLiveStatus(cls.date, cls.startTime, cls.endTime, now);
   const [plannedTopics, setPlannedTopics] = useState(cls.plannedTopics || '');
   // On review, start from the plan so the mentor edits it down to what
   // actually happened rather than retyping.
@@ -213,9 +221,12 @@ function ClassCard({ cls, order, onSaved, onDeleted }) {
         <div className={styles.classTags}>
           {status === 'saving' && <span className={styles.tagMuted}>Saving…</span>}
           {status === 'saved' && <span className={styles.tagOk}>Saved ✓</span>}
-          {isToday(cls.date) && <span className={styles.phaseToday}>Today</span>}
-          {state === 'upcoming' && <span className={styles.phaseUpcoming}>Upcoming</span>}
-          {state === 'toReview' && <span className={styles.phaseReview}>Review</span>}
+          {state === 'upcoming' && liveStatus?.phase === 'ongoing' && <span className={styles.phaseOngoing}>● Class going on</span>}
+          {state === 'upcoming' && liveStatus?.phase === 'not-started' && (
+            <span className={styles.phaseUpcoming}>Starts in {formatCountdown(liveStatus.start - now)}</span>
+          )}
+          {state === 'upcoming' && !liveStatus && <span className={styles.phaseUpcoming}>Upcoming</span>}
+          {state === 'toReview' && <span className={styles.phaseReview}>Class Ended</span>}
           {state === 'taught' && <span className={styles.phaseTaught}>✓ Taught</span>}
           {cls.needsReview && <Badge tone="default">Check details</Badge>}
           {cls.source === 'pdf' && cls.rawText && <span className={styles.tagMuted}>from PDF · {cls.rawText}</span>}
@@ -340,6 +351,14 @@ export default function JobSchedule() {
   const [showManual, setShowManual] = useState(false);
   const [manualDefaultDate, setManualDefaultDate] = useState('');
 
+  // Ticks every 30s so a class's live status (starts-in countdown, going-on,
+  // ended) and which section it belongs in stay accurate without a refresh.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(id);
+  }, []);
+
   const fileIsImage = file && file.type.startsWith('image/');
 
   const refetch = async () => {
@@ -401,7 +420,7 @@ export default function JobSchedule() {
   const sections = useMemo(() => {
     const buckets = { upcoming: [], toReview: [], done: [] };
     classes.forEach((c) => {
-      const s = classState(c);
+      const s = classState(c, now);
       buckets[s === 'taught' ? 'done' : s].push(c);
     });
 
@@ -424,7 +443,7 @@ export default function JobSchedule() {
     // mentor still owes it that day's classes).
     uploads.forEach((u) => {
       const key = new Date(u.date).toISOString();
-      const future = utcMidnight(u.date) > todayUtcMidnight();
+      const future = utcMidnight(u.date) > todayUtcMidnight(now);
       const map = upcomingMap.has(key)
         ? upcomingMap
         : toReviewMap.has(key)
@@ -445,23 +464,24 @@ export default function JobSchedule() {
       toReview: [...toReviewMap.values()].sort(sortDesc),
       done: [...doneMap.values()].sort(sortDesc),
     };
-  }, [classes, uploads]);
+  }, [classes, uploads, now]);
 
   const counts = {
-    upcoming: classes.filter((c) => classState(c) === 'upcoming').length,
-    toReview: classes.filter((c) => classState(c) === 'toReview').length,
-    done: classes.filter((c) => classState(c) === 'taught').length,
+    upcoming: classes.filter((c) => classState(c, now) === 'upcoming').length,
+    toReview: classes.filter((c) => classState(c, now) === 'toReview').length,
+    done: classes.filter((c) => classState(c, now) === 'taught').length,
   };
 
   const weekStats = useMemo(() => {
-    const start = todayUtcMidnight() - 3 * DAY_MS;
-    const end = todayUtcMidnight() + 4 * DAY_MS;
+    const today = todayUtcMidnight(now);
+    const start = today - 3 * DAY_MS;
+    const end = today + 4 * DAY_MS;
     const inWindow = classes.filter((c) => {
       const t = utcMidnight(c.date);
       return t >= start && t < end;
     });
     return { count: inWindow.length, batches: new Set(inWindow.map((c) => c.batchCode)).size };
-  }, [classes]);
+  }, [classes, now]);
 
   const renderPhaseBlocks = (title, tone, count, blocks) => {
     if (blocks.length === 0) return null;
@@ -474,7 +494,7 @@ export default function JobSchedule() {
           </span>
         </div>
         {blocks.map(({ date, classes: dayClasses, upload }) => {
-          const rel = relativeDay(date);
+          const rel = relativeDay(date, now);
           return (
             <section key={date} className={styles.day}>
               <div className={styles.dayHead}>
@@ -506,7 +526,7 @@ export default function JobSchedule() {
               )}
 
               {dayClasses.map((cls) => (
-                <ClassCard key={cls._id} cls={cls} order={order} onSaved={handleSaved} onDeleted={handleDeleted} />
+                <ClassCard key={cls._id} cls={cls} order={order} now={now} onSaved={handleSaved} onDeleted={handleDeleted} />
               ))}
             </section>
           );
