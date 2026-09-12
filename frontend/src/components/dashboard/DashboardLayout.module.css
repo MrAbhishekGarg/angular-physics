@@ -121,6 +121,17 @@
     padding-top: var(--ap-space-sm);
   }
 
+  /* .layout's align-items: flex-start is right for the desktop row (top-
+     align sidebar/content despite differing heights), but once .layout
+     becomes a column here that same property applies to the cross axis —
+     width — instead, so children shrink-to-fit their own content rather
+     than stretching to the container. Without this, .content silently
+     grows to match whatever's widest inside it (a dense flex row that
+     hasn't wrapped) and everything in it renders past the viewport edge. */
+  .content {
+    width: 100%;
+  }
+
   .sidebar {
     width: 100%;
     flex-direction: row;
