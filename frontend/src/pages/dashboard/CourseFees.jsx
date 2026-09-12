@@ -11,6 +11,13 @@ import { courseService } from '../../services/courseService.js';
 import { EXAM_TRACKS } from '../../data/examTracks.js';
 import styles from './CourseFees.module.css';
 
+const SCHEDULE_TYPES = [
+  { value: 'regular', label: 'Regular' },
+  { value: 'weekend', label: 'Weekend (Sat, Sun)' },
+  { value: 'semi-weekend', label: 'Semi Weekend (Fri, Sat, Sun)' },
+];
+const SCHEDULE_LABEL = Object.fromEntries(SCHEDULE_TYPES.map((s) => [s.value, s.label]));
+
 function money(n) {
   return `₹${Math.round(n || 0).toLocaleString('en-IN')}`;
 }
@@ -160,6 +167,7 @@ function NewBatchForm({ courses, onCourseCreated, onCreated }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     courseId: '',
+    scheduleType: 'regular',
     standardFee: '',
     classHoursPerWeek: '',
     doubtsPerWeek: '',
@@ -184,7 +192,16 @@ function NewBatchForm({ courses, onCourseCreated, onCreated }) {
         testsConducted: Number(form.testsConducted) || 0,
         sheetsNotesProvided: Number(form.sheetsNotesProvided) || 0,
       });
-      setForm({ courseId: '', standardFee: '', classHoursPerWeek: '', doubtsPerWeek: '', testsConducted: '', sheetsNotesProvided: '', notes: '' });
+      setForm({
+        courseId: '',
+        scheduleType: 'regular',
+        standardFee: '',
+        classHoursPerWeek: '',
+        doubtsPerWeek: '',
+        testsConducted: '',
+        sheetsNotesProvided: '',
+        notes: '',
+      });
       setOpen(false);
       onCreated();
     } catch (err) {
@@ -208,6 +225,15 @@ function NewBatchForm({ courses, onCourseCreated, onCreated }) {
             <CoursePicker courses={courses} value={form.courseId} onChange={(courseId) => set({ courseId })} onCourseCreated={onCourseCreated} />
           </Field>
           <div className={styles.fieldGrid} style={{ marginTop: '0.75rem' }}>
+            <Field label="Batch schedule">
+              <select className={styles.input} value={form.scheduleType} onChange={(e) => set({ scheduleType: e.target.value })}>
+                {SCHEDULE_TYPES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
             <Field label="Standard course fee (optional)">
               <input
                 className={styles.input}
@@ -249,6 +275,7 @@ function NewBatchForm({ courses, onCourseCreated, onCreated }) {
 function BatchEditForm({ batch, courses, onCourseCreated, onSaved, onCancel }) {
   const [form, setForm] = useState({
     courseId: batch.courseId,
+    scheduleType: batch.scheduleType || 'regular',
     standardFee: batch.standardFee ?? '',
     classHoursPerWeek: batch.classHoursPerWeek,
     doubtsPerWeek: batch.doubtsPerWeek,
@@ -285,6 +312,15 @@ function BatchEditForm({ batch, courses, onCourseCreated, onSaved, onCancel }) {
         <CoursePicker courses={courses} value={form.courseId} onChange={(courseId) => set({ courseId })} onCourseCreated={onCourseCreated} />
       </Field>
       <div className={styles.fieldGrid} style={{ marginTop: '0.75rem', marginBottom: '0.75rem' }}>
+        <Field label="Batch schedule">
+          <select className={styles.input} value={form.scheduleType} onChange={(e) => set({ scheduleType: e.target.value })}>
+            {SCHEDULE_TYPES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </Field>
         <Field label="Standard course fee (optional)">
           <input className={styles.input} type="number" min="0" placeholder="leave blank if it varies" value={form.standardFee} onChange={(e) => set({ standardFee: e.target.value })} />
         </Field>
@@ -846,6 +882,7 @@ function BatchCard({ batch, courses, onCourseCreated, onChanged }) {
           <div className={styles.batchHead}>
             <span className={styles.batchName}>
               {courseTitle}
+              {batch.scheduleType !== 'regular' && <Badge tone="accent">{SCHEDULE_LABEL[batch.scheduleType]}</Badge>}
               {batch.standardFee != null && <Badge tone="default">Standard {money(batch.standardFee)}</Badge>}
               <button type="button" className={styles.editLink} onClick={() => setEditing(true)}>
                 Edit

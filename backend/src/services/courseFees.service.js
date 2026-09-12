@@ -86,6 +86,7 @@ export async function createBatch(payload) {
 
   const created = await CourseFeeBatch.create({
     courseId: payload.courseId,
+    scheduleType: ['weekend', 'semi-weekend'].includes(payload.scheduleType) ? payload.scheduleType : 'regular',
     standardFee: payload.standardFee === '' || payload.standardFee === undefined || payload.standardFee === null ? null : Number(payload.standardFee),
     classHoursPerWeek: payload.classHoursPerWeek || 0,
     doubtsPerWeek: payload.doubtsPerWeek || 0,
@@ -106,6 +107,9 @@ export async function updateBatch(id, payload) {
   ['courseId', 'classHoursPerWeek', 'doubtsPerWeek', 'testsConducted', 'sheetsNotesProvided', 'notes'].forEach((key) => {
     if (payload[key] !== undefined) allowed[key] = payload[key];
   });
+  if (payload.scheduleType !== undefined) {
+    allowed.scheduleType = ['weekend', 'semi-weekend'].includes(payload.scheduleType) ? payload.scheduleType : 'regular';
+  }
   if (payload.standardFee !== undefined) {
     allowed.standardFee = payload.standardFee === '' || payload.standardFee === null ? null : Number(payload.standardFee);
   }

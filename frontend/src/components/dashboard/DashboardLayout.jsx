@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import styles from './DashboardLayout.module.css';
 
@@ -94,6 +95,13 @@ const MY_JOB_NAV_GROUP = {
 
 export default function DashboardLayout({ role, children }) {
   const { user } = useAuth();
+  const location = useLocation();
+  // On the mobile horizontal-scroll-turned-dropdown nav (see .module.css),
+  // a long grouped list (11+ items for admin) is unusable as a strip you
+  // have to keep swiping — this makes it an explicit open/close dropdown
+  // instead, closing itself the moment a link is actually followed.
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => setMenuOpen(false), [location.pathname]);
   const baseNav = role === 'mentor' ? MENTOR_NAV : STUDENT_NAV;
   // Admin sees everything a mentor does (same pages, same DashboardLayout
   // calls) plus this one extra group — real role, not the `role` prop,
@@ -113,7 +121,17 @@ export default function DashboardLayout({ role, children }) {
     <main>
       <div className={styles.shell} data-admin={user?.role === 'admin' ? 'true' : undefined}>
         <div className={styles.layout}>
-          <nav className={styles.sidebar} aria-label="Dashboard sections">
+          <button
+            type="button"
+            className={styles.navToggle}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            <span className={styles.navToggleIcon} data-open={menuOpen} />
+            {menuOpen ? 'Close menu' : 'Menu'}
+          </button>
+          <nav className={`${styles.sidebar} ${menuOpen ? styles.sidebarOpen : ''}`} aria-label="Dashboard sections">
             {nav.map((group) => (
               <div key={group.section || 'main'} className={styles.navGroup}>
                 {group.section && <div className={styles.navGroupLabel}>{group.section}</div>}

@@ -18,6 +18,10 @@ import mongoose from 'mongoose';
 const courseFeeBatchSchema = new mongoose.Schema(
   {
     courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
+    // Which days of the week this live batch actually meets — a separate
+    // axis from the course itself, since the same course can run as a
+    // weekday batch for some students and a weekend batch for others.
+    scheduleType: { type: String, enum: ['regular', 'weekend', 'semi-weekend'], default: 'regular' },
     standardFee: { type: Number, default: null },
     classHoursPerWeek: { type: Number, default: 0 },
     doubtsPerWeek: { type: Number, default: 0 },
