@@ -12,6 +12,10 @@ const jobBatchSchema = new mongoose.Schema(
   {
     code: { type: String, required: true, trim: true, unique: true, index: true },
     type: { type: String, enum: ['Regular', 'Doubt'], default: 'Regular' },
+    // Which days of the week this Aakash batch actually meets — a separate
+    // axis from `type` above (a batch can be a weekend batch AND a doubt
+    // batch at once), same concept as CourseFeeBatch.scheduleType.
+    scheduleType: { type: String, enum: ['regular', 'weekend', 'semi-weekend'], default: 'regular' },
   },
   { timestamps: true }
 );

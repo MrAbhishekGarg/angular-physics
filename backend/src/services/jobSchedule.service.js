@@ -271,11 +271,14 @@ export async function deleteUpload(id) {
  * it, and renaming cascades to every class/plan carrying the old code so
  * the code stays the one join key across the module.
  */
-export async function updateBatch(code, { code: newCode, type } = {}) {
+export async function updateBatch(code, { code: newCode, type, scheduleType } = {}) {
   let batch = await JobBatch.findOne({ code });
   if (!batch) batch = new JobBatch({ code, type: 'Regular' });
 
   if (type !== undefined) batch.type = type === 'Doubt' ? 'Doubt' : 'Regular';
+  if (scheduleType !== undefined) {
+    batch.scheduleType = ['weekend', 'semi-weekend'].includes(scheduleType) ? scheduleType : 'regular';
+  }
 
   const trimmedNew = newCode !== undefined ? String(newCode).trim() : null;
   if (trimmedNew !== null) {
@@ -331,6 +334,7 @@ export async function getBatchSummaries() {
   });
 
   const typeByCode = new Map(registry.map((b) => [b.code, b.type]));
+  const scheduleTypeByCode = new Map(registry.map((b) => [b.code, b.scheduleType]));
 
   const codes = new Set([...byBatch.keys(), ...plansByBatch.keys(), ...typeByCode.keys()]);
 
@@ -346,6 +350,7 @@ export async function getBatchSummaries() {
       return {
         batchCode: code,
         type: typeByCode.get(code) || 'Regular',
+        scheduleType: scheduleTypeByCode.get(code) || 'regular',
         classCount: cs.length,
         doneCount: past.length,
         upcomingCount: future.length,

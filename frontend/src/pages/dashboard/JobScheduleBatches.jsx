@@ -10,6 +10,13 @@ import { batchColor, batchOrder } from '../../data/batchColors.js';
 import { formatTimeRange, classLiveStatus } from '../../data/classTime.js';
 import styles from './JobScheduleBatches.module.css';
 
+const SCHEDULE_TYPES = [
+  { value: 'regular', label: 'Regular' },
+  { value: 'weekend', label: 'Weekend (Sat, Sun)' },
+  { value: 'semi-weekend', label: 'Semi Weekend (Fri, Sat, Sun)' },
+];
+const SCHEDULE_LABEL = Object.fromEntries(SCHEDULE_TYPES.map((s) => [s.value, s.label]));
+
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
@@ -93,6 +100,7 @@ function TopicPlan({ batchCode, plan, onChanged }) {
 function NewBatchPlan({ onCreated }) {
   const [batchCode, setBatchCode] = useState('');
   const [type, setType] = useState('Regular');
+  const [scheduleType, setScheduleType] = useState('regular');
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -103,10 +111,11 @@ function NewBatchPlan({ onCreated }) {
     setBusy(true);
     setError('');
     try {
-      await jobScheduleService.updateBatch(batchCode.trim(), { type });
+      await jobScheduleService.updateBatch(batchCode.trim(), { type, scheduleType });
       if (title.trim()) await jobScheduleService.createTopicPlan(batchCode.trim(), title.trim());
       setBatchCode('');
       setType('Regular');
+      setScheduleType('regular');
       setTitle('');
       onCreated();
     } catch (err) {
@@ -122,6 +131,13 @@ function NewBatchPlan({ onCreated }) {
       <select className={styles.input} value={type} onChange={(e) => setType(e.target.value)}>
         <option value="Regular">Regular</option>
         <option value="Doubt">Doubt</option>
+      </select>
+      <select className={styles.input} value={scheduleType} onChange={(e) => setScheduleType(e.target.value)}>
+        {SCHEDULE_TYPES.map((s) => (
+          <option key={s.value} value={s.value}>
+            {s.label}
+          </option>
+        ))}
       </select>
       <input
         className={`${styles.input} ${styles.inputGrow}`}
@@ -140,6 +156,7 @@ function NewBatchPlan({ onCreated }) {
 function BatchEditForm({ batch, onSaved, onCancel }) {
   const [code, setCode] = useState(batch.batchCode);
   const [type, setType] = useState(batch.type || 'Regular');
+  const [scheduleType, setScheduleType] = useState(batch.scheduleType || 'regular');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -152,6 +169,7 @@ function BatchEditForm({ batch, onSaved, onCancel }) {
       await jobScheduleService.updateBatch(batch.batchCode, {
         code: code.trim() !== batch.batchCode ? code.trim() : undefined,
         type,
+        scheduleType,
       });
       onSaved();
     } catch (err) {
@@ -166,6 +184,13 @@ function BatchEditForm({ batch, onSaved, onCancel }) {
       <select className={styles.input} value={type} onChange={(e) => setType(e.target.value)}>
         <option value="Regular">Regular</option>
         <option value="Doubt">Doubt</option>
+      </select>
+      <select className={styles.input} value={scheduleType} onChange={(e) => setScheduleType(e.target.value)}>
+        {SCHEDULE_TYPES.map((s) => (
+          <option key={s.value} value={s.value}>
+            {s.label}
+          </option>
+        ))}
       </select>
       <Button type="submit" size="sm" disabled={busy || !code.trim()}>
         Save
@@ -241,6 +266,9 @@ export default function JobScheduleBatches() {
                       <span className={styles.batchDot} style={{ background: batchColor(batch.batchCode, order) }} />
                       {batch.batchCode}
                       {batch.type === 'Doubt' && <span className={`${styles.logTag} ${styles.logTag_doubt}`}>Doubt</span>}
+                      {batch.scheduleType && batch.scheduleType !== 'regular' && (
+                        <span className={`${styles.logTag} ${styles.logTag_schedule}`}>{SCHEDULE_LABEL[batch.scheduleType]}</span>
+                      )}
                       <button type="button" className={styles.editLink} onClick={() => setEditingCode(batch.batchCode)}>
                         Edit
                       </button>

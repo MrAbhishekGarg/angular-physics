@@ -157,6 +157,10 @@
   color: var(--ap-accent);
   border: 1px solid var(--ap-accent);
 }
+.logTag_schedule {
+  color: #fff;
+  background: var(--ap-warning);
+}
 
 /* topic plan */
 .progressWrap {
