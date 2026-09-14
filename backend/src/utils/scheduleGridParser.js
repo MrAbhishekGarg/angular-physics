@@ -80,9 +80,77 @@ const DOUBT_PAREN_X_TOLERANCE = 15;
 // ~40pt+ gap between actual consecutive time slots.
 const TIME_ROW_Y_TOLERANCE = 10;
 
+// Optional trailing "_DIS"/"_Disc..." on the faculty-code cell itself marks
+// a discussion slot — same thing as a doubt class, per the mentor. Captured
+// separately so it can be checked without re-matching; note a plain `\b`
+// after the code wouldn't see this suffix at all, since "_" counts as a
+// word character and so doesn't create a boundary against the letters
+// before it — hence matching the suffix explicitly instead of relying on \b.
 function buildHitRegex(facultyCode) {
   const escaped = String(facultyCode).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`^([A-Za-z]+)/${escaped}\\b`);
+  return new RegExp(`^([A-Za-z]+)/${escaped}(_[A-Za-z]+)?\\b`);
+}
+
+// A header/hit fragment names a doubt/discussion slot when it contains
+// "Doubt" (optionally prefixed, e.g. "Doubt_DRA") or a "_DIS"/"_Disc..."
+// marker (e.g. "DTYC_DIS") — the mentor uses the two interchangeably.
+// Stripping whichever matched leaves the real batch code, if one was
+// embedded directly rather than needing the paren-lookup fallback.
+const DOUBT_MARKER_RE = /doubt_?|_dis\w*/gi;
+
+function isDoubtMarked(text) {
+  return /doubt/i.test(text) || /_dis\w*/i.test(text);
+}
+
+function stripDoubtMarker(text) {
+  return text.replace(DOUBT_MARKER_RE, '').trim();
+}
+
+// A fused header+value PDF text run ("BATCHES DTYB_EX" as one string,
+// rather than "BATCHES" and "DTYB_EX" as separate runs — the same kind of
+// tight-kerning merge already seen with time labels) leaves the literal
+// label glued onto the real value; strip it back off.
+function stripLabelPrefix(text, label) {
+  return text.replace(new RegExp(`^${label}\\s+`, 'i'), '');
+}
+
+// The opposite of a fused cell: a narrow column sometimes line-wraps a
+// label exactly at its underscore ("Doubt_DRA" -> "Doubt_" on one line,
+// "DRA" on the next, "DTYC_DIS" -> "DTYC_" then "DIS", etc), landing the two
+// halves as separate text runs ~16pt apart vertically and roughly aligned
+// horizontally — confirmed against several real instances on one page.
+// Recombining them before row-clustering means every downstream lookup
+// (header resolution, doubt-marker stripping) sees one normal label, same
+// as it would if the PDF hadn't wrapped it.
+const WRAP_Y_TOLERANCE = 20;
+const WRAP_X_TOLERANCE = 25;
+
+function mergeWrappedLabels(items) {
+  const consumed = new Set();
+  const merged = [];
+  for (const item of items) {
+    if (consumed.has(item)) continue;
+    if (/_$/.test(item.text)) {
+      let best = null;
+      let bestDist = Infinity;
+      for (const other of items) {
+        if (other === item || consumed.has(other)) continue;
+        const dy = item.y - other.y;
+        const dx = Math.abs(other.x - item.x);
+        if (dy > 0 && dy <= WRAP_Y_TOLERANCE && dx <= WRAP_X_TOLERANCE && dy + dx < bestDist) {
+          bestDist = dy + dx;
+          best = other;
+        }
+      }
+      if (best) {
+        consumed.add(best);
+        merged.push({ text: item.text + best.text, x: item.x, y: item.y });
+        continue;
+      }
+    }
+    merged.push(item);
+  }
+  return merged;
 }
 
 /**
@@ -156,19 +224,49 @@ function findDoubtActualBatch(rows, hitY, hitX) {
   return best;
 }
 
+// A header row occasionally has one of its own cells line-wrapped just far
+// enough off its baseline (~8pt observed) to land in its own separate row
+// cluster instead of the "official" one (whose leftmost cell is literally
+// "BATCHES"/"Room") — mergeWrappedLabels fixes the split text itself, but
+// the merged result still needs to be found. Rows this close to the
+// official header row are treated as extra cells of it.
+const HEADER_ROW_Y_SPREAD = 10;
+
 /**
- * Finds this cell's row/batch/room header value: among rows whose leftmost
- * item is exactly `label` ("BATCHES" or "Room"), picks the one closest
+ * Finds this cell's row/batch/room header value: among rows CONTAINING the
+ * label ("BATCHES" or "Room") somewhere in them, picks the one closest
  * ABOVE the cell's own row (smallest Y greater than the cell's Y — i.e. the
  * nearest enclosing mini-table's own header, not some other table's), then
- * within that row picks whichever data cell's X is closest to the hit's X.
+ * within that row (plus any row within HEADER_ROW_Y_SPREAD of it) picks
+ * whichever data cell's X is closest to the hit's X. Checks for the label
+ * ANYWHERE in the row rather than assuming it's the leftmost item — a
+ * vertical page label (e.g. the "MONDAY" running down the left margin) can
+ * land at the same Y as a header row and sort before it by X, which would
+ * otherwise hide that entire header row from every hit that needs it.
  */
-function pickHeaderValue(labeledRows, rowY, x) {
+function pickHeaderValue(labeledRows, allRows, rowY, x, label) {
   const above = labeledRows.filter((r) => r.y > rowY + ROW_Y_TOLERANCE);
   if (above.length === 0) return null;
   const nearestRow = above.reduce((best, r) => (r.y < best.y ? r : best));
-  const dataCells = nearestRow.items.slice(1); // [0] is the "BATCHES"/"Room" label itself
+  const nearbyRows = allRows.filter((r) => r !== nearestRow && Math.abs(r.y - nearestRow.y) <= HEADER_ROW_Y_SPREAD);
+  const dataCells = [nearestRow, ...nearbyRows].flatMap((r) => r.items).filter((it) => it.text !== label);
   return closestByX(dataCells, x);
+}
+
+/**
+ * A page-wide row of mini-tables laid out side by side can carry several
+ * "H:MM-H:MM" labels at the same Y — one per table sharing that row height
+ * — not just one. A hit's own time label is the nearest such label to its
+ * LEFT in the row: each mini-table's label sits at its own left edge, so
+ * this picks up the hit's own table's label rather than some unrelated
+ * table's that happens to share this Y-band.
+ */
+function findRowTimeMatch(row, x) {
+  const labels = row.items
+    .map((it) => ({ x: it.x, m: TIME_RANGE_RE.exec(it.text) }))
+    .filter((t) => t.m && t.x <= x);
+  if (labels.length === 0) return null;
+  return labels.reduce((best, t) => (t.x > best.x ? t : best)).m;
 }
 
 async function loadTextItems(buffer) {
@@ -183,7 +281,7 @@ async function loadTextItems(buffer) {
 }
 
 export async function extractMyClassesFromPdf(buffer, facultyCode) {
-  const items = await loadTextItems(buffer);
+  const items = mergeWrappedLabels(await loadTextItems(buffer));
   const warnings = [];
 
   const fullText = items.map((i) => i.text).join(' ');
@@ -199,19 +297,18 @@ export async function extractMyClassesFromPdf(buffer, facultyCode) {
   const dayOfWeek = dayItem ? dayItem.text[0] + dayItem.text.slice(1).toLowerCase() : null;
 
   const rows = clusterRows(items);
-  const batchRows = rows.filter((r) => r.items[0]?.text === 'BATCHES');
-  const roomRows = rows.filter((r) => r.items[0]?.text === 'Room');
+  const batchRows = rows.filter((r) => r.items.some((it) => it.text === 'BATCHES'));
+  const roomRows = rows.filter((r) => r.items.some((it) => it.text === 'Room'));
   const hitRegex = buildHitRegex(facultyCode);
 
   const classes = [];
 
   rows.forEach((row) => {
-    const timeMatch = TIME_RANGE_RE.exec(row.items[0]?.text || '') || findNearbyTimeRange(rows, row.y);
-
     row.items.forEach((item, idxInRow) => {
       const hit = hitRegex.exec(item.text);
       if (!hit) return;
 
+      const timeMatch = findRowTimeMatch(row, item.x) || findNearbyTimeRange(rows, row.y);
       let startTime = timeMatch ? normalizeTimeToken(timeMatch[1]) : null;
       let endTime = timeMatch ? normalizeTimeToken(timeMatch[2]) : null;
 
@@ -228,8 +325,8 @@ export async function extractMyClassesFromPdf(buffer, facultyCode) {
         endTime = normalizeTimeToken(paren[2]);
       }
 
-      const batchItem = pickHeaderValue(batchRows, row.y, item.x);
-      const roomItem = pickHeaderValue(roomRows, row.y, item.x);
+      const batchItem = pickHeaderValue(batchRows, rows, row.y, item.x, 'BATCHES');
+      const roomItem = pickHeaderValue(roomRows, rows, row.y, item.x, 'Room');
 
       if (!startTime) {
         warnings.push(`"${item.text}": couldn't determine a time slot (its row's label wasn't a time range) — skipped.`);
@@ -243,27 +340,41 @@ export async function extractMyClassesFromPdf(buffer, facultyCode) {
         warnings.push(`"${item.text}" at ${startTime}-${endTime} (${batchItem.text}): couldn't determine the room.`);
       }
 
-      // A "Doubt" column header means this slot is a doubt-clearing session,
-      // not a regular class for that column — the cell still names the real
-      // batch, printed just below the faculty code as its own line (e.g.
-      // "P/AGP" then "(DRC)" directly under it) rather than as the column's
-      // own header value.
-      let batchCode = batchItem.text;
+      // A header naming "Doubt"/"Doubt_<batch>"/"<batch>_DIS" means this
+      // slot is a doubt-clearing/discussion session, not a regular class —
+      // when the real batch is embedded right in the header text (anything
+      // other than the bare word "Doubt" once the marker is stripped), use
+      // that directly; otherwise it's printed just below the faculty code
+      // as its own line (e.g. "P/AGP" then "(DRC)" directly under it).
+      let batchCode = stripLabelPrefix(batchItem.text, 'BATCHES');
       let isDoubt = false;
-      if (/^doubt$/i.test(batchItem.text)) {
+      if (isDoubtMarked(batchCode)) {
         isDoubt = true;
-        const actual = findDoubtActualBatch(rows, row.y, item.x);
-        if (actual) {
-          batchCode = actual;
+        const embedded = stripDoubtMarker(batchCode);
+        if (embedded) {
+          batchCode = embedded;
         } else {
-          warnings.push(`"${item.text}" at ${startTime}-${endTime}: a doubt-class cell but couldn't find the actual batch printed beneath it — kept as "Doubt".`);
+          const actual = findDoubtActualBatch(rows, row.y, item.x);
+          if (actual) {
+            batchCode = actual;
+          } else {
+            warnings.push(`"${item.text}" at ${startTime}-${endTime}: a doubt-class cell but couldn't find the actual batch printed beneath it — kept as "Doubt".`);
+          }
         }
+      }
+
+      // The hit cell itself can carry the same "_DIS" marker (e.g.
+      // "P/AGP_DIS") rather than the column being a doubt column — the
+      // column's own batch is already correct in that case, only the
+      // doubt/discussion flag needs setting.
+      if (hit[2] && /^_dis/i.test(hit[2])) {
+        isDoubt = true;
       }
 
       classes.push({
         startTime,
         endTime,
-        room: roomItem ? roomItem.text : '',
+        room: roomItem ? stripLabelPrefix(roomItem.text, 'Room') : '',
         batchCode,
         subjectPrefix: expandSubject(hit[1]),
         rawText: item.text,
