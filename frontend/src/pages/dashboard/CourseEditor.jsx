@@ -19,8 +19,10 @@ const emptyForm = {
   track: EXAM_TRACKS[0].key,
   tagline: '',
   description: '',
+  feeType: 'one-time',
   price: '',
   strikePrice: '',
+  monthlyFee: '',
   currency: 'INR',
   durationWeeks: '',
   level: 'Intermediate',
@@ -28,6 +30,7 @@ const emptyForm = {
   examLogoKey: '',
   isFeatured: false,
   status: 'open',
+  visibility: 'public',
 };
 
 function courseToForm(course) {
@@ -37,8 +40,10 @@ function courseToForm(course) {
     track: course.track,
     tagline: course.tagline,
     description: course.description,
+    feeType: course.feeType === 'monthly' ? 'monthly' : 'one-time',
     price: course.price,
     strikePrice: course.strikePrice ?? '',
+    monthlyFee: course.monthlyFee ?? '',
     currency: course.currency || 'INR',
     durationWeeks: course.durationWeeks,
     level: course.level,
@@ -46,6 +51,7 @@ function courseToForm(course) {
     examLogoKey: course.examLogoKey || '',
     isFeatured: course.isFeatured,
     status: course.status,
+    visibility: course.visibility === 'private' ? 'private' : 'public',
   };
 }
 
@@ -111,8 +117,13 @@ export default function CourseEditor() {
       track: form.track,
       tagline: form.tagline,
       description: form.description,
-      price: Number(form.price),
-      strikePrice: form.strikePrice === '' ? undefined : Number(form.strikePrice),
+      feeType: form.feeType,
+      // `price` stays a required top-level number in the schema regardless
+      // of feeType (a monthly course just doesn't display it) — 0 keeps a
+      // monthly course from needing a meaningless one-time price typed in.
+      price: form.feeType === 'monthly' ? 0 : Number(form.price),
+      strikePrice: form.feeType === 'monthly' || form.strikePrice === '' ? undefined : Number(form.strikePrice),
+      monthlyFee: form.feeType === 'monthly' ? Number(form.monthlyFee) || 0 : undefined,
       currency: form.currency,
       durationWeeks: Number(form.durationWeeks),
       level: form.level,
@@ -123,6 +134,7 @@ export default function CourseEditor() {
       examLogoKey: form.examLogoKey || undefined,
       isFeatured: form.isFeatured,
       status: form.status,
+      visibility: form.visibility,
     };
 
     try {
@@ -212,14 +224,33 @@ export default function CourseEditor() {
 
               <div className={formStyles.row}>
                 <label>
-                  Price (₹)
-                  <input type="number" name="price" required min="0" value={form.price} onChange={handleChange} />
+                  Pricing type
+                  <select name="feeType" value={form.feeType} onChange={handleChange}>
+                    <option value="one-time">One-time</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
                 </label>
-                <label>
-                  Strike Price (optional)
-                  <input type="number" name="strikePrice" min="0" value={form.strikePrice} onChange={handleChange} />
-                </label>
+                {form.feeType === 'monthly' ? (
+                  <label>
+                    Monthly Fee (₹)
+                    <input type="number" name="monthlyFee" required min="0" value={form.monthlyFee} onChange={handleChange} />
+                  </label>
+                ) : (
+                  <label>
+                    Price (₹)
+                    <input type="number" name="price" required min="0" value={form.price} onChange={handleChange} />
+                  </label>
+                )}
               </div>
+
+              {form.feeType === 'one-time' && (
+                <div className={formStyles.row}>
+                  <label>
+                    Strike Price (optional)
+                    <input type="number" name="strikePrice" min="0" value={form.strikePrice} onChange={handleChange} />
+                  </label>
+                </div>
+              )}
 
               <div className={formStyles.row}>
                 <label>
@@ -239,6 +270,16 @@ export default function CourseEditor() {
                     <option value="open">Open</option>
                     <option value="launching-soon">Launching Soon</option>
                     <option value="closed">Closed</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className={formStyles.row}>
+                <label>
+                  Visibility
+                  <select name="visibility" value={form.visibility} onChange={handleChange}>
+                    <option value="public">Public (listed)</option>
+                    <option value="private">Private (hidden, not listed)</option>
                   </select>
                 </label>
               </div>

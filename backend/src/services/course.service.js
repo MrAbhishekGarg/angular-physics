@@ -12,18 +12,26 @@ import { ApiError } from '../utils/ApiError.js';
  * without duplicating the branching logic.
  */
 
+// A course predating the `visibility` field has it simply absent, not
+// defaulted — Mongoose only applies schema defaults on documents it creates
+// or hydrates from a full fetch, not inside a query filter. `$ne: 'private'`
+// treats "absent" the same as "public" so older courses don't vanish.
+const PUBLIC_FILTER = { visibility: { $ne: 'private' } };
+
 export async function getAllCourses({ track } = {}) {
   if (isDbConnected()) {
-    const filter = track ? { track } : {};
+    const filter = track ? { track, ...PUBLIC_FILTER } : PUBLIC_FILTER;
     return Course.find(filter).sort({ isFeatured: -1, createdAt: -1 }).lean();
   }
-  return track ? seedCourses.filter((c) => c.track === track) : seedCourses;
+  return (track ? seedCourses.filter((c) => c.track === track) : seedCourses).filter(
+    (c) => c.visibility !== 'private'
+  );
 }
 
 export async function getCourseBySlug(slug) {
   const course = isDbConnected()
-    ? await Course.findOne({ slug }).lean()
-    : seedCourses.find((c) => c.slug === slug);
+    ? await Course.findOne({ slug, ...PUBLIC_FILTER }).lean()
+    : seedCourses.find((c) => c.slug === slug && c.visibility !== 'private');
 
   if (!course) throw new ApiError(404, `Course "${slug}" not found`);
   return course;
@@ -31,9 +39,9 @@ export async function getCourseBySlug(slug) {
 
 export async function getFeaturedCourses() {
   if (isDbConnected()) {
-    return Course.find({ isFeatured: true }).lean();
+    return Course.find({ isFeatured: true, ...PUBLIC_FILTER }).lean();
   }
-  return seedCourses.filter((c) => c.isFeatured);
+  return seedCourses.filter((c) => c.isFeatured && c.visibility !== 'private');
 }
 
 export async function getAllTestimonials() {

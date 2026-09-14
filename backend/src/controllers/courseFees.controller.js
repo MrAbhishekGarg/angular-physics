@@ -66,3 +66,71 @@ export const registerStudentAccount = asyncHandler(async (req, res) => {
   const result = await courseFeesService.registerStudentAccount(req.params.id, req.body);
   return ApiResponse(res, 201, result);
 });
+
+export const sendFeeReminder = asyncHandler(async (req, res) => {
+  const result = await courseFeesService.sendFeeReminder(req.params.id, req.body);
+  return ApiResponse(res, 200, result);
+});
+
+// ---- class logs ----
+
+export const addClassLog = asyncHandler(async (req, res) => {
+  const created = await courseFeesService.addClassLog(req.params.batchId, req.body);
+  return ApiResponse(res, 201, created);
+});
+
+export const updateClassLog = asyncHandler(async (req, res) => {
+  const updated = await courseFeesService.updateClassLog(req.params.id, req.body);
+  return ApiResponse(res, 200, updated);
+});
+
+export const removeClassLog = asyncHandler(async (req, res) => {
+  await courseFeesService.removeClassLog(req.params.id);
+  return ApiResponse(res, 200, { deleted: true });
+});
+
+// ---- upcoming plan lists ----
+
+export const addUpcomingTopic = asyncHandler(async (req, res) => {
+  const updated = await courseFeesService.addUpcomingTopic(req.params.batchId, req.body);
+  return ApiResponse(res, 201, updated);
+});
+export const removeUpcomingTopic = asyncHandler(async (req, res) => {
+  const updated = await courseFeesService.removeUpcomingTopic(req.params.batchId, req.params.itemId);
+  return ApiResponse(res, 200, updated);
+});
+
+export const addUpcomingTest = asyncHandler(async (req, res) => {
+  const updated = await courseFeesService.addUpcomingTest(req.params.batchId, req.body);
+  return ApiResponse(res, 201, updated);
+});
+export const removeUpcomingTest = asyncHandler(async (req, res) => {
+  const updated = await courseFeesService.removeUpcomingTest(req.params.batchId, req.params.itemId);
+  return ApiResponse(res, 200, updated);
+});
+
+export const addUpcomingWorksheet = asyncHandler(async (req, res) => {
+  const updated = await courseFeesService.addUpcomingWorksheet(req.params.batchId, req.body);
+  return ApiResponse(res, 201, updated);
+});
+export const removeUpcomingWorksheet = asyncHandler(async (req, res) => {
+  const updated = await courseFeesService.removeUpcomingWorksheet(req.params.batchId, req.params.itemId);
+  return ApiResponse(res, 200, updated);
+});
+
+// ---- student self-service (authenticate + authorize('student'), no course-fees section gate) ----
+
+export const getMyCourseFee = asyncHandler(async (req, res) => {
+  const data = await courseFeesService.getMyCourseFee(req.user.id);
+  return ApiResponse(res, 200, data);
+});
+
+export const getMySchedule = asyncHandler(async (req, res) => {
+  const data = await courseFeesService.getMySchedule(req.user.id);
+  return ApiResponse(res, 200, data);
+});
+
+export const claimMonthPayment = asyncHandler(async (req, res) => {
+  const updated = await courseFeesService.claimMonthPayment(req.user.id, req.params.monthId);
+  return ApiResponse(res, 200, updated);
+});

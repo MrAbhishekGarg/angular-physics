@@ -28,6 +28,21 @@ const courseFeeBatchSchema = new mongoose.Schema(
     testsConducted: { type: Number, default: 0 },
     sheetsNotesProvided: { type: Number, default: 0 },
     notes: { type: String, default: '' },
+    // Forward-looking plan entries only — actual classes taught (with topics
+    // covered) live in CourseFeeClassLog instead. These are plain admin-
+    // managed lists, not links into the real Note/Worksheet library.
+    upcomingTopics: {
+      type: [{ title: { type: String, required: true }, order: { type: Number, default: 0 } }],
+      default: [],
+    },
+    upcomingTests: {
+      type: [{ title: { type: String, required: true }, date: { type: Date, default: null } }],
+      default: [],
+    },
+    upcomingWorksheets: {
+      type: [{ title: { type: String, required: true }, date: { type: Date, default: null } }],
+      default: [],
+    },
   },
   { timestamps: true }
 );

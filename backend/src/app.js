@@ -33,6 +33,7 @@ import testimonialRoutes from './routes/testimonial.routes.js';
 import questionOfDayRoutes from './routes/questionOfDay.routes.js';
 import jobScheduleRoutes from './routes/jobSchedule.routes.js';
 import courseFeesRoutes from './routes/courseFees.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -75,6 +76,7 @@ app.use('/api/testimonials', testimonialRoutes);
 app.use('/api/question-of-day', questionOfDayRoutes);
 app.use('/api/job-schedule', jobScheduleRoutes);
 app.use('/api/course-fees', courseFeesRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
+import { notificationService } from '../../services/notificationService.js';
 import styles from './DashboardLayout.module.css';
 
 const STUDENT_NAV = [
@@ -8,6 +9,7 @@ const STUDENT_NAV = [
     section: null,
     items: [
       { to: '/dashboard/student', label: 'Dashboard', end: true },
+      { to: '/dashboard/student/my-course', label: 'My Course' },
       { to: '/dashboard/student/notes', label: 'Notes' },
       { to: '/dashboard/student/tests', label: 'Tests' },
       { to: '/dashboard/student/worksheets', label: 'DPPs & Assignments' },
@@ -93,6 +95,63 @@ const MY_JOB_NAV_GROUP = {
   ],
 };
 
+// The entire notification system is in-portal only (no email/SMS in this
+// app) — this bell is the whole delivery mechanism, so it's shared chrome
+// across every role rather than something specific to Course Fees.
+function NotificationsBell() {
+  const [items, setItems] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    notificationService
+      .getMine()
+      .then((data) => {
+        setItems(data.items);
+        setUnreadCount(data.unreadCount);
+      })
+      .catch(() => {});
+  }, []);
+
+  const markRead = async (id) => {
+    setItems((prev) => prev.map((n) => (n._id === id ? { ...n, read: true } : n)));
+    setUnreadCount((c) => Math.max(0, c - 1));
+    try {
+      await notificationService.markRead(id);
+    } catch {
+      // Best-effort — a failed mark-read just means it'll show unread again next load.
+    }
+  };
+
+  return (
+    <div className={styles.notifWrap}>
+      <button type="button" className={styles.notifBell} aria-label="Notifications" onClick={() => setOpen((v) => !v)}>
+        🔔
+        {unreadCount > 0 && <span className={styles.notifBadge}>{unreadCount}</span>}
+      </button>
+      {open && (
+        <div className={styles.notifDropdown}>
+          {items.length === 0 ? (
+            <p className={styles.notifEmpty}>No notifications yet.</p>
+          ) : (
+            items.slice(0, 15).map((n) => (
+              <button
+                type="button"
+                key={n._id}
+                className={`${styles.notifItem} ${n.read ? '' : styles.notifItemUnread}`}
+                onClick={() => !n.read && markRead(n._id)}
+              >
+                <strong>{n.title}</strong>
+                <span>{n.message}</span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DashboardLayout({ role, children }) {
   const { user } = useAuth();
   const location = useLocation();
@@ -120,6 +179,9 @@ export default function DashboardLayout({ role, children }) {
   return (
     <main>
       <div className={styles.shell} data-admin={user?.role === 'admin' ? 'true' : undefined}>
+        <div className={styles.notifBar}>
+          <NotificationsBell />
+        </div>
         <div className={styles.layout}>
           <button
             type="button"

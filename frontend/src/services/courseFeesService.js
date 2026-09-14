@@ -18,4 +18,22 @@ export const courseFeesService = {
   removeMonth: (studentId, monthId) => api.delete(`/course-fees/students/${studentId}/months/${monthId}`),
 
   registerStudentAccount: (studentId, payload) => api.post(`/course-fees/students/${studentId}/register`, payload),
+  sendReminder: (studentId, payload) => api.post(`/course-fees/students/${studentId}/remind`, payload),
+
+  addClassLog: (batchId, payload) => api.post(`/course-fees/batches/${batchId}/class-logs`, payload),
+  updateClassLog: (id, payload) => api.patch(`/course-fees/class-logs/${id}`, payload),
+  removeClassLog: (id) => api.delete(`/course-fees/class-logs/${id}`),
+
+  addUpcomingTopic: (batchId, payload) => api.post(`/course-fees/batches/${batchId}/upcoming-topics`, payload),
+  removeUpcomingTopic: (batchId, itemId) => api.delete(`/course-fees/batches/${batchId}/upcoming-topics/${itemId}`),
+  addUpcomingTest: (batchId, payload) => api.post(`/course-fees/batches/${batchId}/upcoming-tests`, payload),
+  removeUpcomingTest: (batchId, itemId) => api.delete(`/course-fees/batches/${batchId}/upcoming-tests/${itemId}`),
+  addUpcomingWorksheet: (batchId, payload) => api.post(`/course-fees/batches/${batchId}/upcoming-worksheets`, payload),
+  removeUpcomingWorksheet: (batchId, itemId) => api.delete(`/course-fees/batches/${batchId}/upcoming-worksheets/${itemId}`),
+
+  // Student self-service — separate auth (authorize('student')) from
+  // everything above (authorize('mentor')), see courseFees.routes.js.
+  getMine: () => api.get('/course-fees/me'),
+  getMySchedule: () => api.get('/course-fees/me/schedule'),
+  claimMonth: (monthId) => api.post(`/course-fees/me/months/${monthId}/claim`),
 };

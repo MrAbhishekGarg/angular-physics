@@ -66,7 +66,7 @@ function CourseSelect({ courses, value, onChange }) {
 }
 
 function NewCourseMiniForm({ onCreated, onCancel }) {
-  const [form, setForm] = useState({ title: '', track: EXAM_TRACKS[0].key, tagline: '', description: '', price: '', durationWeeks: '' });
+  const [form, setForm] = useState({ title: '', track: EXAM_TRACKS[0].key, tagline: '', description: '', durationWeeks: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
@@ -74,8 +74,15 @@ function NewCourseMiniForm({ onCreated, onCancel }) {
   // A plain button + onClick, not a <form onSubmit>, since this renders
   // inside NewBatchForm/BatchEditForm's own <form> — a nested <form> is
   // invalid HTML and silently misroutes the native submit to the outer one.
+  //
+  // Deliberately doesn't ask for a price here — right after this, the batch
+  // form below asks for "Course Total Fees" too, and asking for two
+  // fee-shaped numbers back to back was confusing. Real pricing (one-time
+  // vs monthly) and public/private visibility are set later from the full
+  // course editor ("course launching"); this quick-create just lands the
+  // course as private/unpriced so it exists to attach a fee batch to.
   const submit = async () => {
-    if (!form.title.trim() || !form.tagline.trim() || !form.description.trim() || !form.price || !form.durationWeeks) return;
+    if (!form.title.trim() || !form.tagline.trim() || !form.description.trim() || !form.durationWeeks) return;
     setBusy(true);
     setError('');
     try {
@@ -85,8 +92,9 @@ function NewCourseMiniForm({ onCreated, onCancel }) {
         track: form.track,
         tagline: form.tagline.trim(),
         description: form.description.trim(),
-        price: Number(form.price),
+        price: 0,
         durationWeeks: Number(form.durationWeeks),
+        visibility: 'private',
       });
       onCreated(created);
     } catch (err) {
@@ -98,6 +106,9 @@ function NewCourseMiniForm({ onCreated, onCancel }) {
 
   return (
     <div className={styles.miniForm}>
+      <p className={styles.tileSub}>
+        Pricing and public visibility are set later from the course editor — this just creates the course to attach a fee batch to.
+      </p>
       <div className={styles.fieldGrid}>
         <Field label="Course title" wide>
           <input className={styles.input} required value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder="e.g. NEET 2028 Live Batch" />
@@ -110,9 +121,6 @@ function NewCourseMiniForm({ onCreated, onCancel }) {
               </option>
             ))}
           </select>
-        </Field>
-        <Field label="Price">
-          <input className={styles.input} required type="number" min="0" value={form.price} onChange={(e) => set({ price: e.target.value })} />
         </Field>
         <Field label="Duration (weeks)">
           <input className={styles.input} required type="number" min="1" value={form.durationWeeks} onChange={(e) => set({ durationWeeks: e.target.value })} />
@@ -361,6 +369,7 @@ function AddStudentForm({ batchId, standardFee, onCreated }) {
     contact: '',
     totalFee: standardFee != null ? String(standardFee) : '',
     monthlyFee: '',
+    registrationDate: new Date().toISOString().slice(0, 10),
     securityAmount: '',
   });
   const [busy, setBusy] = useState(false);
@@ -370,6 +379,7 @@ function AddStudentForm({ batchId, standardFee, onCreated }) {
   const submit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return;
+    if (form.feeType === 'monthly' && !form.registrationDate) return;
     setBusy(true);
     setError('');
     try {
@@ -377,9 +387,18 @@ function AddStudentForm({ batchId, standardFee, onCreated }) {
         ...form,
         totalFee: Number(form.totalFee) || 0,
         monthlyFee: Number(form.monthlyFee) || 0,
+        registrationDate: form.feeType === 'monthly' ? form.registrationDate : undefined,
         securityAmount: Number(form.securityAmount) || 0,
       });
-      setForm({ feeType: 'one-time', name: '', contact: '', totalFee: standardFee != null ? String(standardFee) : '', monthlyFee: '', securityAmount: '' });
+      setForm({
+        feeType: 'one-time',
+        name: '',
+        contact: '',
+        totalFee: standardFee != null ? String(standardFee) : '',
+        monthlyFee: '',
+        registrationDate: new Date().toISOString().slice(0, 10),
+        securityAmount: '',
+      });
       setOpen(false);
       onCreated();
     } catch (err) {
@@ -418,14 +437,26 @@ function AddStudentForm({ batchId, standardFee, onCreated }) {
             onChange={(e) => set({ totalFee: e.target.value })}
           />
         ) : (
-          <input
-            className={`${styles.input} ${styles.inputXs}`}
-            type="number"
-            min="0"
-            placeholder="Fee per month"
-            value={form.monthlyFee}
-            onChange={(e) => set({ monthlyFee: e.target.value })}
-          />
+          <>
+            <input
+              className={`${styles.input} ${styles.inputXs}`}
+              type="number"
+              min="0"
+              placeholder="Fee per month"
+              value={form.monthlyFee}
+              onChange={(e) => set({ monthlyFee: e.target.value })}
+            />
+            <label className={styles.checkboxLabel} style={{ gap: '0.35rem' }}>
+              Registration date
+              <input
+                className={`${styles.input} ${styles.inputSm}`}
+                type="date"
+                required
+                value={form.registrationDate}
+                onChange={(e) => set({ registrationDate: e.target.value })}
+              />
+            </label>
+          </>
         )}
         <input
           className={`${styles.input} ${styles.inputXs}`}
@@ -491,6 +522,7 @@ function AddPaymentForm({ studentId, onAdded, onDone }) {
 function AddMonthForm({ studentId, defaultAmount, onAdded, onDone }) {
   const [month, setMonth] = useState(currentMonth());
   const [amount, setAmount] = useState(defaultAmount ? String(defaultAmount) : '');
+  const [dueDate, setDueDate] = useState('');
   const [paid, setPaid] = useState(false);
   const [paidDate, setPaidDate] = useState(new Date().toISOString().slice(0, 10));
   const [busy, setBusy] = useState(false);
@@ -502,7 +534,13 @@ function AddMonthForm({ studentId, defaultAmount, onAdded, onDone }) {
     setBusy(true);
     setError('');
     try {
-      await courseFeesService.addMonth(studentId, { month, amount: Number(amount) || 0, paid, paidDate: paid ? paidDate : undefined });
+      await courseFeesService.addMonth(studentId, {
+        month,
+        amount: Number(amount) || 0,
+        dueDate: dueDate || undefined,
+        paid,
+        paidDate: paid ? paidDate : undefined,
+      });
       onAdded();
       onDone();
     } catch (err) {
@@ -516,6 +554,13 @@ function AddMonthForm({ studentId, defaultAmount, onAdded, onDone }) {
     <form onSubmit={submit} className={styles.paymentForm}>
       <input className={`${styles.input} ${styles.inputSm}`} type="month" value={month} onChange={(e) => setMonth(e.target.value)} required />
       <input className={`${styles.input} ${styles.inputXs}`} type="number" min="0" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+      <input
+        className={`${styles.input} ${styles.inputSm}`}
+        type="date"
+        title="Due date (optional)"
+        value={dueDate}
+        onChange={(e) => setDueDate(e.target.value)}
+      />
       <label className={styles.checkboxLabel}>
         <input type="checkbox" checked={paid} onChange={(e) => setPaid(e.target.checked)} /> Already paid
       </label>
@@ -531,19 +576,36 @@ function AddMonthForm({ studentId, defaultAmount, onAdded, onDone }) {
   );
 }
 
-function MonthRow({ studentId, entry, onChanged }) {
+function MonthRow({ studentId, entry, securityAvailable, hasLogin, onChanged }) {
   const [markingPaid, setMarkingPaid] = useState(false);
   const [paidDate, setPaidDate] = useState(new Date().toISOString().slice(0, 10));
+  const [viaSecurity, setViaSecurity] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [reminderSent, setReminderSent] = useState(false);
 
   const confirmPaid = async () => {
     setBusy(true);
     try {
-      await courseFeesService.updateMonth(studentId, entry._id, { paid: true, paidDate });
+      await courseFeesService.updateMonth(
+        studentId,
+        entry._id,
+        viaSecurity ? { paidVia: 'security', paidDate } : { paid: true, paidDate }
+      );
       onChanged();
     } finally {
       setBusy(false);
       setMarkingPaid(false);
+      setViaSecurity(false);
+    }
+  };
+
+  const payFromSecurity = async () => {
+    setBusy(true);
+    try {
+      await courseFeesService.updateMonth(studentId, entry._id, { paidVia: 'security' });
+      onChanged();
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -559,13 +621,22 @@ function MonthRow({ studentId, entry, onChanged }) {
     onChanged();
   };
 
+  const remind = async () => {
+    await courseFeesService.sendReminder(studentId, { month: entry.month });
+    setReminderSent(true);
+  };
+
   return (
     <li className={styles.monthItem}>
       <span className={styles.monthLabel}>{formatMonth(entry.month)}</span>
       <span className={styles.paymentAmount}>{money(entry.amount)}</span>
+      {entry.dueDate && <span className={styles.tileSub}>Due {formatDate(entry.dueDate)}</span>}
       {entry.paid ? (
         <>
-          <span className={styles.monthBadgePaid}>Paid {formatDate(entry.paidDate)}</span>
+          <span className={styles.monthBadgePaid}>
+            Paid {formatDate(entry.paidDate)}
+            {entry.paidVia === 'security' ? ' (security)' : ''}
+          </span>
           <button type="button" className={styles.editLink} onClick={revertToPending}>
             Undo
           </button>
@@ -573,6 +644,11 @@ function MonthRow({ studentId, entry, onChanged }) {
       ) : markingPaid ? (
         <>
           <input className={`${styles.input} ${styles.inputSm}`} type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} />
+          {securityAvailable > 0 && (
+            <label className={styles.checkboxLabel}>
+              <input type="checkbox" checked={viaSecurity} onChange={(e) => setViaSecurity(e.target.checked)} /> Pay via security deposit
+            </label>
+          )}
           <Button type="button" size="sm" disabled={busy} onClick={confirmPaid}>
             Confirm
           </Button>
@@ -582,10 +658,27 @@ function MonthRow({ studentId, entry, onChanged }) {
         </>
       ) : (
         <>
-          <span className={styles.monthBadgePending}>Pending</span>
+          {entry.claimedByStudent ? (
+            <span className={styles.monthBadgePending}>Pending approval</span>
+          ) : (
+            <span className={styles.monthBadgePending}>Pending</span>
+          )}
           <button type="button" className={styles.editLink} onClick={() => setMarkingPaid(true)}>
-            Mark paid
+            {entry.claimedByStudent ? 'Approve' : 'Mark paid'}
           </button>
+          {securityAvailable >= entry.amount && (
+            <button type="button" className={styles.editLink} disabled={busy} onClick={payFromSecurity}>
+              Use security
+            </button>
+          )}
+          {hasLogin &&
+            (reminderSent ? (
+              <span className={styles.tileSub}>Reminder sent</span>
+            ) : (
+              <button type="button" className={styles.editLink} onClick={remind}>
+                Send reminder
+              </button>
+            ))}
         </>
       )}
       <button type="button" className={styles.editLink} onClick={remove}>
@@ -659,6 +752,7 @@ function StudentRow({ student, onChanged }) {
     contact: student.contact || '',
     totalFee: student.totalFee,
     monthlyFee: student.monthlyFee,
+    registrationDate: student.registrationDate ? student.registrationDate.slice(0, 10) : '',
     securityAmount: student.securityAmount,
     securityPaid: student.securityPaid,
   });
@@ -675,6 +769,7 @@ function StudentRow({ student, onChanged }) {
         ...editForm,
         totalFee: Number(editForm.totalFee) || 0,
         monthlyFee: Number(editForm.monthlyFee) || 0,
+        registrationDate: editForm.registrationDate || null,
         securityAmount: Number(editForm.securityAmount) || 0,
         securityPaid: Number(editForm.securityPaid) || 0,
       });
@@ -722,6 +817,15 @@ function StudentRow({ student, onChanged }) {
               onChange={(e) => setEditForm((f) => ({ ...f, totalFee: e.target.value }))}
             />
           )}
+          {isMonthly && (
+            <input
+              className={`${styles.input} ${styles.inputSm}`}
+              type="date"
+              title="Registration date"
+              value={editForm.registrationDate}
+              onChange={(e) => setEditForm((f) => ({ ...f, registrationDate: e.target.value }))}
+            />
+          )}
           <input
             className={`${styles.input} ${styles.inputXs}`}
             type="number"
@@ -760,8 +864,10 @@ function StudentRow({ student, onChanged }) {
           {student.securityAmount > 0 && (
             <span className={styles.tileSub}>
               Security {money(student.securityPaid)}/{money(student.securityAmount)}
+              {student.securityApplied > 0 ? ` (${money(student.securityApplied)} used)` : ''}
             </span>
           )}
+          {student.registrationDate && <span className={styles.tileSub}>Registered {formatDate(student.registrationDate)}</span>}
           {student.userId ? (
             <Badge tone="success">Registered</Badge>
           ) : (
@@ -809,7 +915,14 @@ function StudentRow({ student, onChanged }) {
                   {[...student.monthlyPayments]
                     .sort((a, b) => a.month.localeCompare(b.month))
                     .map((m) => (
-                      <MonthRow key={m._id} studentId={student._id} entry={m} onChanged={onChanged} />
+                      <MonthRow
+                        key={m._id}
+                        studentId={student._id}
+                        entry={m}
+                        securityAvailable={student.securityAvailable || 0}
+                        hasLogin={Boolean(student.userId)}
+                        onChanged={onChanged}
+                      />
                     ))}
                 </ul>
               )}
@@ -849,6 +962,181 @@ function StudentRow({ student, onChanged }) {
             </>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+function ClassLogForm({ batchId, onAdded }) {
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [hours, setHours] = useState('1');
+  const [topicsCovered, setTopicsCovered] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!date) return;
+    setBusy(true);
+    setError('');
+    try {
+      await courseFeesService.addClassLog(batchId, { date, hours: Number(hours) || 1, topicsCovered });
+      setTopicsCovered('');
+      onAdded();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className={styles.paymentForm}>
+      <input className={`${styles.input} ${styles.inputSm}`} type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+      <input className={`${styles.input} ${styles.inputXs}`} type="number" min="0" step="0.5" placeholder="Hours" value={hours} onChange={(e) => setHours(e.target.value)} />
+      <input className={styles.input} placeholder="Topics covered" value={topicsCovered} onChange={(e) => setTopicsCovered(e.target.value)} />
+      <Button type="submit" size="sm" disabled={busy}>
+        {busy ? 'Logging…' : 'Log class'}
+      </Button>
+      {error && <p className={styles.feedbackErr}>{error}</p>}
+    </form>
+  );
+}
+
+function ClassLogList({ logs, onChanged }) {
+  const remove = async (id) => {
+    if (!window.confirm('Remove this class log?')) return;
+    await courseFeesService.removeClassLog(id);
+    onChanged();
+  };
+
+  if (logs.length === 0) return <p className={styles.tileSub}>No classes logged yet.</p>;
+
+  return (
+    <ul className={styles.months}>
+      {logs.map((l) => (
+        <li key={l._id} className={styles.monthItem}>
+          <span className={styles.monthLabel}>{formatDate(l.date)}</span>
+          <span className={styles.paymentAmount}>{l.hours}h</span>
+          {l.topicsCovered && <span className={styles.tileSub}>{l.topicsCovered}</span>}
+          <button type="button" className={styles.editLink} onClick={() => remove(l._id)}>
+            Remove
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// One small component drives all three "upcoming" lists (topics/tests/
+// worksheets) — same shape (title + optional date), different endpoints.
+function UpcomingList({ title, items, addFn, removeFn, batchId, onChanged, withDate }) {
+  const [titleInput, setTitleInput] = useState('');
+  const [dateInput, setDateInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const add = async (e) => {
+    e.preventDefault();
+    if (!titleInput.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      await addFn(batchId, { title: titleInput.trim(), ...(withDate ? { date: dateInput || undefined } : {}) });
+      setTitleInput('');
+      setDateInput('');
+      onChanged();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (itemId) => {
+    await removeFn(batchId, itemId);
+    onChanged();
+  };
+
+  return (
+    <div style={{ marginTop: '0.75rem' }}>
+      <p className={styles.sectionLabel}>{title}</p>
+      {items.length === 0 ? (
+        <p className={styles.tileSub}>None planned.</p>
+      ) : (
+        <ul className={styles.months}>
+          {items.map((it) => (
+            <li key={it._id} className={styles.monthItem}>
+              <span className={styles.monthLabel}>{it.title}</span>
+              {it.date && <span className={styles.tileSub}>{formatDate(it.date)}</span>}
+              <button type="button" className={styles.editLink} onClick={() => remove(it._id)}>
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form onSubmit={add} className={styles.paymentForm}>
+        <input className={`${styles.input} ${styles.inputSm}`} placeholder="Title" value={titleInput} onChange={(e) => setTitleInput(e.target.value)} />
+        {withDate && <input className={`${styles.input} ${styles.inputSm}`} type="date" value={dateInput} onChange={(e) => setDateInput(e.target.value)} />}
+        <Button type="submit" size="sm" disabled={busy || !titleInput.trim()}>
+          + Add
+        </Button>
+      </form>
+      {error && <p className={styles.feedbackErr}>{error}</p>}
+    </div>
+  );
+}
+
+// Real classes taught (with topics covered) plus forward-looking plan lists
+// — visible to the mentor here and read-only on the matching student page.
+// Deliberately doesn't touch the real Notes/Worksheets library — these are
+// plan/reminder entries only.
+function ScheduleSection({ batch, onChanged }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className={styles.panel} style={{ marginTop: '0.75rem' }}>
+      <div className={styles.panelHead}>
+        <div className={styles.panelTitle}>
+          Schedule — {batch.classesDone} class{batch.classesDone === 1 ? '' : 'es'} done ({batch.hoursDone}h)
+        </div>
+        <Button type="button" size="sm" variant="ghost" onClick={() => setOpen((v) => !v)}>
+          {open ? 'Close' : 'Open'}
+        </Button>
+      </div>
+      {open && (
+        <>
+          <p className={styles.sectionLabel}>Classes taught</p>
+          <ClassLogList logs={batch.classLogs} onChanged={onChanged} />
+          <ClassLogForm batchId={batch._id} onAdded={onChanged} />
+          <UpcomingList
+            title="Upcoming topics"
+            items={batch.upcomingTopics}
+            addFn={courseFeesService.addUpcomingTopic}
+            removeFn={courseFeesService.removeUpcomingTopic}
+            batchId={batch._id}
+            onChanged={onChanged}
+          />
+          <UpcomingList
+            title="Upcoming tests"
+            items={batch.upcomingTests}
+            addFn={courseFeesService.addUpcomingTest}
+            removeFn={courseFeesService.removeUpcomingTest}
+            batchId={batch._id}
+            onChanged={onChanged}
+            withDate
+          />
+          <UpcomingList
+            title="Upcoming worksheets"
+            items={batch.upcomingWorksheets}
+            addFn={courseFeesService.addUpcomingWorksheet}
+            removeFn={courseFeesService.removeUpcomingWorksheet}
+            batchId={batch._id}
+            onChanged={onChanged}
+            withDate
+          />
+        </>
       )}
     </div>
   );
@@ -914,6 +1202,8 @@ function BatchCard({ batch, courses, onCourseCreated, onChanged }) {
           {batch.notes && <p className={styles.batchNotes}>{batch.notes}</p>}
         </>
       )}
+
+      <ScheduleSection batch={batch} onChanged={onChanged} />
 
       <p className={styles.sectionLabel}>Students</p>
       {batch.students.length === 0 ? (

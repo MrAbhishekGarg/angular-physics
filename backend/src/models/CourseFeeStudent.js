@@ -31,6 +31,9 @@ const paymentSchema = new mongoose.Schema(
     amount: { type: Number, required: true },
     date: { type: Date, required: true },
     note: { type: String, default: '' },
+    // 'security' means this payment was covered from the deposit rather
+    // than a fresh collection — see securityApplied below.
+    paidVia: { type: String, enum: ['cash', 'security'], default: 'cash' },
   },
   { timestamps: true }
 );
@@ -39,8 +42,18 @@ const monthlyPaymentSchema = new mongoose.Schema(
   {
     month: { type: String, required: true }, // "YYYY-MM"
     amount: { type: Number, required: true },
+    // Admin-entered by hand, same as paidDate — when this month's fee is
+    // supposed to be paid by. Fees are paid in advance, so this is
+    // typically before the month itself starts.
+    dueDate: { type: Date, default: null },
     paid: { type: Boolean, default: false },
     paidDate: { type: Date, default: null },
+    paidVia: { type: String, enum: ['cash', 'security'], default: 'cash' },
+    // Student self-reported "I paid this" — a non-blocking flag the mentor
+    // reviews and confirms via the existing paid/paidDate fields; it never
+    // gates anything on its own.
+    claimedByStudent: { type: Boolean, default: false },
+    claimedAt: { type: Date, default: null },
     note: { type: String, default: '' },
   },
   { timestamps: true }
@@ -53,12 +66,20 @@ const courseFeeStudentSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     contact: { type: String, default: '', trim: true },
     feeType: { type: String, enum: ['one-time', 'monthly'], required: true, default: 'one-time' },
+    // Required in practice for monthly payers (enforced in the service, not
+    // the schema, since a one-time payer has no use for it) — anchors due
+    // dates and reminders to when the student actually started.
+    registrationDate: { type: Date, default: null },
     totalFee: { type: Number, default: 0 },
     payments: { type: [paymentSchema], default: [] },
     monthlyFee: { type: Number, default: 0 },
     monthlyPayments: { type: [monthlyPaymentSchema], default: [] },
     securityAmount: { type: Number, default: 0 },
     securityPaid: { type: Number, default: 0 },
+    // How much of securityPaid has already been used to cover a month/
+    // payment (paidVia: 'security') — never exceeds securityPaid; the
+    // remainder is what's still actually available as a refundable deposit.
+    securityApplied: { type: Number, default: 0 },
     notes: { type: String, default: '' },
   },
   { timestamps: true }

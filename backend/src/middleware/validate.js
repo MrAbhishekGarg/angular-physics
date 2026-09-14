@@ -9,7 +9,12 @@ import { ApiError } from '../utils/ApiError.js';
  */
 export function validateBody(requiredFields = []) {
   return (req, res, next) => {
-    const missing = requiredFields.filter((field) => !req.body?.[field]);
+    // A plain truthy check would reject legitimate falsy values (price: 0,
+    // isFeatured: false) as "missing" — only actual absence counts.
+    const missing = requiredFields.filter((field) => {
+      const value = req.body?.[field];
+      return value === undefined || value === null || value === '';
+    });
     if (missing.length > 0) {
       return next(new ApiError(400, `Missing required field(s): ${missing.join(', ')}`));
     }
