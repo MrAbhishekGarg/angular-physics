@@ -398,7 +398,6 @@ export async function getBatchSummaries() {
  */
 export async function getDashboard() {
   const now = new Date();
-  const tomorrow = new Date(startOfDay(now).getTime() + 24 * 60 * 60 * 1000);
   const [classes, plans, uploadCount] = await Promise.all([
     JobClass.find().sort({ date: 1, startTime: 1 }).lean(),
     JobTopicPlan.find().lean(),
@@ -407,11 +406,6 @@ export async function getDashboard() {
 
   const done = classes.filter((c) => isClassEnded(c, now));
   const upcoming = classes.filter((c) => !isClassEnded(c, now));
-  // `classes` is already date/startTime-sorted from the query above, so a
-  // plain filter keeps that order without re-sorting. "Tomorrow" here is a
-  // calendar-day question, not an ended/upcoming one, so it stays date-based.
-  const dayAfterTomorrow = new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000);
-  const tomorrowClasses = classes.filter((c) => new Date(c.date) >= tomorrow && new Date(c.date) < dayAfterTomorrow);
   const doneMinutes = done.reduce((s, c) => s + durationMinutes(c.startTime, c.endTime), 0);
   const upcomingMinutes = upcoming.reduce((s, c) => s + durationMinutes(c.startTime, c.endTime), 0);
   const toReview = done.filter((c) => !c.reviewed);
@@ -496,8 +490,10 @@ export async function getDashboard() {
     busiestDay: busiestDay?.classes ? busiestDay.weekday : null,
     topBatch: topBatch ? { batchCode: topBatch[0], classes: topBatch[1] } : null,
     recentTopics: topicsTaught.slice(0, 8),
+    // Not-yet-ended classes, soonest first — today's remaining classes lead
+    // the list (they haven't ended, so they belong here even though "today"
+    // isn't literally "upcoming" in the calendar sense), then later days.
     upcomingClasses: upcoming.slice(0, 6),
-    tomorrowClasses,
   };
 }
 

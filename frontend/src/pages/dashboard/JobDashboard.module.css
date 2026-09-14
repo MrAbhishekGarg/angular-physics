@@ -61,6 +61,17 @@
   padding-left: 0.65rem;
   font-size: 0.85rem;
 }
+.tomorrowDay {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ap-text-muted);
+  background: var(--ap-surface-alt, rgba(0, 0, 0, 0.04));
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  white-space: nowrap;
+}
 .tomorrowTime {
   font-family: var(--ap-font-heading);
   font-weight: 800;

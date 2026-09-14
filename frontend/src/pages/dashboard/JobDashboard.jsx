@@ -14,6 +14,24 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'UTC' });
 }
 
+// Matches classTime.js's own IST-offset math — "today" has to be read off
+// the IST wall-clock instant, not the viewer's own local timezone.
+const IST_OFFSET_MINUTES = 5 * 60 + 30;
+function utcMidnight(dateStr) {
+  const d = new Date(dateStr);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+function todayUtcMidnight() {
+  const ist = new Date(Date.now() + IST_OFFSET_MINUTES * 60000);
+  return Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate());
+}
+function dayLabel(dateStr) {
+  const diff = Math.round((utcMidnight(dateStr) - todayUtcMidnight()) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  return fmtDate(dateStr);
+}
+
 function Tile({ value, label, sub, tone }) {
   return (
     <div className={`${styles.tile} ${tone ? styles[tone] : ''}`}>
@@ -24,21 +42,22 @@ function Tile({ value, label, sub, tone }) {
   );
 }
 
-function TomorrowStrip({ classes, order }) {
+function UpNextStrip({ classes, order }) {
   return (
     <div className={styles.tomorrowCard}>
       <div className={styles.tomorrowHead}>
-        <h2>Tomorrow’s classes</h2>
+        <h2>Up next</h2>
         <Link to="/dashboard/mentor/admin/job-schedule" className={styles.tomorrowLink}>
           Full schedule →
         </Link>
       </div>
       {classes.length === 0 ? (
-        <p className={styles.tileSub}>Nothing scheduled for tomorrow.</p>
+        <p className={styles.tileSub}>No upcoming classes.</p>
       ) : (
         <ul className={styles.tomorrowList}>
           {classes.map((c) => (
             <li key={c._id} className={styles.tomorrowItem} style={{ borderLeftColor: batchColor(c.batchCode, order) }}>
+              <span className={styles.tomorrowDay}>{dayLabel(c.date)}</span>
               <span className={styles.tomorrowTime}>{formatTimeRange(c.startTime, c.endTime)}</span>
               <BatchChip code={c.batchCode} order={order} size="sm" />
               <span className={styles.tileSub}>Room {c.room || '?'}</span>
@@ -135,7 +154,7 @@ export default function JobDashboard() {
 
           {!loading && !error && data && (
             <>
-              <TomorrowStrip classes={data.tomorrowClasses} order={order} />
+              <UpNextStrip classes={data.upcomingClasses} order={order} />
 
               <div className={styles.tiles}>
                 <Tile value={data.counts.done} label="Classes done" sub={`${data.hours.done} h taught`} tone="ok" />
