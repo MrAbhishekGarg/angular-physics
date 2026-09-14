@@ -25,6 +25,14 @@
   gap: var(--ap-space-sm);
   position: sticky;
   top: 76px;
+  /* A long grouped list (admin's "My Job" group alone adds 6+ items) can
+     be taller than the viewport itself — sticky positioning alone still
+     leaves the bottom entries reachable only by scrolling the whole page
+     down first. Giving the sidebar its own scroll region means every item
+     is reachable right where it's pinned, no page-scroll chase required. */
+  max-height: calc(100vh - 76px - var(--ap-space-md));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--ap-bg-muted);
   border: 1px solid var(--ap-border);
   box-shadow: var(--ap-shadow-sm);
@@ -34,6 +42,14 @@
     100% calc(100% - var(--ap-chamfer-md)), calc(100% - var(--ap-chamfer-md)) 100%,
     0 100%, 0 var(--ap-chamfer-md)
   );
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--ap-border);
+  border-radius: 3px;
 }
 
 .navGroup {
