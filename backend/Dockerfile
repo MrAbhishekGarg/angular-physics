@@ -3,8 +3,16 @@ FROM node:24-bookworm-slim
 # ImageMagick (WMF conversion via libwmf) — used to convert legacy MathType
 # equation previews and embedded pictures extracted from bulk-uploaded
 # question Word docs. See src/utils/docxEmbeddedImageExtractor.js.
+#
+# libmagickcore-6.q16-6-extra is required too, even though it looks
+# redundant with `imagemagick` itself — Debian splits delegate-based coders
+# (WMF among them) out of the base package specifically so installing
+# `imagemagick` alone does NOT register WMF. Confirmed by hand: without this
+# package `convert -list format` has no WMF entry at all, regardless of
+# libwmf being present.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       imagemagick \
+      libmagickcore-6.q16-6-extra \
       libwmf-bin \
       libwmf0.2-7 \
     && rm -rf /var/lib/apt/lists/*
