@@ -3,6 +3,7 @@ import SEO from '../../components/seo/SEO.jsx';
 import Container from '../../components/common/Container.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
+import MathText from '../../components/common/MathText.jsx';
 import { useFetch } from '../../hooks/useFetch.js';
 import { useAuth, isMentorRole } from '../../hooks/useAuth.js';
 import { testService } from '../../services/testService.js';
@@ -130,7 +131,7 @@ export default function TestResult() {
                     </span>
                   </div>
 
-                  {q.text?.trim() && <p className={styles.stemText}>{q.text}</p>}
+                  {q.text?.trim() && <MathText as="p" className={styles.stemText} text={q.text} />}
                   {q.imageUrl && <img src={assetUrl(q.imageUrl)} alt={q.text} className={styles.stemImage} />}
 
                   {q.type === 'numerical' ? (
@@ -162,7 +163,7 @@ export default function TestResult() {
                                 <span className={`${styles.optionLetter} ${styles[`letter${optIndex % 6}`]}`}>
                                   {String.fromCharCode(65 + optIndex)}
                                 </span>
-                                {opt.text?.trim() && <span className={styles.optionText}>{opt.text}</span>}
+                                {opt.text?.trim() && <MathText as="span" className={styles.optionText} text={opt.text} />}
                                 {opt.imageUrl && <img src={assetUrl(opt.imageUrl)} alt={opt.text} className={styles.optionImage} />}
                               </td>
                               <td className={styles.optionCenterCell}>

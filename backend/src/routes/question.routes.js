@@ -9,6 +9,7 @@ import {
   bulkUploadQuestionsScreenshots,
   bulkUploadQuestionsExcelScreenshots,
   bulkUploadQuestionsDocxScreenshots,
+  commitExtractedQuestions,
   generateQuestionSet,
   uploadQuestionImage,
 } from '../controllers/question.controller.js';
@@ -53,6 +54,15 @@ router.post(
   requireAction('questions-create'),
   uploadQuestionDocxScreenshots,
   bulkUploadQuestionsDocxScreenshots
+);
+router.post(
+  '/commit-extracted',
+  authenticate,
+  authorize('mentor'),
+  requireSection('questions'),
+  requireAction('questions-create'),
+  uploadQuestionExcelWithImages,
+  commitExtractedQuestions
 );
 router.post('/generate-set', authenticate, authorize('mentor'), requireSection('questions'), requireAction('questions-create'), generateQuestionSet);
 router.post(

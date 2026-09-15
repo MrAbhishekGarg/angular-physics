@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
+import MathText from '../../components/common/MathText.jsx';
 import { testService } from '../../services/testService.js';
 import { useProctoring } from '../../hooks/useProctoring.js';
 import { useAuth, isMentorRole } from '../../hooks/useAuth.js';
@@ -309,7 +310,7 @@ export default function TestAttempt() {
             </span>
           </div>
 
-          {question.text?.trim() && <p className={styles.stemText}>{question.text}</p>}
+          {question.text?.trim() && <MathText as="p" className={styles.stemText} text={question.text} />}
           {question.imageUrl && <img src={assetUrl(question.imageUrl)} alt={question.text} className={styles.stemImage} />}
 
           {question.type === 'numerical' ? (
@@ -344,7 +345,7 @@ export default function TestAttempt() {
                             checked={isSelected}
                             onChange={() => toggleOption(optIndex)}
                           />
-                          {opt.text?.trim() && opt.text}
+                          {opt.text?.trim() && <MathText text={opt.text} />}
                           {opt.imageUrl && <img src={assetUrl(opt.imageUrl)} alt={opt.text} className={styles.optionImage} />}
                         </label>
                       </td>

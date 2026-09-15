@@ -177,6 +177,25 @@ export default function QuestionUpload() {
 
           {canCreate && (
             <div className={formStyles.card}>
+              <strong>Bulk Upload — AI-Extracted from a PDF</strong>
+              <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
+                Send a question paper's PDF to a Claude conversation and ask it to extract every question as text
+                with inline LaTeX math — it hands back a JSON file with genuine diagrams flagged rather than
+                guessed. Upload that JSON, paste in any flagged diagrams, and publish with the usual Excel answer
+                key. No screenshots needed for most questions.
+              </p>
+              <div className={formStyles.actions}>
+                <Link to="/dashboard/mentor/questions/upload/review">
+                  <Button type="button" size="sm">
+                    Open the review screen
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {canCreate && (
+            <div className={formStyles.card}>
               <strong>Bulk Upload — Screenshots in a Word Doc</strong>
               <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
                 For pasting straight out of a PDF or your own scanned questions — type <code>Q1.</code> on its own

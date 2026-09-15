@@ -413,6 +413,50 @@ export async function bulkCreateFromDocxScreenshots(docxBuffer, excelBuffer, bat
 }
 
 /**
+ * Bulk upload from a mentor-reviewed JSON array of AI-extracted questions.
+ * The extraction itself happens entirely outside this app — a Claude
+ * conversation reads the source PDF and hands back this shape — so nothing
+ * here calls any AI API. Diagram images the mentor pasted during review
+ * already have real imageUrls attached (via the existing
+ * POST /questions/upload-image endpoint the review screen calls per pasted
+ * image) by the time this runs. Reuses mergeAndInsertQuestions unchanged —
+ * this flow adds only "where do the skeletons come from."
+ */
+export async function commitExtractedQuestions(extractedQuestions, excelBuffer, batchDefaults) {
+  const conceptCodeMap = await getConceptCodeMap();
+  const { rowsByNumber, warnings: excelWarnings } = await parseQuestionMetadataFromExcelBuffer(excelBuffer);
+
+  const warnings = [...excelWarnings];
+  const skeletons = [];
+
+  (Array.isArray(extractedQuestions) ? extractedQuestions : []).forEach((q, i) => {
+    if (!q || typeof q.questionNumber !== 'number' || !q.type) {
+      warnings.push(`Entry ${i + 1}: missing a question number or type — skipped.`);
+      return;
+    }
+    const hasText = typeof q.text === 'string' && q.text.trim().length > 0;
+    if (!hasText && !q.imageUrl) {
+      warnings.push(`Question ${q.questionNumber}: no text and no image — skipped.`);
+      return;
+    }
+    skeletons.push({
+      questionNumber: q.questionNumber,
+      text: q.text || '',
+      imageUrl: q.imageUrl || undefined,
+      options: Array.isArray(q.options) ? q.options.map((o) => ({ text: o?.text || '', imageUrl: o?.imageUrl || undefined })) : [],
+      type: q.type,
+      chapter: q.chapter || undefined,
+      topic: q.topic || undefined,
+      conceptCodes: Array.isArray(q.conceptCodes) ? q.conceptCodes : [],
+    });
+  });
+
+  const { created, warnings: mergeWarnings } = await mergeAndInsertQuestions(skeletons, rowsByNumber, conceptCodeMap, batchDefaults);
+
+  return { questions: created, warnings: [...warnings, ...mergeWarnings] };
+}
+
+/**
  * Randomly samples up to `count` matching questions — used both by the
  * student self-serve practice flow and an optional mentor "auto-fill"
  * convenience when building a test. Deliberately excludes unmapped

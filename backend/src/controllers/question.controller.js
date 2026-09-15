@@ -106,6 +106,31 @@ export const bulkUploadQuestionsDocxScreenshots = asyncHandler(async (req, res) 
   return ApiResponse(res, 200, { questions, warnings }, { created: questions.length, skipped: warnings.length });
 });
 
+export const commitExtractedQuestions = asyncHandler(async (req, res) => {
+  const { examType, chapter, topic, difficulty, author, subject, tags, questions: questionsRaw } = req.body;
+
+  let extractedQuestions;
+  try {
+    extractedQuestions = JSON.parse(questionsRaw);
+  } catch {
+    throw new ApiError(400, 'The "questions" field must be valid JSON.');
+  }
+  if (!Array.isArray(extractedQuestions)) {
+    throw new ApiError(400, 'The "questions" field must be a JSON array.');
+  }
+
+  const { questions, warnings } = await questionService.commitExtractedQuestions(extractedQuestions, req.file.buffer, {
+    examType: examType || '',
+    chapter: chapter || '',
+    topic: topic || '',
+    difficulty: difficulty || 'medium',
+    author: author || '',
+    subject: subject || '',
+    tags: parseTagsField(tags),
+  });
+  return ApiResponse(res, 200, { questions, warnings }, { created: questions.length, skipped: warnings.length });
+});
+
 export const generateQuestionSet = asyncHandler(async (req, res) => {
   const { examType, chapter, topic, difficulty, isPYQ, year, count } = req.body;
   const questions = await questionService.generateQuestionSet({ examType, chapter, topic, difficulty, isPYQ, year, count });
