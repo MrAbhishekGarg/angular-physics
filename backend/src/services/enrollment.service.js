@@ -139,13 +139,14 @@ async function populatedEnrollment(id) {
 /** Sets the negotiated fee terms decided at registration — feeType/totalFee
  * (one-time) or monthlyFee, plus the security deposit amount. Safe to call
  * again later if terms change. */
-export async function setEnrollmentFeeConfig(id, { feeType, totalFee, monthlyFee, securityAmount, feeNotes }) {
+export async function setEnrollmentFeeConfig(id, { feeType, totalFee, monthlyFee, securityAmount, feeNotes, registrationDate }) {
   const update = {};
   if (feeType !== undefined) update.feeType = feeType;
   if (totalFee !== undefined) update.totalFee = totalFee;
   if (monthlyFee !== undefined) update.monthlyFee = monthlyFee;
   if (securityAmount !== undefined) update.securityAmount = securityAmount;
   if (feeNotes !== undefined) update.feeNotes = feeNotes;
+  if (registrationDate !== undefined) update.registrationDate = registrationDate;
 
   const result = await Enrollment.findByIdAndUpdate(id, update, { new: true });
   if (!result) throw new ApiError(404, 'Enrollment not found');
@@ -183,7 +184,7 @@ export async function addMonthlyEntry(id, { month, amount, dueDate }) {
   return populatedEnrollment(id);
 }
 
-export async function updateMonthlyEntry(id, monthId, { amount, dueDate, paid, note }) {
+export async function updateMonthlyEntry(id, monthId, { amount, dueDate, paid, paidDate, note }) {
   const enrollment = await Enrollment.findOne({ _id: id, 'monthlyPayments._id': monthId });
   if (!enrollment) throw new ApiError(404, 'Enrollment or month entry not found');
 
@@ -193,11 +194,72 @@ export async function updateMonthlyEntry(id, monthId, { amount, dueDate, paid, n
   if (note !== undefined) set['monthlyPayments.$.note'] = note;
   if (paid !== undefined) {
     set['monthlyPayments.$.paid'] = paid;
-    set['monthlyPayments.$.paidDate'] = paid ? new Date() : null;
+    // An explicit paidDate lets a mentor backfill a past month's real
+    // payment date instead of always stamping "now" — useful when
+    // generating months for a student who registered a while ago.
+    set['monthlyPayments.$.paidDate'] = paid ? paidDate || new Date() : null;
+  } else if (paidDate !== undefined) {
+    set['monthlyPayments.$.paidDate'] = paidDate;
   }
 
   await Enrollment.updateOne({ _id: id, 'monthlyPayments._id': monthId }, { $set: set });
   return populatedEnrollment(id);
+}
+
+function monthKey(year, monthIndex) {
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+}
+
+// Same day-of-month as registrationDate, clamped to that target month's
+// actual last day (a student who registered on the 31st still gets a due
+// date in a 30-day or February month instead of overflowing into the next).
+// Built entirely in UTC: registrationDate itself is stored as UTC midnight
+// of the calendar day a mentor picked (a plain "YYYY-MM-DD" date-input
+// value casts that way), and reading/writing it back through local-timezone
+// getters would silently shift the day whenever the server's timezone isn't
+// UTC (IST, +5:30, rolls a local midnight back into the previous UTC day).
+function dueDateFor(registrationDate, year, monthIndex) {
+  const lastDayOfMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  const day = Math.min(registrationDate.getUTCDate(), lastDayOfMonth);
+  return new Date(Date.UTC(year, monthIndex, day));
+}
+
+/** Fills in one monthlyPayments entry for every calendar month from
+ * registrationDate through the current month that doesn't already have
+ * one — lets a mentor backfill a student's whole history in one action
+ * instead of clicking "Add Month" repeatedly. Existing months are left
+ * untouched. Returns how many were added alongside the enrollment. */
+export async function generateMissingMonths(id) {
+  const enrollment = await Enrollment.findById(id).select('registrationDate monthlyFee monthlyPayments');
+  if (!enrollment) throw new ApiError(404, 'Enrollment not found');
+  if (!enrollment.registrationDate) throw new ApiError(400, 'Set a registration date before generating months');
+
+  const existing = new Set(enrollment.monthlyPayments.map((m) => m.month));
+  const start = new Date(enrollment.registrationDate);
+  const now = new Date();
+
+  const toAdd = [];
+  let year = start.getUTCFullYear();
+  let monthIndex = start.getUTCMonth();
+  const endYear = now.getUTCFullYear();
+  const endMonthIndex = now.getUTCMonth();
+  while (year < endYear || (year === endYear && monthIndex <= endMonthIndex)) {
+    const key = monthKey(year, monthIndex);
+    if (!existing.has(key)) {
+      toAdd.push({ month: key, amount: enrollment.monthlyFee, dueDate: dueDateFor(start, year, monthIndex) });
+    }
+    monthIndex += 1;
+    if (monthIndex > 11) {
+      monthIndex = 0;
+      year += 1;
+    }
+  }
+
+  if (toAdd.length > 0) {
+    await Enrollment.findByIdAndUpdate(id, { $push: { monthlyPayments: { $each: toAdd } } });
+  }
+  const updated = await populatedEnrollment(id);
+  return { enrollment: updated, addedCount: toAdd.length };
 }
 
 export async function removeMonthlyEntry(id, monthId) {

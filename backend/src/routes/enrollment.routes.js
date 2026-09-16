@@ -26,6 +26,7 @@ router.patch('/:id/security-paid', ...feeGate, enrollmentController.setSecurityP
 router.post('/:id/payments', ...feeGate, enrollmentController.addPayment);
 router.delete('/:id/payments/:paymentId', ...feeGate, enrollmentController.removePayment);
 router.post('/:id/months', ...feeGate, enrollmentController.addMonthlyEntry);
+router.post('/:id/months/generate', ...feeGate, enrollmentController.generateMissingMonths);
 router.patch('/:id/months/:monthId', ...feeGate, enrollmentController.updateMonthlyEntry);
 router.delete('/:id/months/:monthId', ...feeGate, enrollmentController.removeMonthlyEntry);
 // Admin-only: directly grant a student access to any course, skipping the

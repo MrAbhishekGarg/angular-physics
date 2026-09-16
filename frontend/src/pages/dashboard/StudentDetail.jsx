@@ -139,7 +139,21 @@ function GrantAccessForm({ studentId, onDone, onGranted }) {
   );
 }
 
-const todayMonth = () => new Date().toISOString().slice(0, 7);
+const todayMonth = () => toDateInputValue(new Date()).slice(0, 7);
+
+// A server-computed date (e.g. a monthly due date) round-trips through JSON
+// as UTC — slicing that ISO string directly can land on the wrong calendar
+// day once the local timezone is anything but UTC (IST is +5:30, so a local
+// midnight due date serializes to the previous day's UTC evening). Reading
+// it back through local Date getters, the same way it's displayed elsewhere
+// via toLocaleDateString, keeps the <input type="date"> value in sync with
+// what the mentor actually sees printed next to it.
+function toDateInputValue(dateInput) {
+  if (!dateInput) return '';
+  const d = new Date(dateInput);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
 /**
  * Mentor/admin-managed fee tracking for one student's enrollment in a live
@@ -155,8 +169,14 @@ function EnrollmentFeeManager({ enrollment, onChanged }) {
   const [monthlyFee, setMonthlyFee] = useState(enrollment.monthlyFee || '');
   const [securityAmount, setSecurityAmount] = useState(enrollment.securityAmount || '');
   const [securityPaid, setSecurityPaid] = useState(enrollment.securityPaid || 0);
-  const [newPayment, setNewPayment] = useState({ amount: '', date: new Date().toISOString().slice(0, 10), note: '' });
+  const [registrationDate, setRegistrationDate] = useState(toDateInputValue(enrollment.registrationDate));
+  const [newPayment, setNewPayment] = useState({ amount: '', date: toDateInputValue(new Date()), note: '' });
   const [newMonth, setNewMonth] = useState({ month: todayMonth(), amount: enrollment.monthlyFee || '', dueDate: '' });
+  // One editable "paid on" date per month row, for backfilling a month that
+  // was actually paid in the past rather than stamping today's date —
+  // defaults to that month's own due date since that's the best guess for
+  // when it was likely paid.
+  const [paidDateByMonth, setPaidDateByMonth] = useState({});
 
   const run = async (fn) => {
     setBusy(true);
@@ -179,9 +199,12 @@ function EnrollmentFeeManager({ enrollment, onChanged }) {
         totalFee: feeType === 'one-time' ? Number(totalFee) || 0 : undefined,
         monthlyFee: feeType === 'monthly' ? Number(monthlyFee) || 0 : undefined,
         securityAmount: Number(securityAmount) || 0,
+        registrationDate: registrationDate || undefined,
       })
     );
   };
+
+  const generateMonths = () => run(() => enrollmentService.generateMissingMonths(enrollment._id));
 
   const saveSecurityPaid = () => run(() => enrollmentService.setSecurityPaid(enrollment._id, Number(securityPaid) || 0));
 
@@ -194,7 +217,7 @@ function EnrollmentFeeManager({ enrollment, onChanged }) {
         date: newPayment.date,
         note: newPayment.note,
       });
-      setNewPayment({ amount: '', date: new Date().toISOString().slice(0, 10), note: '' });
+      setNewPayment({ amount: '', date: toDateInputValue(new Date()), note: '' });
     });
   };
 
@@ -213,16 +236,21 @@ function EnrollmentFeeManager({ enrollment, onChanged }) {
     });
   };
 
-  const toggleMonthPaid = (monthId, paid) => run(() => enrollmentService.updateMonthlyEntry(enrollment._id, monthId, { paid }));
+  const toggleMonthPaid = (monthId, paid, paidDate) =>
+    run(() => enrollmentService.updateMonthlyEntry(enrollment._id, monthId, { paid, paidDate: paid ? paidDate : undefined }));
   const removeMonth = (monthId) => run(() => enrollmentService.removeMonthlyEntry(enrollment._id, monthId));
 
   const totalPaid = (enrollment.payments || []).reduce((sum, p) => sum + p.amount, 0);
 
   return (
-    <div className={formStyles.card} style={{ marginBottom: '0.75rem' }}>
+    <div className={`${formStyles.card} ${formStyles.form}`} style={{ marginBottom: '0.75rem' }}>
       <strong>{enrollment.courseId?.title}</strong>
 
       <form onSubmit={saveFeeConfig} className={formStyles.row} style={{ marginTop: '0.5rem', alignItems: 'flex-end' }}>
+        <label>
+          Registration Date
+          <input type="date" value={registrationDate} onChange={(e) => setRegistrationDate(e.target.value)} />
+        </label>
         <label>
           Fee type
           <select value={feeType} onChange={(e) => setFeeType(e.target.value)}>
@@ -298,22 +326,48 @@ function EnrollmentFeeManager({ enrollment, onChanged }) {
         </div>
       ) : (
         <div style={{ marginTop: '0.75rem' }}>
-          {(enrollment.monthlyPayments || []).map((m) => (
-            <div key={m._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.25rem 0', fontSize: '0.85rem' }}>
-              <span>
-                {m.month} — ₹{m.amount} {m.dueDate ? `· due ${new Date(m.dueDate).toLocaleDateString('en-IN')}` : ''}
-              </span>
-              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                <Badge tone={m.paid ? 'success' : 'accent'}>{m.paid ? 'Paid' : 'Due'}</Badge>
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => toggleMonthPaid(m._id, !m.paid)}>
-                  Mark {m.paid ? 'Unpaid' : 'Paid'}
-                </Button>
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => removeMonth(m._id)}>
-                  Remove
-                </Button>
+          <Button type="button" size="sm" variant="ghost" disabled={busy || !registrationDate} onClick={generateMonths}>
+            Generate Months Since Registration
+          </Button>
+          {!registrationDate && (
+            <span style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)', marginLeft: '0.5rem' }}>
+              Set a registration date above first.
+            </span>
+          )}
+
+          {(enrollment.monthlyPayments || []).map((m) => {
+            const paidDateValue = paidDateByMonth[m._id] ?? (m.dueDate ? toDateInputValue(m.dueDate) : toDateInputValue(new Date()));
+            return (
+              <div key={m._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', fontSize: '0.85rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                <span>
+                  {m.month} — ₹{m.amount} {m.dueDate ? `· due ${new Date(m.dueDate).toLocaleDateString('en-IN')}` : ''}
+                  {m.paid && m.paidDate ? ` · paid ${new Date(m.paidDate).toLocaleDateString('en-IN')}` : ''}
+                </span>
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <Badge tone={m.paid ? 'success' : 'accent'}>{m.paid ? 'Paid' : 'Due'}</Badge>
+                  {!m.paid && (
+                    <input
+                      type="date"
+                      value={paidDateValue}
+                      onChange={(e) => setPaidDateByMonth((f) => ({ ...f, [m._id]: e.target.value }))}
+                      style={{ padding: '0.3rem 0.4rem', fontSize: '0.8rem' }}
+                    />
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => toggleMonthPaid(m._id, !m.paid, m.paid ? undefined : paidDateValue)}
+                  >
+                    Mark {m.paid ? 'Unpaid' : 'Paid'}
+                  </Button>
+                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => removeMonth(m._id)}>
+                    Remove
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           <form onSubmit={addMonth} className={formStyles.row} style={{ marginTop: '0.4rem', alignItems: 'flex-end' }}>
             <label>
               Month

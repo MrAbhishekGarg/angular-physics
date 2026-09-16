@@ -41,6 +41,10 @@ const enrollmentSchema = new mongoose.Schema(
     courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
     status: { type: String, enum: ['pending', 'active', 'completed', 'cancelled'], default: 'pending' },
     progressPercent: { type: Number, min: 0, max: 100, default: 0 },
+    // When the student actually joined a live course — the anchor date used
+    // to generate one monthlyPayments entry per elapsed month (their billing
+    // cycle runs from this date, not the calendar month).
+    registrationDate: { type: Date, default: null },
     feeType: { type: String, enum: ['one-time', 'monthly'], default: null },
     totalFee: { type: Number, default: 0 },
     payments: { type: [paymentSchema], default: [] },

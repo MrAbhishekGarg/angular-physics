@@ -16,6 +16,7 @@ export const enrollmentService = {
   addPayment: (id, payload) => api.post(`/enrollments/${id}/payments`, payload),
   removePayment: (id, paymentId) => api.delete(`/enrollments/${id}/payments/${paymentId}`),
   addMonthlyEntry: (id, payload) => api.post(`/enrollments/${id}/months`, payload),
+  generateMissingMonths: (id) => api.post(`/enrollments/${id}/months/generate`),
   updateMonthlyEntry: (id, monthId, payload) => api.patch(`/enrollments/${id}/months/${monthId}`, payload),
   removeMonthlyEntry: (id, monthId) => api.delete(`/enrollments/${id}/months/${monthId}`),
 };

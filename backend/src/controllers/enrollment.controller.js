@@ -60,7 +60,7 @@ export const listMyFees = asyncHandler(async (req, res) => {
 
 export const setFeeConfig = asyncHandler(async (req, res) => {
   await assertAssignedToEnrollment(req);
-  const { feeType, totalFee, monthlyFee, securityAmount, feeNotes } = req.body;
+  const { feeType, totalFee, monthlyFee, securityAmount, feeNotes, registrationDate } = req.body;
   if (feeType !== undefined && !['one-time', 'monthly'].includes(feeType)) {
     throw new ApiError(400, "feeType must be 'one-time' or 'monthly'");
   }
@@ -70,8 +70,15 @@ export const setFeeConfig = asyncHandler(async (req, res) => {
     monthlyFee,
     securityAmount,
     feeNotes,
+    registrationDate,
   });
   return ApiResponse(res, 200, enrollment);
+});
+
+export const generateMissingMonths = asyncHandler(async (req, res) => {
+  await assertAssignedToEnrollment(req);
+  const { enrollment, addedCount } = await enrollmentService.generateMissingMonths(req.params.id);
+  return ApiResponse(res, 200, enrollment, { addedCount });
 });
 
 export const setSecurityPaid = asyncHandler(async (req, res) => {
@@ -106,8 +113,8 @@ export const addMonthlyEntry = asyncHandler(async (req, res) => {
 
 export const updateMonthlyEntry = asyncHandler(async (req, res) => {
   await assertAssignedToEnrollment(req);
-  const { amount, dueDate, paid, note } = req.body;
-  const enrollment = await enrollmentService.updateMonthlyEntry(req.params.id, req.params.monthId, { amount, dueDate, paid, note });
+  const { amount, dueDate, paid, paidDate, note } = req.body;
+  const enrollment = await enrollmentService.updateMonthlyEntry(req.params.id, req.params.monthId, { amount, dueDate, paid, paidDate, note });
   return ApiResponse(res, 200, enrollment);
 });
 
