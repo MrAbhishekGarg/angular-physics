@@ -85,11 +85,17 @@ export default function QuestionBank() {
     });
   };
 
-  const allVisibleSelected = questions && questions.length > 0 && questions.every((q) => selectedIds.has(q._id));
-  const toggleSelectAll = () => {
+  // Scoped to the current page, not the full filtered set — selecting
+  // "all" across all 141 questions from one click was a footgun next to a
+  // bulk-delete button. Selections still survive a page change (a union in
+  // selectedIds), so picking a few from page 1 and a few from page 2 works.
+  const allPageSelected = pageQuestions.length > 0 && pageQuestions.every((q) => selectedIds.has(q._id));
+  const toggleSelectPage = () => {
     setSelectedIds((prev) => {
-      if (allVisibleSelected) return new Set();
-      return new Set((questions || []).map((q) => q._id));
+      const next = new Set(prev);
+      if (allPageSelected) pageQuestions.forEach((q) => next.delete(q._id));
+      else pageQuestions.forEach((q) => next.add(q._id));
+      return next;
     });
   };
 
@@ -188,11 +194,11 @@ export default function QuestionBank() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--ap-space-sm)', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                {canEdit && questions && questions.length > 0 && (
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.85rem', fontWeight: 600 }}>
-                    <input type="checkbox" checked={Boolean(allVisibleSelected)} onChange={toggleSelectAll} />
-                    Select All
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                {canEdit && pageQuestions.length > 0 && (
+                  <label className={`${styles.selectAllToggle} ${allPageSelected ? styles.selectAllToggleActive : ''}`}>
+                    <input type="checkbox" checked={Boolean(allPageSelected)} onChange={toggleSelectPage} />
+                    Select Page ({pageQuestions.length})
                   </label>
                 )}
                 <h2 style={{ color: 'var(--ap-primary)', margin: 0 }}>
@@ -214,6 +220,8 @@ export default function QuestionBank() {
                 )}
               </div>
             </div>
+
+            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
             {loading && <Spinner label="Loading questions…" />}
             {error && <ErrorState message={error} onRetry={refetch} />}

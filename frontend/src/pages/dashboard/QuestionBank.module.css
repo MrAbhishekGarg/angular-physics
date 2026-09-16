@@ -57,3 +57,36 @@
   color: var(--ap-warning, #b45309);
   margin: 0 0 0.5rem;
 }
+
+.selectAllToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--ap-border);
+  background: var(--ap-bg);
+  color: var(--ap-text);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.selectAllToggle:hover {
+  border-color: var(--ap-accent);
+}
+
+.selectAllToggle input {
+  width: 0.95rem;
+  height: 0.95rem;
+  margin: 0;
+  accent-color: var(--ap-accent);
+}
+
+.selectAllToggleActive {
+  background: color-mix(in srgb, var(--ap-accent) 18%, var(--ap-bg));
+  border-color: var(--ap-accent);
+  color: var(--ap-primary);
+}
