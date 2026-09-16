@@ -28,6 +28,7 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.3",
     "jszip": "^3.10.1",
+    "mathjax-full": "^3.2.1",
     "mongoose": "^8.4.0",
     "morgan": "^1.10.0",
     "multer": "^2.2.0",
@@ -35,6 +36,7 @@
     "pdfkit": "^0.19.1",
     "razorpay": "^2.9.8",
     "sharp": "^0.35.3",
+    "svg-to-pdfkit": "^0.1.8",
     "xpath": "^0.0.34"
   },
   "devDependencies": {

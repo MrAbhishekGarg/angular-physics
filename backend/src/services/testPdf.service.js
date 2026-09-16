@@ -3,6 +3,7 @@ import path from 'path';
 import PDFDocument from 'pdfkit';
 import { env } from '../config/env.js';
 import { UPLOADS_ROOT } from '../middleware/upload.js';
+import { measureRichText, drawRichText } from '../utils/pdfRichText.js';
 
 const BRAND = 'Angular Physics';
 const TAGLINE = 'Mentored by Abhishek Garg';
@@ -32,30 +33,12 @@ function totalMarks(test) {
   return test.questions.reduce((sum, q) => sum + (q.marks || 0), 0);
 }
 
-// pdfkit's built-in Helvetica only supports WinAnsiEncoding (roughly
-// Latin-1) — no Greek letters, arrows, √, ≤/≠, or arbitrary superscripts.
-// Drawing those code points directly renders as blank/garbled boxes, which
-// is worse than the raw LaTeX source. So the PDF gets a readable ASCII
-// degrade instead of true typesetting (the web app renders the real thing
-// via KaTeX) — this only needs to cover the macros this app's question
-// bank actually uses.
-const GREEK_WORDS = {
-  '\\alpha': 'alpha',
-  '\\beta': 'beta',
-  '\\theta': 'theta',
-  '\\lambda': 'lambda',
-  '\\mu': 'mu',
-  '\\rho': 'rho',
-  '\\pi': 'pi',
-  '\\Omega': 'Omega',
-};
-
-function stripBraces(str) {
-  return str.replace(/^\{(.*)\}$/, '$1');
-}
-
-// Covers stray Unicode symbols mentors/extractions type directly into plain
-// prose (outside any $...$ span) that Helvetica/WinAnsi still can't render.
+// Math inside $...$ now renders as real typeset MathJax/SVG via
+// pdfRichText.js — but a stray Unicode symbol typed directly into plain
+// prose (outside any $...$ span, e.g. a pasted "→" or "≈") still hits
+// Helvetica/WinAnsi's limited glyph set and would render as a garbled box.
+// Only the prose segments get swapped; math segments are left untouched
+// for MathJax's own TeX parser.
 const GLOBAL_UNICODE_SWAPS = [
   [/→/g, '->'],
   [/≈/g, '~'],
@@ -67,46 +50,19 @@ const GLOBAL_UNICODE_SWAPS = [
   [/∠/g, 'angle '],
 ];
 
-function formatMathForPdf(raw) {
-  if (!raw) return raw;
-  let result = raw.replace(/\$([^$]*)\$/g, (_, expr) => {
-    let s = expr;
-    // A single pass can't resolve a macro whose argument is itself another
-    // macro (e.g. \dfrac{1}{\sqrt{2}} — the \dfrac regex needs brace-free
-    // groups, so it only matches once \sqrt has already been reduced).
-    // Looping to a fixed point handles arbitrary nesting depth.
-    for (let i = 0; i < 6; i += 1) {
-      const before = s;
-      s = s.replace(/\\left|\\right/g, '');
-      s = s.replace(/\\[,;!]|\\ /g, ' ');
-      s = s.replace(/\\d?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
-      s = s.replace(/\\d?frac([a-zA-Z0-9])([a-zA-Z0-9])/g, '($1)/($2)');
-      s = s.replace(/\\sqrt\{([^{}]*)\}/g, 'sqrt($1)');
-      s = s.replace(/\\vec\{([^{}]*)\}/g, '$1');
-      s = s.replace(/\\text\{([^{}]*)\}/g, '$1');
-      s = s.replace(/\\times/g, 'x');
-      s = s.replace(/\\cdot/g, '.');
-      s = s.replace(/\\le/g, '<=');
-      s = s.replace(/\\neq/g, '!=');
-      s = s.replace(/\\rightarrow|\\to/g, '->');
-      s = s.replace(/\\infty/g, 'infinity');
-      s = s.replace(/\\angle/g, 'angle ');
-      s = s.replace(/\\AA/g, 'A');
-      Object.entries(GREEK_WORDS).forEach(([macro, word]) => {
-        s = s.split(macro).join(word);
+function sanitizeProseUnicode(text) {
+  if (!text) return text;
+  return text
+    .split(/(\$[^$]*\$)/g)
+    .map((segment, i) => {
+      if (i % 2 === 1) return segment; // a $...$ math span — leave for MathJax
+      let s = segment;
+      GLOBAL_UNICODE_SWAPS.forEach(([pattern, replacement]) => {
+        s = s.replace(pattern, replacement);
       });
-      // ^{...}/_{...} keep their braces as parens; ^x/_x (single token) stay bare.
-      s = s.replace(/\^\{([^{}]*)\}/g, '^($1)');
-      s = s.replace(/_\{([^{}]*)\}/g, '_($1)');
-      if (s === before) break;
-    }
-    s = stripBraces(s.trim());
-    return s.replace(/\s+/g, ' ').trim();
-  });
-  GLOBAL_UNICODE_SWAPS.forEach(([pattern, replacement]) => {
-    result = result.replace(pattern, replacement);
-  });
-  return result;
+      return s;
+    })
+    .join('');
 }
 
 // question.imageUrl is a served path like "/uploads/question-images/xyz.png" —
@@ -192,8 +148,8 @@ export function generateTestPdf(test, { includeAnswers = false } = {}) {
     ...test,
     questions: test.questions.map((q) => ({
       ...q,
-      text: formatMathForPdf(q.text),
-      options: (q.options || []).map((o) => ({ ...o, text: formatMathForPdf(o.text) })),
+      text: sanitizeProseUnicode(q.text),
+      options: (q.options || []).map((o) => ({ ...o, text: sanitizeProseUnicode(o.text) })),
     })),
   };
 
@@ -247,8 +203,7 @@ export function generateTestPdf(test, { includeAnswers = false } = {}) {
   function measureOptionCellHeight(option, colWidth) {
     const contentWidth = colWidth - CELL_PADDING * 2 - LETTER_COL_WIDTH;
     const hasText = Boolean(option.text?.trim());
-    doc.fontSize(10).font('Helvetica');
-    const textHeight = hasText ? doc.heightOfString(option.text, { width: contentWidth }) : 0;
+    const textHeight = hasText ? measureRichText(doc, option.text, contentWidth, 10) : 0;
 
     const optionImagePath = resolveImagePath(option.imageUrl);
     if (optionImagePath) {
@@ -281,9 +236,11 @@ export function generateTestPdf(test, { includeAnswers = false } = {}) {
     const hasText = Boolean(option.text?.trim());
     let textBlockHeight = 0;
     if (hasText) {
-      doc.font(highlight ? 'Helvetica-Bold' : 'Helvetica');
-      doc.text(option.text, contentX, y + CELL_PADDING, { width: contentWidth });
-      textBlockHeight = doc.heightOfString(option.text, { width: contentWidth });
+      textBlockHeight = drawRichText(doc, option.text, contentX, y + CELL_PADDING, contentWidth, {
+        fontSize: 10,
+        font: highlight ? 'Helvetica-Bold' : 'Helvetica',
+        color: textColor,
+      });
     }
 
     const optionImagePath = resolveImagePath(option.imageUrl);
@@ -312,9 +269,8 @@ export function generateTestPdf(test, { includeAnswers = false } = {}) {
     const numberLineHeight = doc.currentLineHeight(true);
 
     const hasText = Boolean(q.text?.trim());
-    doc.fontSize(11).font('Helvetica');
     const textWidth = tableWidth - CELL_PADDING * 2 - NUMBER_COL_WIDTH;
-    const textHeight = hasText ? doc.heightOfString(q.text, { width: textWidth }) : 0;
+    const textHeight = hasText ? measureRichText(doc, q.text, textWidth, 11) : 0;
     const textBlockHeight = Math.max(textHeight, numberLineHeight);
 
     const imagePath = resolveImagePath(q.imageUrl);
@@ -369,9 +325,10 @@ export function generateTestPdf(test, { includeAnswers = false } = {}) {
 
     const hasText = Boolean(q.text?.trim());
     if (hasText) {
-      doc.fontSize(11).font('Helvetica').fillColor('#111827');
-      doc.text(q.text, tableX + CELL_PADDING + NUMBER_COL_WIDTH, startY + CELL_PADDING, {
-        width: tableWidth - CELL_PADDING * 2 - NUMBER_COL_WIDTH,
+      drawRichText(doc, q.text, tableX + CELL_PADDING + NUMBER_COL_WIDTH, startY + CELL_PADDING, tableWidth - CELL_PADDING * 2 - NUMBER_COL_WIDTH, {
+        fontSize: 11,
+        font: 'Helvetica',
+        color: '#111827',
       });
     }
 
