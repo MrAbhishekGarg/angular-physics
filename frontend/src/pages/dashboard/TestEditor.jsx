@@ -54,6 +54,10 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
   const { data: bankQuestions, loading: bankLoading } = useQuestions(bankFilters);
   const [showCreateQuestion, setShowCreateQuestion] = useState(false);
 
+  useEffect(() => {
+    setBankFilters((f) => (f.examType === examType ? f : { ...f, examType }));
+  }, [examType]);
+
   const handleBankFilterChange = (e) => setBankFilters((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const toggleQuestion = (question) => {
