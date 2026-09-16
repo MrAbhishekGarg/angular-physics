@@ -8,6 +8,7 @@ import Test from '../models/Test.js';
 import Worksheet from '../models/Worksheet.js';
 import Purchase from '../models/Purchase.js';
 import Question from '../models/Question.js';
+import User from '../models/User.js';
 import Doubt from '../models/Doubt.js';
 import TestAttempt from '../models/TestAttempt.js';
 import { gradeQuestion } from './test.service.js';
@@ -200,7 +201,7 @@ export async function getStudentAnalytics(studentId, email) {
  * reuses test.service.js's gradeQuestion rather than duplicating it).
  */
 export async function getStudentDetailAnalytics(studentId) {
-  const [enrollments, paidPurchases, activeAttempts, allAttempts] = await Promise.all([
+  const [enrollments, paidPurchases, activeAttempts, allAttempts, student] = await Promise.all([
     Enrollment.find({ studentId }).populate('courseId', 'title slug track courseType').sort({ createdAt: -1 }).lean(),
     Purchase.find({ studentId, status: 'paid' }).lean(),
     TestAttempt.find({ studentId, archived: { $ne: true } })
@@ -211,6 +212,7 @@ export async function getStudentDetailAnalytics(studentId) {
     // (per test) tells a mentor how many times this student has actually
     // given a test, not just whether their current attempt is active.
     TestAttempt.find({ studentId }).select('testId').lean(),
+    User.findById(studentId).select('restrictedStudentAccess').lean(),
   ]);
 
   const countByTest = new Map();
@@ -259,5 +261,13 @@ export async function getStudentDetailAnalytics(studentId) {
       )
     : null;
 
-  return { enrollments, purchasedNotes, attempts, testsAttemptedCount: submittedAttempts.length, averageScorePercent, weakChapters };
+  return {
+    enrollments,
+    purchasedNotes,
+    attempts,
+    testsAttemptedCount: submittedAttempts.length,
+    averageScorePercent,
+    weakChapters,
+    restrictedStudentAccess: student?.restrictedStudentAccess || [],
+  };
 }

@@ -6,6 +6,7 @@ import Enrollment from '../models/Enrollment.js';
 import { ApiError } from '../utils/ApiError.js';
 import { hasPurchased } from './payment.service.js';
 import { generateQuestionSet } from './question.service.js';
+import { hasStudentAccess } from '../utils/studentAccess.js';
 
 const ACTIVE_STATUSES = ['active', 'completed'];
 
@@ -62,6 +63,11 @@ async function resolveQuestionsWithSections(test) {
 }
 
 async function getEligibleCourseIds(studentId) {
+  // Admin-managed per-student block, independent of enrollment status —
+  // checked first so a restricted student sees zero available tests
+  // rather than a filtered subset that might mislead them into thinking
+  // it's an enrollment problem.
+  if (!(await hasStudentAccess(studentId, 'tests'))) return [];
   const enrollments = await Enrollment.find({ studentId, status: { $in: ACTIVE_STATUSES } }).lean();
   return enrollments.map((e) => e.courseId.toString());
 }
@@ -143,6 +149,7 @@ export async function getAvailableTestsForStudent(studentId) {
 async function assertStudentEligible(studentId, test) {
   if (test.kind === 'practice') {
     if (test.studentId?.toString() !== studentId) throw new ApiError(403, 'This practice test is not yours');
+    if (!(await hasStudentAccess(studentId, 'tests'))) throw new ApiError(403, 'Test access has been restricted for your account');
     return;
   }
 
@@ -528,6 +535,7 @@ export async function resetAttempt(attemptId) {
  * attempt — one round trip into the same TestAttempt flow already built.
  */
 export async function createPracticeTest(studentId, { examType, chapter, topic, difficulty, isPYQ, year, count }) {
+  if (!(await hasStudentAccess(studentId, 'tests'))) throw new ApiError(403, 'Test access has been restricted for your account');
   const questions = await generateQuestionSet({ examType, chapter, topic, difficulty, isPYQ, year, count });
 
   const label = chapter || topic || examType;

@@ -6,6 +6,7 @@ import { isDbConnected } from '../config/db.js';
 import { adminSafeUser, matchesAdminCredentials } from '../utils/adminUser.js';
 import { MENTOR_SECTIONS } from '../constants/mentorSections.js';
 import { MENTOR_ACTIONS } from '../constants/mentorActions.js';
+import { STUDENT_ACCESS_MODULES } from '../constants/studentAccess.js';
 
 const SALT_ROUNDS = 10;
 
@@ -23,6 +24,7 @@ function toSafeUser(user) {
     courseAccessMode: user.courseAccessMode || 'all',
     assignedCourseIds: (user.assignedCourseIds || []).map((cid) => cid.toString()),
     canManagePaidContent: user.canManagePaidContent !== false,
+    restrictedStudentAccess: user.restrictedStudentAccess || [],
   };
 }
 
@@ -172,6 +174,19 @@ export async function updateMentorPermissions(
 
   const user = await User.findOneAndUpdate({ _id: id, role: 'mentor' }, update, { new: true }).lean();
   if (!user) throw new ApiError(404, 'Mentor not found');
+  return toSafeUser(user);
+}
+
+/** Admin-only: which content modules ('tests'/'worksheets'/'notes') a
+ * student is blocked from — see User.js#restrictedStudentAccess and
+ * utils/studentAccess.js for where this is actually enforced. */
+export async function updateStudentAccess(id, { restrictedStudentAccess }) {
+  const keys = Array.isArray(restrictedStudentAccess) ? restrictedStudentAccess : [];
+  const unknown = keys.filter((k) => !STUDENT_ACCESS_MODULES.includes(k));
+  if (unknown.length > 0) throw new ApiError(400, `Unknown module(s): ${unknown.join(', ')}`);
+
+  const user = await User.findOneAndUpdate({ _id: id, role: 'student' }, { restrictedStudentAccess: keys }, { new: true }).lean();
+  if (!user) throw new ApiError(404, 'Student not found');
   return toSafeUser(user);
 }
 

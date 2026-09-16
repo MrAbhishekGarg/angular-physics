@@ -35,6 +35,12 @@ const userSchema = new mongoose.Schema(
     // Only meaningful for role: 'mentor'. Default true preserves today's
     // behavior — any mentor can create/edit/delete paid tests and premium notes.
     canManagePaidContent: { type: Boolean, default: true },
+    // Only meaningful for role: 'student' — admin-managed, per-student
+    // content access, separate from restrictedSections above (which gates
+    // a MENTOR's own dashboard, not a student's). A denylist of module
+    // keys ('tests' | 'worksheets' | 'notes'); empty (default) means full
+    // access, so every existing student keeps working with zero migration.
+    restrictedStudentAccess: { type: [String], default: [] },
   },
   { timestamps: true }
 );

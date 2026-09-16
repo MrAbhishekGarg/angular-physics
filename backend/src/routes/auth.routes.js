@@ -13,6 +13,7 @@ import {
   resetStudentPassword,
   listStudents,
   removeStudent,
+  updateStudentAccess,
 } from '../controllers/auth.controller.js';
 import { authenticate, authorize, requirePasswordResetPermission } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
@@ -51,5 +52,6 @@ router.post(
 // (which is enrollment-centric and mentor-facing).
 router.get('/students', authenticate, authorize('admin'), listStudents);
 router.delete('/students/:id', authenticate, authorize('admin'), removeStudent);
+router.patch('/students/:id/access', authenticate, authorize('admin'), updateStudentAccess);
 
 export default router;

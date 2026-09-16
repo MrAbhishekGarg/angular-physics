@@ -139,6 +139,73 @@ function GrantAccessForm({ studentId, onDone, onGranted }) {
   );
 }
 
+const ACCESS_MODULES = [
+  { key: 'tests', label: 'Tests' },
+  { key: 'worksheets', label: 'DPPs & Assignments (Worksheets)' },
+  { key: 'notes', label: 'Notes' },
+];
+
+/**
+ * Admin-only: per-student content access, independent of course
+ * enrollment — see backend/src/models/User.js#restrictedStudentAccess.
+ * Unlike GrantAccessForm (which activates a course), this blocks/unblocks
+ * whole modules (tests/worksheets/notes) regardless of enrollment status.
+ */
+function ManageAccessForm({ studentId, initialRestricted, onDone, onSaved }) {
+  const [restricted, setRestricted] = useState(() => new Set(initialRestricted || []));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const toggle = (key) => {
+    setRestricted((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+    setSuccess(false);
+  };
+
+  const handleSave = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await authService.updateStudentAccess(studentId, [...restricted]);
+      setSuccess(true);
+      await onSaved();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: '0.6rem', maxWidth: 420 }}>
+      <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0 0 0.5rem' }}>
+        Unchecking a module blocks this student from it everywhere on the site, regardless of course enrollment.
+      </p>
+      {ACCESS_MODULES.map((m) => (
+        <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0', fontSize: '0.9rem' }}>
+          <input type="checkbox" checked={!restricted.has(m.key)} onChange={() => toggle(m.key)} />
+          {m.label}
+        </label>
+      ))}
+      <div className={formStyles.actions} style={{ marginTop: '0.5rem' }}>
+        <Button type="button" size="sm" disabled={busy} onClick={handleSave}>
+          {busy ? 'Saving…' : 'Save Access'}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={onDone}>
+          Close
+        </Button>
+      </div>
+      {success && <p style={{ color: 'var(--ap-success)', fontSize: '0.82rem' }}>Access updated.</p>}
+      {error && <p className={formStyles.errorMsg}>{error}</p>}
+    </div>
+  );
+}
+
 const todayMonth = () => toDateInputValue(new Date()).slice(0, 7);
 
 // A server-computed date (e.g. a monthly due date) round-trips through JSON
@@ -399,6 +466,7 @@ export default function StudentDetail() {
   const { data, loading, error, refetch } = useStudentDetailAnalytics(studentId);
   const [resetOpen, setResetOpen] = useState(false);
   const [grantOpen, setGrantOpen] = useState(false);
+  const [accessOpen, setAccessOpen] = useState(false);
   const canResetAttempts = !user?.restrictedSections?.includes('tests');
   const canResetPassword = user?.canResetPasswords !== false;
   const isAdmin = user?.role === 'admin';
@@ -422,6 +490,11 @@ export default function StudentDetail() {
                   {grantOpen ? 'Close' : 'Grant Course Access'}
                 </Button>
               )}
+              {isAdmin && (
+                <Button size="sm" variant="ghost" onClick={() => setAccessOpen((v) => !v)}>
+                  {accessOpen ? 'Close' : 'Manage Access'}
+                </Button>
+              )}
               {canResetPassword && (
                 <Button size="sm" variant="ghost" onClick={() => setResetOpen((v) => !v)}>
                   {resetOpen ? 'Close' : 'Reset Password'}
@@ -431,6 +504,14 @@ export default function StudentDetail() {
           </div>
           {grantOpen && isAdmin && (
             <GrantAccessForm studentId={studentId} onDone={() => setGrantOpen(false)} onGranted={refetch} />
+          )}
+          {accessOpen && isAdmin && (
+            <ManageAccessForm
+              studentId={studentId}
+              initialRestricted={data?.restrictedStudentAccess}
+              onDone={() => setAccessOpen(false)}
+              onSaved={refetch}
+            />
           )}
           {resetOpen && canResetPassword && <ResetPasswordForm studentId={studentId} onDone={() => setResetOpen(false)} />}
 

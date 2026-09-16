@@ -4,10 +4,12 @@ import WorksheetProgress from '../models/WorksheetProgress.js';
 import Enrollment from '../models/Enrollment.js';
 import { ApiError } from '../utils/ApiError.js';
 import { SECURE_UPLOADS_ROOT } from '../middleware/upload.js';
+import { hasStudentAccess } from '../utils/studentAccess.js';
 
 const ACTIVE_STATUSES = ['active', 'completed'];
 
 async function getEligibleCourseIds(studentId) {
+  if (!(await hasStudentAccess(studentId, 'worksheets'))) return [];
   const enrollments = await Enrollment.find({ studentId, status: { $in: ACTIVE_STATUSES } }).lean();
   return enrollments.map((e) => e.courseId.toString());
 }

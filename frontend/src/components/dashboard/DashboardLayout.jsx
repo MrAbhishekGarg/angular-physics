@@ -4,15 +4,19 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { notificationService } from '../../services/notificationService.js';
 import styles from './DashboardLayout.module.css';
 
+// sectionKey here matches backend/src/constants/studentAccess.js — an admin
+// restricting a student from a module (see StudentDetail.jsx's "Manage
+// Access") hides its nav item the same way a mentor's restrictedSections
+// already hides theirs, below.
 const STUDENT_NAV = [
   {
     section: null,
     items: [
       { to: '/dashboard/student', label: 'Dashboard', end: true },
-      { to: '/dashboard/student/notes', label: 'Notes' },
-      { to: '/dashboard/student/tests', label: 'Tests' },
-      { to: '/dashboard/student/worksheets', label: 'DPPs & Assignments' },
-      { to: '/dashboard/student/practice', label: 'Practice by Topic' },
+      { to: '/dashboard/student/notes', label: 'Notes', sectionKey: 'notes' },
+      { to: '/dashboard/student/tests', label: 'Tests', sectionKey: 'tests' },
+      { to: '/dashboard/student/worksheets', label: 'DPPs & Assignments', sectionKey: 'worksheets' },
+      { to: '/dashboard/student/practice', label: 'Practice by Topic', sectionKey: 'tests' },
       { to: '/dashboard/student/doubts', label: 'Doubts' },
     ],
   },
@@ -164,13 +168,18 @@ export default function DashboardLayout({ role, children }) {
   // calls) plus this one extra group — real role, not the `role` prop,
   // since every mentor page still passes role="mentor" unchanged.
   const withAdminGroup = user?.role === 'admin' ? [...baseNav, ADMIN_NAV_GROUP, MY_JOB_NAV_GROUP] : baseNav;
-  // Drop any item the admin has restricted this mentor from, then drop any
-  // group that's now empty — admin never carries restrictedSections, so
-  // this is a no-op for them regardless of which nav they're looking at.
+  // Drop any item the admin has restricted this account from, then drop any
+  // group that's now empty. A mentor only ever carries restrictedSections
+  // and a student only ever carries restrictedStudentAccess, so checking
+  // both unconditionally is a no-op for whichever doesn't apply.
   const nav = withAdminGroup
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.sectionKey || !user?.restrictedSections?.includes(item.sectionKey)),
+      items: group.items.filter(
+        (item) =>
+          !item.sectionKey ||
+          (!user?.restrictedSections?.includes(item.sectionKey) && !user?.restrictedStudentAccess?.includes(item.sectionKey))
+      ),
     }))
     .filter((group) => group.items.length > 0);
 

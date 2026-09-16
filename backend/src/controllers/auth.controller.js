@@ -73,6 +73,13 @@ export const updateMentorPermissions = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, mentor);
 });
 
+export const updateStudentAccess = asyncHandler(async (req, res) => {
+  const student = await authService.updateStudentAccess(req.params.id, {
+    restrictedStudentAccess: req.body.restrictedStudentAccess,
+  });
+  return ApiResponse(res, 200, student);
+});
+
 export const resetStudentPassword = asyncHandler(async (req, res) => {
   const user = await authService.resetPassword(req.params.id, req.body.newPassword, 'student');
   return ApiResponse(res, 200, user);

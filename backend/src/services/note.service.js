@@ -3,6 +3,7 @@ import Note from '../models/Note.js';
 import { ApiError } from '../utils/ApiError.js';
 import { hasPurchased } from './payment.service.js';
 import { SECURE_UPLOADS_ROOT } from '../middleware/upload.js';
+import { hasStudentAccess } from '../utils/studentAccess.js';
 
 export async function getAllNotes({ track } = {}) {
   const filter = track ? { track } : {};
@@ -70,6 +71,10 @@ export async function resolveNoteFileForDownload(id, user) {
   const note = await Note.findById(id).lean();
   if (!note) throw new ApiError(404, 'Note not found');
   if (!note.fileKey) throw new ApiError(404, 'This note has no file uploaded yet');
+
+  if (user.role === 'student' && !(await hasStudentAccess(user.id, 'notes'))) {
+    throw new ApiError(403, 'Notes access has been restricted for your account');
+  }
 
   if (note.category === 'premium' && user.role !== 'mentor' && user.role !== 'admin') {
     const purchased = await hasPurchased(user.id, 'note', id);
