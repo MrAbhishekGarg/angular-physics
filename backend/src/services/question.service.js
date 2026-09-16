@@ -6,6 +6,10 @@ import { extractDocxScreenshotGroups } from '../utils/docxScreenshotParser.js';
 import { saveQuestionImage } from '../utils/questionImageStorage.js';
 import { getConceptCodeMap } from './conceptCode.service.js';
 
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export async function getAllQuestions({ examType, chapter, topic, difficulty, search, isPYQ, author, tag, subject, conceptCode } = {}) {
   const filter = {};
   // Mongo/Mongoose matches a scalar against an array field as "array
@@ -16,9 +20,9 @@ export async function getAllQuestions({ examType, chapter, topic, difficulty, se
   if (difficulty) filter.difficulty = difficulty;
   if (search) filter.text = { $regex: search, $options: 'i' };
   if (isPYQ !== undefined) filter.isPYQ = isPYQ;
-  if (author) filter.author = author;
-  if (tag) filter.tags = tag;
-  if (subject) filter.subject = subject;
+  if (author) filter.author = { $regex: `^${escapeRegex(author)}$`, $options: 'i' };
+  if (tag) filter.tags = { $regex: `^${escapeRegex(tag)}$`, $options: 'i' };
+  if (subject) filter.subject = { $regex: `^${escapeRegex(subject)}$`, $options: 'i' };
   if (conceptCode) filter.conceptCodes = conceptCode.toUpperCase();
 
   return Question.find(filter).sort({ createdAt: -1 }).lean();
