@@ -139,6 +139,206 @@ function GrantAccessForm({ studentId, onDone, onGranted }) {
   );
 }
 
+const todayMonth = () => new Date().toISOString().slice(0, 7);
+
+/**
+ * Mentor/admin-managed fee tracking for one student's enrollment in a live
+ * course (no public price/payment gateway — the fee and security deposit
+ * are negotiated per student and tracked manually here). Recorded courses
+ * never render this; their fee is Course.price + a Purchase record.
+ */
+function EnrollmentFeeManager({ enrollment, onChanged }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [feeType, setFeeType] = useState(enrollment.feeType || 'monthly');
+  const [totalFee, setTotalFee] = useState(enrollment.totalFee || '');
+  const [monthlyFee, setMonthlyFee] = useState(enrollment.monthlyFee || '');
+  const [securityAmount, setSecurityAmount] = useState(enrollment.securityAmount || '');
+  const [securityPaid, setSecurityPaid] = useState(enrollment.securityPaid || 0);
+  const [newPayment, setNewPayment] = useState({ amount: '', date: new Date().toISOString().slice(0, 10), note: '' });
+  const [newMonth, setNewMonth] = useState({ month: todayMonth(), amount: enrollment.monthlyFee || '', dueDate: '' });
+
+  const run = async (fn) => {
+    setBusy(true);
+    setError('');
+    try {
+      await fn();
+      await onChanged();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveFeeConfig = (e) => {
+    e.preventDefault();
+    run(() =>
+      enrollmentService.setFeeConfig(enrollment._id, {
+        feeType,
+        totalFee: feeType === 'one-time' ? Number(totalFee) || 0 : undefined,
+        monthlyFee: feeType === 'monthly' ? Number(monthlyFee) || 0 : undefined,
+        securityAmount: Number(securityAmount) || 0,
+      })
+    );
+  };
+
+  const saveSecurityPaid = () => run(() => enrollmentService.setSecurityPaid(enrollment._id, Number(securityPaid) || 0));
+
+  const addPayment = (e) => {
+    e.preventDefault();
+    if (!newPayment.amount) return;
+    run(async () => {
+      await enrollmentService.addPayment(enrollment._id, {
+        amount: Number(newPayment.amount),
+        date: newPayment.date,
+        note: newPayment.note,
+      });
+      setNewPayment({ amount: '', date: new Date().toISOString().slice(0, 10), note: '' });
+    });
+  };
+
+  const removePayment = (paymentId) => run(() => enrollmentService.removePayment(enrollment._id, paymentId));
+
+  const addMonth = (e) => {
+    e.preventDefault();
+    if (!newMonth.month) return;
+    run(async () => {
+      await enrollmentService.addMonthlyEntry(enrollment._id, {
+        month: newMonth.month,
+        amount: newMonth.amount ? Number(newMonth.amount) : undefined,
+        dueDate: newMonth.dueDate || undefined,
+      });
+      setNewMonth({ month: '', amount: enrollment.monthlyFee || '', dueDate: '' });
+    });
+  };
+
+  const toggleMonthPaid = (monthId, paid) => run(() => enrollmentService.updateMonthlyEntry(enrollment._id, monthId, { paid }));
+  const removeMonth = (monthId) => run(() => enrollmentService.removeMonthlyEntry(enrollment._id, monthId));
+
+  const totalPaid = (enrollment.payments || []).reduce((sum, p) => sum + p.amount, 0);
+
+  return (
+    <div className={formStyles.card} style={{ marginBottom: '0.75rem' }}>
+      <strong>{enrollment.courseId?.title}</strong>
+
+      <form onSubmit={saveFeeConfig} className={formStyles.row} style={{ marginTop: '0.5rem', alignItems: 'flex-end' }}>
+        <label>
+          Fee type
+          <select value={feeType} onChange={(e) => setFeeType(e.target.value)}>
+            <option value="monthly">Monthly</option>
+            <option value="one-time">One-time</option>
+          </select>
+        </label>
+        {feeType === 'monthly' ? (
+          <label>
+            Monthly Fee (₹)
+            <input type="number" min="0" value={monthlyFee} onChange={(e) => setMonthlyFee(e.target.value)} />
+          </label>
+        ) : (
+          <label>
+            Total Fee (₹)
+            <input type="number" min="0" value={totalFee} onChange={(e) => setTotalFee(e.target.value)} />
+          </label>
+        )}
+        <label>
+          Security Deposit (₹)
+          <input type="number" min="0" value={securityAmount} onChange={(e) => setSecurityAmount(e.target.value)} />
+        </label>
+        <Button type="submit" size="sm" disabled={busy}>
+          Save Terms
+        </Button>
+      </form>
+
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+        <label>
+          Security Paid (₹)
+          <input type="number" min="0" value={securityPaid} onChange={(e) => setSecurityPaid(e.target.value)} />
+        </label>
+        <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={saveSecurityPaid}>
+          Update
+        </Button>
+        <span style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}>
+          of {enrollment.securityAmount || 0} deposit
+        </span>
+      </div>
+
+      {feeType === 'one-time' ? (
+        <div style={{ marginTop: '0.75rem' }}>
+          <p style={{ fontSize: '0.85rem' }}>
+            Paid so far: <strong>₹{totalPaid}</strong> of ₹{enrollment.totalFee || 0}
+          </p>
+          {(enrollment.payments || []).map((p) => (
+            <div key={p._id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', fontSize: '0.85rem' }}>
+              <span>
+                ₹{p.amount} on {new Date(p.date).toLocaleDateString('en-IN')} {p.note ? `— ${p.note}` : ''}
+              </span>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => removePayment(p._id)}>
+                Remove
+              </Button>
+            </div>
+          ))}
+          <form onSubmit={addPayment} className={formStyles.row} style={{ marginTop: '0.4rem', alignItems: 'flex-end' }}>
+            <label>
+              Amount (₹)
+              <input type="number" min="0" value={newPayment.amount} onChange={(e) => setNewPayment((f) => ({ ...f, amount: e.target.value }))} />
+            </label>
+            <label>
+              Date
+              <input type="date" value={newPayment.date} onChange={(e) => setNewPayment((f) => ({ ...f, date: e.target.value }))} />
+            </label>
+            <label>
+              Note (optional)
+              <input value={newPayment.note} onChange={(e) => setNewPayment((f) => ({ ...f, note: e.target.value }))} />
+            </label>
+            <Button type="submit" size="sm" disabled={busy || !newPayment.amount}>
+              Add Payment
+            </Button>
+          </form>
+        </div>
+      ) : (
+        <div style={{ marginTop: '0.75rem' }}>
+          {(enrollment.monthlyPayments || []).map((m) => (
+            <div key={m._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.25rem 0', fontSize: '0.85rem' }}>
+              <span>
+                {m.month} — ₹{m.amount} {m.dueDate ? `· due ${new Date(m.dueDate).toLocaleDateString('en-IN')}` : ''}
+              </span>
+              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                <Badge tone={m.paid ? 'success' : 'accent'}>{m.paid ? 'Paid' : 'Due'}</Badge>
+                <Button size="sm" variant="ghost" disabled={busy} onClick={() => toggleMonthPaid(m._id, !m.paid)}>
+                  Mark {m.paid ? 'Unpaid' : 'Paid'}
+                </Button>
+                <Button size="sm" variant="ghost" disabled={busy} onClick={() => removeMonth(m._id)}>
+                  Remove
+                </Button>
+              </div>
+            </div>
+          ))}
+          <form onSubmit={addMonth} className={formStyles.row} style={{ marginTop: '0.4rem', alignItems: 'flex-end' }}>
+            <label>
+              Month
+              <input type="month" value={newMonth.month} onChange={(e) => setNewMonth((f) => ({ ...f, month: e.target.value }))} />
+            </label>
+            <label>
+              Amount (₹)
+              <input type="number" min="0" value={newMonth.amount} onChange={(e) => setNewMonth((f) => ({ ...f, amount: e.target.value }))} />
+            </label>
+            <label>
+              Due Date (optional)
+              <input type="date" value={newMonth.dueDate} onChange={(e) => setNewMonth((f) => ({ ...f, dueDate: e.target.value }))} />
+            </label>
+            <Button type="submit" size="sm" disabled={busy || !newMonth.month}>
+              Add Month
+            </Button>
+          </form>
+        </div>
+      )}
+
+      {error && <p className={formStyles.errorMsg}>{error}</p>}
+    </div>
+  );
+}
+
 export default function StudentDetail() {
   const { studentId } = useParams();
   const { user } = useAuth();
@@ -218,6 +418,17 @@ export default function StudentDetail() {
                       </tbody>
                     </table>
                   </div>
+                )}
+
+                {data.enrollments.some((e) => e.courseId?.courseType === 'live') && (
+                  <>
+                    <h2 style={{ color: 'var(--ap-primary)' }}>Live Course Fees</h2>
+                    {data.enrollments
+                      .filter((e) => e.courseId?.courseType === 'live')
+                      .map((e) => (
+                        <EnrollmentFeeManager key={e._id} enrollment={e} onChanged={refetch} />
+                      ))}
+                  </>
                 )}
 
                 <h2 style={{ color: 'var(--ap-primary)' }}>Weak Chapters</h2>

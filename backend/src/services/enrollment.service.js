@@ -127,3 +127,81 @@ export async function updateEnrollment(id, { status, progressPercent }) {
   if (!enrollment) throw new ApiError(404, 'Enrollment not found');
   return enrollment;
 }
+
+// ---- Live-course fee tracking (mentor/admin-managed, see Enrollment.js) ----
+
+async function populatedEnrollment(id) {
+  const enrollment = await Enrollment.findById(id).populate('courseId', COURSE_FIELDS).populate('studentId', 'name email').lean();
+  if (!enrollment) throw new ApiError(404, 'Enrollment not found');
+  return enrollment;
+}
+
+/** Sets the negotiated fee terms decided at registration — feeType/totalFee
+ * (one-time) or monthlyFee, plus the security deposit amount. Safe to call
+ * again later if terms change. */
+export async function setEnrollmentFeeConfig(id, { feeType, totalFee, monthlyFee, securityAmount, feeNotes }) {
+  const update = {};
+  if (feeType !== undefined) update.feeType = feeType;
+  if (totalFee !== undefined) update.totalFee = totalFee;
+  if (monthlyFee !== undefined) update.monthlyFee = monthlyFee;
+  if (securityAmount !== undefined) update.securityAmount = securityAmount;
+  if (feeNotes !== undefined) update.feeNotes = feeNotes;
+
+  const result = await Enrollment.findByIdAndUpdate(id, update, { new: true });
+  if (!result) throw new ApiError(404, 'Enrollment not found');
+  return populatedEnrollment(id);
+}
+
+export async function setSecurityPaid(id, securityPaid) {
+  const result = await Enrollment.findByIdAndUpdate(id, { securityPaid }, { new: true });
+  if (!result) throw new ApiError(404, 'Enrollment not found');
+  return populatedEnrollment(id);
+}
+
+export async function addPayment(id, { amount, date, note }) {
+  const enrollment = await Enrollment.findByIdAndUpdate(
+    id,
+    { $push: { payments: { amount, date: date || new Date(), note: note || '' } } },
+    { new: true }
+  );
+  if (!enrollment) throw new ApiError(404, 'Enrollment not found');
+  return populatedEnrollment(id);
+}
+
+export async function removePayment(id, paymentId) {
+  const enrollment = await Enrollment.findByIdAndUpdate(id, { $pull: { payments: { _id: paymentId } } }, { new: true });
+  if (!enrollment) throw new ApiError(404, 'Enrollment not found');
+  return populatedEnrollment(id);
+}
+
+export async function addMonthlyEntry(id, { month, amount, dueDate }) {
+  const enrollment = await Enrollment.findById(id).select('monthlyFee');
+  if (!enrollment) throw new ApiError(404, 'Enrollment not found');
+  await Enrollment.findByIdAndUpdate(id, {
+    $push: { monthlyPayments: { month, amount: amount ?? enrollment.monthlyFee, dueDate: dueDate || null } },
+  });
+  return populatedEnrollment(id);
+}
+
+export async function updateMonthlyEntry(id, monthId, { amount, dueDate, paid, note }) {
+  const enrollment = await Enrollment.findOne({ _id: id, 'monthlyPayments._id': monthId });
+  if (!enrollment) throw new ApiError(404, 'Enrollment or month entry not found');
+
+  const set = {};
+  if (amount !== undefined) set['monthlyPayments.$.amount'] = amount;
+  if (dueDate !== undefined) set['monthlyPayments.$.dueDate'] = dueDate;
+  if (note !== undefined) set['monthlyPayments.$.note'] = note;
+  if (paid !== undefined) {
+    set['monthlyPayments.$.paid'] = paid;
+    set['monthlyPayments.$.paidDate'] = paid ? new Date() : null;
+  }
+
+  await Enrollment.updateOne({ _id: id, 'monthlyPayments._id': monthId }, { $set: set });
+  return populatedEnrollment(id);
+}
+
+export async function removeMonthlyEntry(id, monthId) {
+  const enrollment = await Enrollment.findByIdAndUpdate(id, { $pull: { monthlyPayments: { _id: monthId } } }, { new: true });
+  if (!enrollment) throw new ApiError(404, 'Enrollment not found');
+  return populatedEnrollment(id);
+}

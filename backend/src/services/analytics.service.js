@@ -175,7 +175,7 @@ export async function getMentorAnalytics() {
 export async function getStudentAnalytics(studentId, email) {
   const [enrollments, leadsSubmittedCount, newContent] = await Promise.all([
     Enrollment.find({ studentId })
-      .populate('courseId', 'title slug track price durationWeeks status imageUrl')
+      .populate('courseId', 'title slug track price durationWeeks status imageUrl courseType')
       .sort({ createdAt: -1 })
       .lean(),
     Lead.countDocuments({ email }),
@@ -201,7 +201,7 @@ export async function getStudentAnalytics(studentId, email) {
  */
 export async function getStudentDetailAnalytics(studentId) {
   const [enrollments, paidPurchases, activeAttempts, allAttempts] = await Promise.all([
-    Enrollment.find({ studentId }).populate('courseId', 'title slug track').sort({ createdAt: -1 }).lean(),
+    Enrollment.find({ studentId }).populate('courseId', 'title slug track courseType').sort({ createdAt: -1 }).lean(),
     Purchase.find({ studentId, status: 'paid' }).lean(),
     TestAttempt.find({ studentId, archived: { $ne: true } })
       .populate('testId', 'title kind examType')
