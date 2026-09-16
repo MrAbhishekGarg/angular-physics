@@ -5,6 +5,7 @@ import Button from '../../components/common/Button.jsx';
 import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
+import Pagination from '../../components/common/Pagination.jsx';
 import PlaylistFilterBar from '../../components/video/PlaylistFilterBar.jsx';
 import { useFetch } from '../../hooks/useFetch.js';
 import { videoLibraryService } from '../../services/videoLibraryService.js';
@@ -12,6 +13,7 @@ import formStyles from './DashboardForm.module.css';
 import styles from './VideoLibraryManager.module.css';
 
 const emptyPlaylistForm = { title: '', youtubePlaylistId: '' };
+const PAGE_SIZE = 20;
 
 function PlaylistRow({ playlist, onSaved, onDeleted }) {
   const [editing, setEditing] = useState(false);
@@ -138,6 +140,7 @@ export default function VideoLibraryManager() {
     [activePlaylistId]
   );
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
 
   const [form, setForm] = useState(emptyPlaylistForm);
   const [creating, setCreating] = useState(false);
@@ -188,6 +191,8 @@ export default function VideoLibraryManager() {
   };
 
   const filteredVideos = (videos || []).filter((v) => v.title.toLowerCase().includes(search.toLowerCase()));
+  const totalPages = Math.max(1, Math.ceil(filteredVideos.length / PAGE_SIZE));
+  const pagedVideos = filteredVideos.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <>
@@ -254,7 +259,15 @@ export default function VideoLibraryManager() {
           <h2 style={{ color: 'var(--ap-primary)', marginTop: 'var(--ap-space-md)' }}>Videos</h2>
           <div className={styles.toolbar}>
             <div className={styles.playlistFilterWrap}>
-              <PlaylistFilterBar playlists={playlists || []} activePlaylistId={activePlaylistId} onChange={setActivePlaylistId} compact />
+              <PlaylistFilterBar
+                playlists={playlists || []}
+                activePlaylistId={activePlaylistId}
+                onChange={(id) => {
+                  setActivePlaylistId(id);
+                  setPage(1);
+                }}
+                compact
+              />
             </div>
             <div className={styles.searchWrap}>
               <svg className={styles.searchIcon} width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -264,7 +277,10 @@ export default function VideoLibraryManager() {
               <input
                 className={styles.searchInput}
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
                 placeholder="Search videos by title…"
                 aria-label="Search videos by title"
               />
@@ -286,9 +302,10 @@ export default function VideoLibraryManager() {
                 : ''}
             </p>
           )}
-          {filteredVideos.map((v) => (
+          {pagedVideos.map((v) => (
             <VideoRow key={v._id} video={v} playlists={playlists || []} onChanged={refetchAll} />
           ))}
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
         </div>
       </DashboardLayout>
     </>

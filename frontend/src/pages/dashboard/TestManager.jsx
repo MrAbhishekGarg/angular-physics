@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../../components/seo/SEO.jsx';
 import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
@@ -5,17 +6,23 @@ import Button from '../../components/common/Button.jsx';
 import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
+import Pagination from '../../components/common/Pagination.jsx';
 import { useMentorTests } from '../../hooks/useTests.js';
 import { testService } from '../../services/testService.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { formatPrice } from '../../data/courseFormat.js';
 import formStyles from './DashboardForm.module.css';
 
+const PAGE_SIZE = 20;
+
 export default function TestManager() {
   const { user } = useAuth();
   const canCreate = !user?.restrictedActions?.includes('tests-create');
   const canEdit = !user?.restrictedActions?.includes('tests-edit');
   const { data: tests, loading, error, refetch } = useMentorTests();
+  const [page, setPage] = useState(1);
+  const totalPages = tests ? Math.max(1, Math.ceil(tests.length / PAGE_SIZE)) : 1;
+  const pagedTests = tests ? tests.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : [];
 
   const handleDelete = async (test) => {
     if (!window.confirm(`Delete "${test.title}"? This also deletes all student attempts.`)) return;
@@ -52,7 +59,7 @@ export default function TestManager() {
 
             {tests && tests.length === 0 && <ErrorState message="No tests yet." />}
 
-            {(tests || []).map((test) => (
+            {pagedTests.map((test) => (
                 <div key={test._id} className={formStyles.card}>
                   <div className={formStyles.cardHeader}>
                     <strong>{test.title}</strong>
@@ -104,6 +111,7 @@ export default function TestManager() {
                   </div>
                 </div>
               ))}
+            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
         </div>
       </DashboardLayout>
     </>

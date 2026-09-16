@@ -5,6 +5,7 @@ import Button from '../../components/common/Button.jsx';
 import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
+import Pagination from '../../components/common/Pagination.jsx';
 import { useWorksheets } from '../../hooks/useWorksheets.js';
 import { useMentorCourses } from '../../hooks/useCourses.js';
 import { useWorksheetProgress } from '../../hooks/useWorksheetProgress.js';
@@ -14,6 +15,7 @@ import formStyles from './DashboardForm.module.css';
 import dashboardStyles from './Dashboard.module.css';
 
 const emptyForm = { title: '', type: 'dpp', examType: EXAM_TRACKS[0].key, chapter: '', topic: '', deadlineAt: '' };
+const PAGE_SIZE = 20;
 
 function AssignPanel({ worksheet, courses, onAssigned }) {
   const [selected, setSelected] = useState((worksheet.courseIds || []).map((c) => (typeof c === 'string' ? c : c._id)));
@@ -104,6 +106,9 @@ function StatusPanel({ worksheetId }) {
 export default function WorksheetManager() {
   const { data: worksheets, loading, error, refetch } = useWorksheets();
   const { data: courses } = useMentorCourses();
+  const [page, setPage] = useState(1);
+  const totalPages = worksheets ? Math.max(1, Math.ceil(worksheets.length / PAGE_SIZE)) : 1;
+  const pagedWorksheets = worksheets ? worksheets.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : [];
   const [form, setForm] = useState(emptyForm);
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -158,7 +163,7 @@ export default function WorksheetManager() {
                 {worksheets.length === 0 ? (
                   <p style={{ color: 'var(--ap-text-muted)' }}>No worksheets uploaded yet.</p>
                 ) : (
-                  worksheets.map((w) => (
+                  pagedWorksheets.map((w) => (
                     <div key={w._id} className={formStyles.card}>
                       <div className={formStyles.cardHeader}>
                         <strong>{w.title}</strong>
@@ -212,6 +217,7 @@ export default function WorksheetManager() {
                     </div>
                   ))
                 )}
+                <Pagination page={page} totalPages={totalPages} onChange={setPage} />
               </div>
             )}
 

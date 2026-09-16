@@ -5,14 +5,19 @@ import Button from '../../components/common/Button.jsx';
 import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
+import Pagination from '../../components/common/Pagination.jsx';
 import { useMentorArticles } from '../../hooks/useArticles.js';
 import { articleService } from '../../services/articleService.js';
 import formStyles from './DashboardForm.module.css';
 
 const emptyForm = { title: '', slug: '', excerpt: '', body: '', status: 'draft' };
+const PAGE_SIZE = 20;
 
 export default function ArticleManager() {
   const { data: articles, loading, error, refetch } = useMentorArticles();
+  const [page, setPage] = useState(1);
+  const totalPages = articles ? Math.max(1, Math.ceil(articles.length / PAGE_SIZE)) : 1;
+  const pagedArticles = articles ? articles.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : [];
   const [form, setForm] = useState(emptyForm);
   const [coverFile, setCoverFile] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -80,7 +85,7 @@ export default function ArticleManager() {
                 {articles.length === 0 ? (
                   <p style={{ color: 'var(--ap-text-muted)' }}>No articles yet.</p>
                 ) : (
-                  articles.map((a) => (
+                  pagedArticles.map((a) => (
                     <div key={a._id} className={formStyles.card}>
                       <div className={formStyles.cardHeader}>
                         <strong>{a.title}</strong>
@@ -99,6 +104,7 @@ export default function ArticleManager() {
                     </div>
                   ))
                 )}
+                <Pagination page={page} totalPages={totalPages} onChange={setPage} />
               </div>
             )}
 
