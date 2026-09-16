@@ -5,4 +5,4 @@
  * note.service.js). Mirrors the display list in
  * frontend/src/data/studentAccessModules.js.
  */
-export const STUDENT_ACCESS_MODULES = ['tests', 'worksheets', 'notes'];
+export const STUDENT_ACCESS_MODULES = ['tests', 'worksheets', 'notes', 'doubts'];

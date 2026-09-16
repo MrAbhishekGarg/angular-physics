@@ -2,6 +2,7 @@ import { useState } from 'react';
 import SEO from '../../components/seo/SEO.jsx';
 import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
 import Button from '../../components/common/Button.jsx';
+import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { useMentors, useAdminStudents } from '../../hooks/useAdmin.js';
@@ -381,6 +382,13 @@ export default function AdminMentors() {
     await refetch();
   };
 
+  const handleToggleStatus = async (mentor) => {
+    const nextStatus = mentor.status === 'inactive' ? 'active' : 'inactive';
+    if (nextStatus === 'inactive' && !window.confirm(`Deactivate "${mentor.name}"? They won't be able to log in until reactivated.`)) return;
+    await authService.updateMentorStatus(mentor._id, nextStatus);
+    await refetch();
+  };
+
   return (
     <>
       <SEO title="Manage Mentors" description="Create mentor accounts and reset passwords." path="/dashboard/mentor/admin/mentors" />
@@ -403,7 +411,14 @@ export default function AdminMentors() {
                 mentors.map((m) => (
                   <div key={m._id} className={formStyles.card}>
                     <div className={formStyles.cardHeader}>
-                      <strong>{m.name}</strong>
+                      <strong>
+                        {m.name}{' '}
+                        {m.status === 'inactive' && (
+                          <span style={{ marginLeft: '0.3rem' }}>
+                            <Badge tone="default">Deactivated</Badge>
+                          </span>
+                        )}
+                      </strong>
                       <span style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}>
                         Joined {new Date(m.createdAt).toLocaleDateString()}
                       </span>
@@ -417,6 +432,9 @@ export default function AdminMentors() {
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => setPermOpenId((id) => (id === m._id ? null : m._id))}>
                         {permOpenId === m._id ? 'Close' : 'Permissions'}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleToggleStatus(m)}>
+                        {m.status === 'inactive' ? 'Reactivate' : 'Deactivate'}
                       </Button>
                       <Button size="sm" variant="danger" onClick={() => handleDelete(m)}>
                         Remove

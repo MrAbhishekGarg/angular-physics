@@ -24,6 +24,7 @@ export const authenticate = asyncHandler(async (req, res, next) => {
 
   const user = await User.findById(decoded.sub).lean();
   if (!user) throw new ApiError(401, 'Not authenticated');
+  if (user.status === 'inactive') throw new ApiError(403, 'This account has been deactivated. Contact your mentor/admin.');
 
   req.user = {
     id: user._id.toString(),

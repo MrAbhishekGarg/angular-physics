@@ -2,6 +2,7 @@ import Course from '../models/Course.js';
 import Enrollment from '../models/Enrollment.js';
 import User from '../models/User.js';
 import { ApiError } from '../utils/ApiError.js';
+import { createNotification } from './notification.service.js';
 
 const COURSE_FIELDS = 'title slug track price durationWeeks status imageUrl';
 const PURCHASED_STATUSES = ['active', 'completed'];
@@ -266,4 +267,39 @@ export async function removeMonthlyEntry(id, monthId) {
   const enrollment = await Enrollment.findByIdAndUpdate(id, { $pull: { monthlyPayments: { _id: monthId } } }, { new: true });
   if (!enrollment) throw new ApiError(404, 'Enrollment not found');
   return populatedEnrollment(id);
+}
+
+/** Admin-triggered "please pay" push to the student's own portal — the
+ * entire delivery mechanism for a fee reminder, since this app has no
+ * email/SMS. Defaults to the earliest unpaid month when none is named,
+ * so "Send Reminder" on the fee panel can be a single click without the
+ * mentor having to pick which month first. */
+export async function sendFeeReminder(id, { month } = {}) {
+  const enrollment = await Enrollment.findById(id).populate('courseId', 'title').populate('studentId', 'name').lean();
+  if (!enrollment) throw new ApiError(404, 'Enrollment not found');
+
+  const courseName = enrollment.courseId?.title || 'your course';
+  let message;
+
+  if (enrollment.feeType === 'monthly') {
+    const target = month
+      ? enrollment.monthlyPayments.find((m) => m.month === month)
+      : enrollment.monthlyPayments.find((m) => !m.paid);
+    if (!target) throw new ApiError(409, 'No pending month to remind about — everything is marked paid.');
+    const dueBit = target.dueDate ? ` by ${new Date(target.dueDate).toLocaleDateString('en-IN')}` : '';
+    message = `Your fee of ₹${target.amount} for ${target.month} (${courseName}) is due${dueBit}. Please pay at your earliest convenience.`;
+  } else {
+    const paidSoFar = (enrollment.payments || []).reduce((sum, p) => sum + p.amount, 0);
+    const remaining = (enrollment.totalFee || 0) - paidSoFar;
+    if (remaining <= 0) throw new ApiError(409, 'No pending fee to remind about — the full amount is already paid.');
+    message = `You have a pending fee of ₹${remaining} for ${courseName}. Please pay at your earliest convenience.`;
+  }
+
+  await createNotification({
+    userId: enrollment.studentId._id,
+    type: 'fee-reminder',
+    title: 'Fee Reminder',
+    message,
+  });
+  return { sent: true };
 }

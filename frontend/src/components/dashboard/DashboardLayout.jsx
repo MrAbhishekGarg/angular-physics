@@ -17,7 +17,7 @@ const STUDENT_NAV = [
       { to: '/dashboard/student/tests', label: 'Tests', sectionKey: 'tests' },
       { to: '/dashboard/student/worksheets', label: 'DPPs & Assignments', sectionKey: 'worksheets' },
       { to: '/dashboard/student/practice', label: 'Practice by Topic', sectionKey: 'tests' },
-      { to: '/dashboard/student/doubts', label: 'Doubts' },
+      { to: '/dashboard/student/doubts', label: 'Doubts', sectionKey: 'doubts' },
     ],
   },
 ];

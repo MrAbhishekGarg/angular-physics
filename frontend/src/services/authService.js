@@ -12,6 +12,7 @@ export const authService = {
   resetMentorPassword: (id, newPassword) => api.post(`/auth/mentors/${id}/reset-password`, { newPassword }),
   removeMentor: (id) => api.delete(`/auth/mentors/${id}`),
   updateMentorPermissions: (id, permissions) => api.patch(`/auth/mentors/${id}/permissions`, permissions),
+  updateMentorStatus: (id, status) => api.patch(`/auth/mentors/${id}/status`, { status }),
 
   // Mentor (or admin) resetting a student's password
   resetStudentPassword: (id, newPassword) => api.post(`/auth/students/${id}/reset-password`, { newPassword }),
@@ -20,4 +21,5 @@ export const authService = {
   listStudents: () => api.get('/auth/students'),
   removeStudent: (id) => api.delete(`/auth/students/${id}`),
   updateStudentAccess: (id, restrictedStudentAccess) => api.patch(`/auth/students/${id}/access`, { restrictedStudentAccess }),
+  updateStudentStatus: (id, status) => api.patch(`/auth/students/${id}/status`, { status }),
 };

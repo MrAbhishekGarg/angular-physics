@@ -41,6 +41,13 @@ const userSchema = new mongoose.Schema(
     // keys ('tests' | 'worksheets' | 'notes'); empty (default) means full
     // access, so every existing student keeps working with zero migration.
     restrictedStudentAccess: { type: [String], default: [] },
+    // Applies to both 'mentor' and 'student' accounts — an admin-only soft
+    // disable, distinct from deletion: an 'inactive' account's data (fee
+    // history, test attempts, notes) stays intact and reversible, but login
+    // is refused (checked both at login and on every authenticated request,
+    // so deactivating someone already logged in takes effect immediately
+    // rather than waiting for their session to expire).
+    status: { type: String, enum: ['active', 'inactive'], default: 'active' },
   },
   { timestamps: true }
 );

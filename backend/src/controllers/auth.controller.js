@@ -49,6 +49,11 @@ export const removeMentor = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, { deleted: true });
 });
 
+export const updateMentorStatus = asyncHandler(async (req, res) => {
+  const mentor = await authService.updateUserStatus(req.params.id, req.body.status, 'mentor');
+  return ApiResponse(res, 200, mentor);
+});
+
 export const updateMentorPermissions = asyncHandler(async (req, res) => {
   const {
     restrictedSections,
@@ -93,4 +98,9 @@ export const listStudents = asyncHandler(async (req, res) => {
 export const removeStudent = asyncHandler(async (req, res) => {
   await authService.removeStudent(req.params.id);
   return ApiResponse(res, 200, { deleted: true });
+});
+
+export const updateStudentStatus = asyncHandler(async (req, res) => {
+  const student = await authService.updateUserStatus(req.params.id, req.body.status, 'student');
+  return ApiResponse(res, 200, student);
 });

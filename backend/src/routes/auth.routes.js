@@ -14,6 +14,8 @@ import {
   listStudents,
   removeStudent,
   updateStudentAccess,
+  updateMentorStatus,
+  updateStudentStatus,
 } from '../controllers/auth.controller.js';
 import { authenticate, authorize, requirePasswordResetPermission } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
@@ -35,6 +37,7 @@ router.post('/mentors', authenticate, authorize('admin'), validateBody(['name', 
 router.post('/mentors/:id/reset-password', authenticate, authorize('admin'), validateBody(['newPassword']), resetMentorPassword);
 router.delete('/mentors/:id', authenticate, authorize('admin'), removeMentor);
 router.patch('/mentors/:id/permissions', authenticate, authorize('admin'), updateMentorPermissions);
+router.patch('/mentors/:id/status', authenticate, authorize('admin'), updateMentorStatus);
 
 // Mentor (or admin, via the authorize() bypass) can reset a student's
 // password directly — no email infra exists, so this is relayed out of band.
@@ -53,5 +56,6 @@ router.post(
 router.get('/students', authenticate, authorize('admin'), listStudents);
 router.delete('/students/:id', authenticate, authorize('admin'), removeStudent);
 router.patch('/students/:id/access', authenticate, authorize('admin'), updateStudentAccess);
+router.patch('/students/:id/status', authenticate, authorize('admin'), updateStudentStatus);
 
 export default router;

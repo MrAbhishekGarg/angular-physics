@@ -25,6 +25,7 @@ function toSafeUser(user) {
     assignedCourseIds: (user.assignedCourseIds || []).map((cid) => cid.toString()),
     canManagePaidContent: user.canManagePaidContent !== false,
     restrictedStudentAccess: user.restrictedStudentAccess || [],
+    status: user.status || 'active',
   };
 }
 
@@ -59,6 +60,8 @@ export async function authenticateUser({ email, password }) {
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) throw new ApiError(401, 'Invalid email or password');
 
+  if (user.status === 'inactive') throw new ApiError(403, 'This account has been deactivated. Contact your mentor/admin.');
+
   return { user, safeUser: toSafeUser(user) };
 }
 
@@ -84,7 +87,7 @@ export async function listMentors() {
 
 /** Admin-only: every student's login details in one place — name/email/phone/joined. */
 export async function listStudents() {
-  return User.find({ role: 'student' }).select('name email phone createdAt').sort({ createdAt: -1 }).lean();
+  return User.find({ role: 'student' }).select('name email phone status createdAt').sort({ createdAt: -1 }).lean();
 }
 
 /**
@@ -187,6 +190,17 @@ export async function updateStudentAccess(id, { restrictedStudentAccess }) {
 
   const user = await User.findOneAndUpdate({ _id: id, role: 'student' }, { restrictedStudentAccess: keys }, { new: true }).lean();
   if (!user) throw new ApiError(404, 'Student not found');
+  return toSafeUser(user);
+}
+
+/** Admin-only soft disable/enable for a mentor or student account — see
+ * User.js#status. `expectedRole` scopes the target the same way
+ * resetPassword() does below, so this can't be pointed at the wrong
+ * account type by id collision. */
+export async function updateUserStatus(id, status, expectedRole) {
+  if (!['active', 'inactive'].includes(status)) throw new ApiError(400, "status must be 'active' or 'inactive'");
+  const user = await User.findOneAndUpdate({ _id: id, role: expectedRole }, { status }, { new: true }).lean();
+  if (!user) throw new ApiError(404, `${expectedRole === 'mentor' ? 'Mentor' : 'Student'} not found`);
   return toSafeUser(user);
 }
 

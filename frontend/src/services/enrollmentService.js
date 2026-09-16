@@ -19,4 +19,5 @@ export const enrollmentService = {
   generateMissingMonths: (id) => api.post(`/enrollments/${id}/months/generate`),
   updateMonthlyEntry: (id, monthId, payload) => api.patch(`/enrollments/${id}/months/${monthId}`, payload),
   removeMonthlyEntry: (id, monthId) => api.delete(`/enrollments/${id}/months/${monthId}`),
+  sendFeeReminder: (id, month) => api.post(`/enrollments/${id}/fee-reminder`, month ? { month } : {}),
 };

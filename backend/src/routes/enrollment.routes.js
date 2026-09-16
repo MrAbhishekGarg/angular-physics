@@ -29,6 +29,7 @@ router.post('/:id/months', ...feeGate, enrollmentController.addMonthlyEntry);
 router.post('/:id/months/generate', ...feeGate, enrollmentController.generateMissingMonths);
 router.patch('/:id/months/:monthId', ...feeGate, enrollmentController.updateMonthlyEntry);
 router.delete('/:id/months/:monthId', ...feeGate, enrollmentController.removeMonthlyEntry);
+router.post('/:id/fee-reminder', ...feeGate, enrollmentController.sendFeeReminder);
 // Admin-only: directly grant a student access to any course, skipping the
 // normal pending -> mentor-approval flow — see plan: courses have no
 // separate payment gateway/Purchase record like notes/tests do, so

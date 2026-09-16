@@ -143,6 +143,7 @@ const ACCESS_MODULES = [
   { key: 'tests', label: 'Tests' },
   { key: 'worksheets', label: 'DPPs & Assignments (Worksheets)' },
   { key: 'notes', label: 'Notes' },
+  { key: 'doubts', label: 'Doubts' },
 ];
 
 /**
@@ -244,6 +245,8 @@ function EnrollmentFeeManager({ enrollment, onChanged }) {
   // defaults to that month's own due date since that's the best guess for
   // when it was likely paid.
   const [paidDateByMonth, setPaidDateByMonth] = useState({});
+  const [reminderStatus, setReminderStatus] = useState('idle'); // idle | sending | sent | error
+  const [reminderError, setReminderError] = useState('');
 
   const run = async (fn) => {
     setBusy(true);
@@ -308,10 +311,43 @@ function EnrollmentFeeManager({ enrollment, onChanged }) {
   const removeMonth = (monthId) => run(() => enrollmentService.removeMonthlyEntry(enrollment._id, monthId));
 
   const totalPaid = (enrollment.payments || []).reduce((sum, p) => sum + p.amount, 0);
+  const nextUnpaidMonth = (enrollment.monthlyPayments || []).find((m) => !m.paid);
+  const oneTimeRemaining = (enrollment.totalFee || 0) - totalPaid;
+  const hasPendingFee = enrollment.feeType === 'monthly' ? Boolean(nextUnpaidMonth) : oneTimeRemaining > 0;
+
+  const handleSendReminder = async () => {
+    setReminderStatus('sending');
+    setReminderError('');
+    try {
+      await enrollmentService.sendFeeReminder(enrollment._id, nextUnpaidMonth?.month);
+      setReminderStatus('sent');
+    } catch (err) {
+      setReminderStatus('error');
+      setReminderError(err.message);
+    }
+  };
 
   return (
     <div className={`${formStyles.card} ${formStyles.form}`} style={{ marginBottom: '0.75rem' }}>
-      <strong>{enrollment.courseId?.title}</strong>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <strong>{enrollment.courseId?.title}</strong>
+        {hasPendingFee && (
+          <div style={{ textAlign: 'right' }}>
+            <Badge tone="accent">
+              {enrollment.feeType === 'monthly'
+                ? `${nextUnpaidMonth.month} due — ₹${nextUnpaidMonth.amount}${nextUnpaidMonth.dueDate ? ` by ${new Date(nextUnpaidMonth.dueDate).toLocaleDateString('en-IN')}` : ''}`
+                : `₹${oneTimeRemaining} pending`}
+            </Badge>
+            <div style={{ marginTop: '0.3rem' }}>
+              <Button size="sm" variant="ghost" disabled={reminderStatus === 'sending'} onClick={handleSendReminder}>
+                {reminderStatus === 'sending' ? 'Sending…' : 'Send Reminder'}
+              </Button>
+            </div>
+            {reminderStatus === 'sent' && <p style={{ fontSize: '0.75rem', color: 'var(--ap-success)', margin: '0.2rem 0 0' }}>Sent to student portal.</p>}
+            {reminderStatus === 'error' && <p style={{ fontSize: '0.75rem', color: 'var(--ap-danger)', margin: '0.2rem 0 0' }}>{reminderError}</p>}
+          </div>
+        )}
+      </div>
 
       <form onSubmit={saveFeeConfig} className={formStyles.row} style={{ marginTop: '0.5rem', alignItems: 'flex-end' }}>
         <label>
@@ -467,6 +503,7 @@ export default function StudentDetail() {
   const [resetOpen, setResetOpen] = useState(false);
   const [grantOpen, setGrantOpen] = useState(false);
   const [accessOpen, setAccessOpen] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(false);
   const canResetAttempts = !user?.restrictedSections?.includes('tests');
   const canResetPassword = user?.canResetPasswords !== false;
   const isAdmin = user?.role === 'admin';
@@ -477,13 +514,46 @@ export default function StudentDetail() {
     await refetch();
   };
 
+  const handleToggleStatus = async () => {
+    const nextStatus = data.student.status === 'active' ? 'inactive' : 'active';
+    if (nextStatus === 'inactive' && !window.confirm(`Deactivate ${data.student.name}? They won't be able to log in until reactivated.`)) return;
+    setStatusBusy(true);
+    try {
+      await authService.updateStudentStatus(studentId, nextStatus);
+      await refetch();
+    } finally {
+      setStatusBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Permanently delete ${data.student.name}'s account? This cannot be undone.`)) return;
+    await authService.removeStudent(studentId);
+    window.location.href = '/dashboard/mentor/students';
+  };
+
   return (
     <>
       <SEO title="Student Detail" description="Notes, tests, and analysis for this student." path="/dashboard/mentor" />
       <DashboardLayout role="mentor">
         <div className={formStyles.wrap} style={{ maxWidth: 900 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <h1>Student Detail</h1>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div>
+              <h1 style={{ marginBottom: '0.15rem' }}>
+                {data?.student?.name || 'Student Detail'}
+                {data?.student?.status === 'inactive' && (
+                  <span style={{ marginLeft: '0.5rem' }}>
+                    <Badge tone="default">Deactivated</Badge>
+                  </span>
+                )}
+              </h1>
+              {data?.student && (
+                <p style={{ color: 'var(--ap-text-muted)', fontSize: '0.85rem', margin: 0 }}>
+                  {data.student.email} · {data.student.phone} · Joined{' '}
+                  {new Date(data.student.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              )}
+            </div>
             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
               {isAdmin && (
                 <Button size="sm" variant="ghost" onClick={() => setGrantOpen((v) => !v)}>
@@ -498,6 +568,16 @@ export default function StudentDetail() {
               {canResetPassword && (
                 <Button size="sm" variant="ghost" onClick={() => setResetOpen((v) => !v)}>
                   {resetOpen ? 'Close' : 'Reset Password'}
+                </Button>
+              )}
+              {isAdmin && data?.student && (
+                <Button size="sm" variant="ghost" disabled={statusBusy} onClick={handleToggleStatus}>
+                  {data.student.status === 'active' ? 'Deactivate' : 'Reactivate'}
+                </Button>
+              )}
+              {isAdmin && data?.student && (
+                <Button size="sm" variant="danger" onClick={handleDelete}>
+                  Delete Account
                 </Button>
               )}
             </div>

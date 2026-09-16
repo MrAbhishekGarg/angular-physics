@@ -12,6 +12,7 @@ import User from '../models/User.js';
 import Doubt from '../models/Doubt.js';
 import TestAttempt from '../models/TestAttempt.js';
 import { gradeQuestion } from './test.service.js';
+import { ApiError } from '../utils/ApiError.js';
 
 const NEW_CONTENT_WINDOW_DAYS = 7;
 const NEW_CONTENT_LIMIT = 10;
@@ -212,8 +213,9 @@ export async function getStudentDetailAnalytics(studentId) {
     // (per test) tells a mentor how many times this student has actually
     // given a test, not just whether their current attempt is active.
     TestAttempt.find({ studentId }).select('testId').lean(),
-    User.findById(studentId).select('restrictedStudentAccess').lean(),
+    User.findById(studentId).select('name email phone role status restrictedStudentAccess createdAt').lean(),
   ]);
+  if (!student || student.role !== 'student') throw new ApiError(404, 'Student not found');
 
   const countByTest = new Map();
   allAttempts.forEach((a) => {
@@ -262,12 +264,20 @@ export async function getStudentDetailAnalytics(studentId) {
     : null;
 
   return {
+    student: {
+      id: student._id.toString(),
+      name: student.name,
+      email: student.email,
+      phone: student.phone,
+      status: student.status || 'active',
+      createdAt: student.createdAt,
+    },
     enrollments,
     purchasedNotes,
     attempts,
     testsAttemptedCount: submittedAttempts.length,
     averageScorePercent,
     weakChapters,
-    restrictedStudentAccess: student?.restrictedStudentAccess || [],
+    restrictedStudentAccess: student.restrictedStudentAccess || [],
   };
 }

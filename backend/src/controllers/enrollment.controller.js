@@ -124,6 +124,12 @@ export const removeMonthlyEntry = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, enrollment);
 });
 
+export const sendFeeReminder = asyncHandler(async (req, res) => {
+  await assertAssignedToEnrollment(req);
+  const result = await enrollmentService.sendFeeReminder(req.params.id, { month: req.body.month });
+  return ApiResponse(res, 200, result);
+});
+
 export const update = asyncHandler(async (req, res) => {
   const { status, progressPercent } = req.body;
   if (status !== undefined && !VALID_STATUSES.includes(status)) {

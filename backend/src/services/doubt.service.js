@@ -2,8 +2,12 @@ import Doubt from '../models/Doubt.js';
 import Worksheet from '../models/Worksheet.js';
 import WorksheetProgress from '../models/WorksheetProgress.js';
 import { ApiError } from '../utils/ApiError.js';
+import { hasStudentAccess } from '../utils/studentAccess.js';
 
 export async function createDoubt(studentId, { courseId, worksheetId, questionText, questionImageUrl }) {
+  if (!(await hasStudentAccess(studentId, 'doubts'))) {
+    throw new ApiError(403, 'Doubts access has been restricted for your account');
+  }
   if (!questionText && !questionImageUrl) {
     throw new ApiError(400, 'A doubt needs text, an image, or both');
   }
