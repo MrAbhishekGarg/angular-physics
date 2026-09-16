@@ -11,7 +11,7 @@ import { useMentorCourses } from '../../hooks/useCourses.js';
 import { useQuestions } from '../../hooks/useQuestions.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { testService } from '../../services/testService.js';
-import { EXAM_TRACKS } from '../../data/examTracks.js';
+import { EXAM_TRACKS, getTrackMeta } from '../../data/examTracks.js';
 import formStyles from './DashboardForm.module.css';
 
 const emptyForm = {
@@ -131,6 +131,9 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
             {showCreateQuestion ? 'Close' : '+ New Question'}
           </Button>
         </div>
+        <p style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)', margin: '0.25rem 0 0.5rem' }}>
+          Showing only <strong>{getTrackMeta(examType)?.label || examType}</strong> questions, since that's this test's Exam Type above — switch it there to browse another track.
+        </p>
         <div className={formStyles.row}>
           <label>
             Chapter

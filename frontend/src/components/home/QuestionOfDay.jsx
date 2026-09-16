@@ -5,6 +5,7 @@ import Card from '../common/Card.jsx';
 import { useQuestionOfDay } from '../../hooks/useQuestionOfDay.js';
 import { questionOfDayService } from '../../services/questionOfDayService.js';
 import { assetUrl } from '../../data/assetUrl.js';
+import MathText from '../common/MathText.jsx';
 import styles from './QuestionOfDay.module.css';
 
 export default function QuestionOfDay() {
@@ -47,7 +48,7 @@ export default function QuestionOfDay() {
       <Container>
         <SectionHeading eyebrow="Daily Challenge" title="Question of the Day" subtitle="Test yourself — the answer reveals right after you pick." />
         <Card className={styles.card}>
-          {question.text?.trim() && <p className={styles.stemText}>{question.text}</p>}
+          {question.text?.trim() && <MathText as="p" className={styles.stemText} text={question.text} />}
           {question.imageUrl && <img src={assetUrl(question.imageUrl)} alt={question.text} className={styles.stemImage} />}
 
           {isNumerical ? (
@@ -83,7 +84,7 @@ export default function QuestionOfDay() {
                     disabled={Boolean(result) || busy}
                     onClick={() => toggleOption(index)}
                   >
-                    {opt.text?.trim() && opt.text}
+                    {opt.text?.trim() && <MathText text={opt.text} />}
                     {opt.imageUrl && <img src={assetUrl(opt.imageUrl)} alt={opt.text} className={styles.optionImage} />}
                   </button>
                 );
