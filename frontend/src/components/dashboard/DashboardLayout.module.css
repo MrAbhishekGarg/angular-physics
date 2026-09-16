@@ -1,27 +1,88 @@
-/* Wide, not "full-bleed" — a data-dense admin panel benefits from more
-   width than a marketing page, but literal edge-to-edge on an ultrawide
-   monitor stretches tables/charts into unreadable ribbons, so this still
-   caps (generously) and centers past that point instead of never capping. */
-.shell {
-  width: 100%;
+/* The dashboard now owns its entire chrome (see App.jsx#isDashboardRoute) —
+   no more marketing Header/Footer stacked above/below it. .page is the
+   full-viewport wrapper that makes that possible: a sticky topbar, then a
+   sidebar that can finally size itself against the real viewport instead of
+   guessing how tall a header it doesn't control might be. */
+.page {
+  min-height: 100vh;
+  background: var(--ap-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--ap-bg);
+  border-bottom: 1px solid var(--ap-border);
+}
+
+.topbarInner {
   max-width: 1800px;
   margin: 0 auto;
   padding: 0 clamp(1rem, 3vw, 2.5rem);
-  box-sizing: border-box;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  gap: var(--ap-space-sm);
 }
 
-.layout {
+.topbarBrand {
   display: flex;
-  align-items: flex-start;
-  gap: var(--ap-space-md);
-  padding: var(--ap-space-md) 0 var(--ap-space-xl);
+  align-items: center;
+  flex: 1;
+  min-width: 0;
 }
 
-.notifBar {
+.topbarActions {
   display: flex;
-  justify-content: flex-end;
-  padding-top: var(--ap-space-sm);
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
+
+.themeToggle {
+  border: 1px solid var(--ap-border);
+  background: var(--ap-bg-muted);
+  border-radius: 999px;
+  width: 2.2rem;
+  height: 2.2rem;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.siteLink {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ap-text-muted);
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.siteLink:hover {
+  color: var(--ap-accent);
+  background: var(--ap-bg-muted);
+}
+
+.logoutBtn {
+  border: none;
+  background: var(--ap-secondary-accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  transition: filter 0.15s ease;
+}
+.logoutBtn:hover {
+  filter: brightness(1.08);
+}
+
+/* ---- notifications (unchanged behavior, restyled to sit in the topbar) ---- */
 
 .notifWrap {
   position: relative;
@@ -101,37 +162,126 @@
   color: var(--ap-text-muted);
 }
 
+/* ---- shell / layout ---- */
+
+.shell {
+  width: 100%;
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 3vw, 2.5rem);
+  box-sizing: border-box;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.layout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ap-space-md);
+  padding: var(--ap-space-md) 0 var(--ap-space-xl);
+  width: 100%;
+  min-height: 0;
+}
+
+/* ---- sidebar ---- */
+
 .sidebar {
-  width: 200px;
+  width: 232px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--ap-space-sm);
   position: sticky;
-  top: 76px;
-  /* A long grouped list (admin's "My Job" group alone adds 6+ items) can
-     be taller than the viewport itself — sticky positioning alone still
-     leaves the bottom entries reachable only by scrolling the whole page
-     down first. Giving the sidebar its own scroll region means every item
-     is reachable right where it's pinned, no page-scroll chase required. */
-  max-height: calc(100vh - 76px - var(--ap-space-md));
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  top: calc(62px + var(--ap-space-md));
+  /* Own scroll region for the nav list (see .navScroll) means a long
+     grouped list — admin's "My Job" group alone adds 3+ items on top of
+     everything else — never gets cut off: every item stays reachable right
+     where the sidebar is pinned, no page-scroll chase required. */
+  max-height: calc(100vh - 62px - var(--ap-space-md) * 2);
   background: var(--ap-bg-muted);
   border: 1px solid var(--ap-border);
   box-shadow: var(--ap-shadow-sm);
-  padding: var(--ap-space-sm);
   clip-path: polygon(
     var(--ap-chamfer-md) 0, 100% 0,
     100% calc(100% - var(--ap-chamfer-md)), calc(100% - var(--ap-chamfer-md)) 100%,
     0 100%, 0 var(--ap-chamfer-md)
   );
+  overflow: hidden;
 }
 
-.sidebar::-webkit-scrollbar {
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 1rem 0.9rem 0.85rem;
+  border-bottom: 1px solid var(--ap-border);
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ap-font-heading);
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #fff;
+  background: linear-gradient(135deg, var(--ap-accent), var(--ap-primary-surface));
+}
+
+.profileText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.profileName {
+  font-size: 0.9rem;
+  color: var(--ap-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roleTag {
+  align-self: flex-start;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  color: #fff;
+}
+.roleTag_admin {
+  background: var(--ap-secondary-accent);
+}
+.roleTag_mentor {
+  background: var(--ap-accent);
+  color: var(--ap-primary);
+}
+.roleTag_student {
+  background: var(--ap-primary-surface);
+}
+
+.navScroll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ap-space-sm);
+  padding: 0.75rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.navScroll::-webkit-scrollbar {
   width: 6px;
 }
-.sidebar::-webkit-scrollbar-thumb {
+.navScroll::-webkit-scrollbar-thumb {
   background: var(--ap-border);
   border-radius: 3px;
 }
@@ -143,7 +293,7 @@
 }
 
 .navGroupLabel {
-  padding: 0.3rem 0.9rem 0.15rem;
+  padding: 0.3rem 0.6rem 0.15rem;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -153,25 +303,35 @@
 }
 
 .navItem {
-  padding: 0.6rem 0.9rem;
-  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.87rem;
   font-weight: 600;
   color: var(--ap-text-muted);
-  transition: background 0.15s ease, color 0.15s ease;
-  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  border-left: 3px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.navIcon {
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 1.2rem;
+  text-align: center;
 }
 
 .navItem:hover {
-  /* Sidebar's own panel is --ap-bg-muted now, so hover needs the other
-     tone (--ap-bg) to still read as a distinct state against it. */
-  background: var(--ap-bg);
+  background: color-mix(in srgb, var(--ap-accent) 12%, var(--ap-bg-muted));
   color: var(--ap-text);
 }
 
 .navItemActive,
 .navItemActive:hover {
-  background: var(--ap-primary-surface);
-  color: #fff;
+  background: color-mix(in srgb, var(--ap-accent) 18%, var(--ap-bg-muted));
+  color: var(--ap-primary);
+  border-left-color: var(--ap-accent);
 }
 
 /* Admin's shell reuses the site's own "always-dark-regardless-of-theme"
@@ -181,33 +341,41 @@
    instead of --ap-text/--ap-text-muted, since those flip to a LIGHT color
    in dark theme and would go invisible against a panel that's dark in
    both themes (same reasoning Button.module.css's ghostInverse documents). */
-.shell[data-admin='true'] .sidebar {
-  background: var(--ap-primary-surface);
+.page[data-admin='true'] .sidebar {
+  background: linear-gradient(180deg, var(--ap-primary-surface), var(--ap-primary-light));
   border-color: var(--ap-primary-surface);
 }
 
-.shell[data-admin='true'] .navGroupLabel {
+.page[data-admin='true'] .profile {
+  border-bottom-color: rgba(255, 255, 255, 0.18);
+}
+
+.page[data-admin='true'] .profileName {
+  color: #fff;
+}
+
+.page[data-admin='true'] .navGroupLabel {
   color: rgba(255, 255, 255, 0.55);
 }
 
-.shell[data-admin='true'] .navItem {
+.page[data-admin='true'] .navItem {
   color: rgba(255, 255, 255, 0.78);
 }
 
-.shell[data-admin='true'] .navItem:hover {
+.page[data-admin='true'] .navItem:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
 
 /* The sidebar itself is now the same navy .navItemActive used to sit on
    top of, so the active indicator needs a genuinely different color here
-   or it disappears into its own background — coral is otherwise the most
-   under-used accent in the palette, reserved for exactly this kind of
-   "make this one thing unmistakable" moment. */
-.shell[data-admin='true'] .navItemActive,
-.shell[data-admin='true'] .navItemActive:hover {
-  background: var(--ap-secondary-accent);
+   or it disappears into its own background — cyan reads clearly against
+   navy in both themes. */
+.page[data-admin='true'] .navItemActive,
+.page[data-admin='true'] .navItemActive:hover {
+  background: rgba(255, 255, 255, 0.16);
   color: #fff;
+  border-left-color: var(--ap-accent);
 }
 
 .content {
@@ -220,6 +388,14 @@
 }
 
 @media (max-width: 860px) {
+  .topbarInner {
+    gap: 0.5rem;
+  }
+
+  .siteLink {
+    display: none;
+  }
+
   .layout {
     flex-direction: column;
     padding-top: var(--ap-space-sm);
@@ -243,20 +419,14 @@
   .navToggle {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    width: 100%;
     justify-content: center;
-    padding: 0.65rem;
-    margin-bottom: 0.5rem;
+    width: 2.4rem;
+    height: 2.4rem;
+    flex-shrink: 0;
     border: 1px solid var(--ap-border);
-    background: var(--ap-bg);
+    background: var(--ap-bg-muted);
     border-radius: 10px;
-    font-family: var(--ap-font-heading);
-    font-weight: 700;
-    font-size: 0.9rem;
-    color: var(--ap-text);
     cursor: pointer;
-    box-shadow: var(--ap-shadow-sm);
   }
 
   .navToggleIcon,
@@ -264,7 +434,7 @@
   .navToggleIcon::after {
     position: relative;
     display: inline-block;
-    width: 18px;
+    width: 16px;
     height: 2px;
     background: var(--ap-text);
     border-radius: 2px;
@@ -277,10 +447,10 @@
     left: 0;
   }
   .navToggleIcon::before {
-    top: -6px;
+    top: -5px;
   }
   .navToggleIcon::after {
-    top: 6px;
+    top: 5px;
   }
   .navToggleIcon[data-open='true'] {
     background: transparent;
@@ -296,32 +466,32 @@
 
   .sidebar {
     width: 100%;
-    flex-direction: column;
     position: static;
-    padding: 0 0.25rem;
-    gap: var(--ap-space-sm);
-    max-height: 0;
-    overflow: hidden;
+    max-height: none;
+    overflow: visible;
     box-shadow: none;
     border: none;
     background: transparent;
     clip-path: none;
-    transition: max-height 0.25s ease;
+    display: none;
   }
 
   .sidebarOpen {
-    max-height: min(70vh, 640px);
-    overflow-y: auto;
-    padding: 0.75rem;
+    display: flex;
     margin-bottom: var(--ap-space-sm);
     border: 1px solid var(--ap-border);
     background: var(--ap-bg-muted);
     border-radius: 10px;
     box-shadow: var(--ap-shadow-sm);
+    max-height: min(70vh, 640px);
   }
 
-  .shell[data-admin='true'] .sidebarOpen {
-    background: var(--ap-primary-surface);
+  .navScroll {
+    max-height: min(60vh, 560px);
+  }
+
+  .page[data-admin='true'] .sidebarOpen {
+    background: linear-gradient(180deg, var(--ap-primary-surface), var(--ap-primary-light));
     border-color: var(--ap-primary-surface);
   }
 }
