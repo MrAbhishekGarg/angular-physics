@@ -6,6 +6,7 @@ import Button from '../../components/common/Button.jsx';
 import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
+import Pagination from '../../components/common/Pagination.jsx';
 import { useStudentsOverview, useStudentStats } from '../../hooks/useEnrollments.js';
 import styles from './Dashboard.module.css';
 
@@ -20,6 +21,8 @@ export default function AllStudents() {
   const { data: students, loading, error, refetch } = useStudentsOverview();
   const { data: stats } = useStudentStats();
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const statsByStudent = new Map((stats || []).map((s) => [s.studentId, s]));
 
@@ -28,6 +31,8 @@ export default function AllStudents() {
     if (categoryFilter === 'not-purchased') return !s.hasPurchased;
     return true;
   });
+  const totalPages = Math.max(1, Math.ceil(visibleStudents.length / PAGE_SIZE));
+  const pagedStudents = visibleStudents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <>
@@ -41,7 +46,10 @@ export default function AllStudents() {
                 <button
                   key={c.key}
                   type="button"
-                  onClick={() => setCategoryFilter(c.key)}
+                  onClick={() => {
+                    setCategoryFilter(c.key);
+                    setPage(1);
+                  }}
                   style={{
                     border: '1px solid var(--ap-border)',
                     clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
@@ -79,7 +87,7 @@ export default function AllStudents() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleStudents.map((s) => {
+                  {pagedStudents.map((s) => {
                     const stat = statsByStudent.get(s._id);
                     return (
                       <tr key={s._id}>
@@ -123,6 +131,7 @@ export default function AllStudents() {
               </table>
             </div>
           )}
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
         </div>
       </DashboardLayout>
     </>

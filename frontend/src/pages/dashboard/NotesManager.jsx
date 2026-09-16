@@ -5,6 +5,7 @@ import Button from '../../components/common/Button.jsx';
 import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
+import Pagination from '../../components/common/Pagination.jsx';
 import { useNotes } from '../../hooks/useNotes.js';
 import { noteService } from '../../services/noteService.js';
 import { useAuth } from '../../hooks/useAuth.js';
@@ -24,6 +25,10 @@ export default function NotesManager() {
   const { user } = useAuth();
   const canManagePaid = user?.canManagePaidContent !== false;
   const { data: notes, loading, error, refetch } = useNotes();
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
+  const totalPages = notes ? Math.max(1, Math.ceil(notes.length / PAGE_SIZE)) : 1;
+  const pagedNotes = notes ? notes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : [];
   const [form, setForm] = useState(emptyForm);
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -79,7 +84,7 @@ export default function NotesManager() {
                 {notes.length === 0 ? (
                   <p style={{ color: 'var(--ap-text-muted)' }}>No notes uploaded yet.</p>
                 ) : (
-                  notes.map((note) => (
+                  pagedNotes.map((note) => (
                     <div key={note._id} className={formStyles.card}>
                       <div className={formStyles.cardHeader}>
                         <strong>{note.title}</strong>
@@ -99,6 +104,7 @@ export default function NotesManager() {
                     </div>
                   ))
                 )}
+                <Pagination page={page} totalPages={totalPages} onChange={setPage} />
               </div>
             )}
 

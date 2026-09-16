@@ -8,6 +8,7 @@ import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import QuestionEditor from '../../components/dashboard/QuestionEditor.jsx';
 import MathText from '../../components/common/MathText.jsx';
+import Pagination from '../../components/common/Pagination.jsx';
 import { assetUrl } from '../../data/assetUrl.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useQuestions } from '../../hooks/useQuestions.js';
@@ -40,13 +41,20 @@ export default function QuestionBank() {
     includeUsage: 'true',
   });
   const { data: questions, loading, error, refetch } = useQuestions(filters);
+  const PAGE_SIZE = 20;
+  const [page, setPage] = useState(1);
+  const totalPages = questions ? Math.max(1, Math.ceil(questions.length / PAGE_SIZE)) : 1;
+  const pageQuestions = questions ? questions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : [];
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [qotdId, setQotdId] = useState(null);
   const [qotdBusyId, setQotdBusyId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
-  const handleFilterChange = (e) => setFilters((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const handleFilterChange = (e) => {
+    setFilters((f) => ({ ...f, [e.target.name]: e.target.value }));
+    setPage(1);
+  };
 
   const handleSaved = () => {
     setEditingQuestion(null);
@@ -187,7 +195,11 @@ export default function QuestionBank() {
                     Select All
                   </label>
                 )}
-                <h2 style={{ color: 'var(--ap-primary)', margin: 0 }}>{questions ? `${questions.length} question(s)` : 'Questions'}</h2>
+                <h2 style={{ color: 'var(--ap-primary)', margin: 0 }}>
+                  {questions
+                    ? `${questions.length} question(s)${totalPages > 1 ? ` · page ${page} of ${totalPages}` : ''}`
+                    : 'Questions'}
+                </h2>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 {canEdit && selectedIds.size > 0 && (
@@ -208,7 +220,7 @@ export default function QuestionBank() {
             {questions && questions.length === 0 && <ErrorState message="No questions match these filters yet." />}
 
             {questions &&
-              questions.map((q) =>
+              pageQuestions.map((q) =>
                 canEdit && editingQuestion?._id === q._id ? (
                   <QuestionEditor
                     key={q._id}
@@ -306,6 +318,8 @@ export default function QuestionBank() {
                   </div>
                 )
               )}
+
+            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
         </div>
       </DashboardLayout>
     </>
