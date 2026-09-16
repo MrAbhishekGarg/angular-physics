@@ -12,7 +12,7 @@ function parseTagsField(raw) {
 }
 
 export const listQuestions = asyncHandler(async (req, res) => {
-  const { examType, chapter, topic, difficulty, search, isPYQ, author, tag, subject, conceptCode } = req.query;
+  const { examType, chapter, topic, difficulty, search, isPYQ, author, tag, subject, conceptCode, includeUsage } = req.query;
   const questions = await questionService.getAllQuestions({
     examType,
     chapter,
@@ -24,6 +24,7 @@ export const listQuestions = asyncHandler(async (req, res) => {
     tag,
     subject,
     conceptCode,
+    includeUsage: includeUsage === 'true',
   });
   return ApiResponse(res, 200, questions, { count: questions.length });
 });
@@ -51,6 +52,13 @@ export const updateQuestion = asyncHandler(async (req, res) => {
 export const deleteQuestion = asyncHandler(async (req, res) => {
   await questionService.deleteQuestion(req.params.id);
   return ApiResponse(res, 200, { deleted: true });
+});
+
+export const bulkDeleteQuestions = asyncHandler(async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) throw new ApiError(400, 'ids must be a non-empty array');
+  const result = await questionService.deleteQuestions(ids);
+  return ApiResponse(res, 200, result);
 });
 
 export const bulkUploadQuestionsScreenshots = asyncHandler(async (req, res) => {

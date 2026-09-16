@@ -6,6 +6,7 @@ import {
   createQuestion,
   updateQuestion,
   deleteQuestion,
+  bulkDeleteQuestions,
   bulkUploadQuestionsScreenshots,
   bulkUploadQuestionsExcelScreenshots,
   bulkUploadQuestionsDocxScreenshots,
@@ -94,5 +95,6 @@ router.post(
 );
 router.put('/:id', authenticate, authorize('mentor'), requireSection('questions'), requireAction('questions-edit'), updateQuestion);
 router.delete('/:id', authenticate, authorize('mentor'), requireSection('questions'), requireAction('questions-edit'), deleteQuestion);
+router.post('/bulk-delete', authenticate, authorize('mentor'), requireSection('questions'), requireAction('questions-edit'), bulkDeleteQuestions);
 
 export default router;

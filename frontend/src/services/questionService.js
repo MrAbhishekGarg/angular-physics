@@ -7,6 +7,7 @@ export const questionService = {
   create: (payload) => api.post('/questions', payload),
   update: (id, payload) => api.put(`/questions/${id}`, payload),
   remove: (id) => api.delete(`/questions/${id}`),
+  bulkRemove: (ids) => api.post('/questions/bulk-delete', { ids }),
   bulkUploadScreenshots: (imageFiles, excelFile, { examType, chapter, topic, difficulty, author, subject, tags }) => {
     const formData = new FormData();
     imageFiles.forEach((file) => formData.append('images', file));

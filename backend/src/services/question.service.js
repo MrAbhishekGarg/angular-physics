@@ -1,4 +1,5 @@
 import Question from '../models/Question.js';
+import Test from '../models/Test.js';
 import { ApiError } from '../utils/ApiError.js';
 import { parseQuestionMetadataFromExcelBuffer } from '../utils/questionMetadataExcelParser.js';
 import { extractExcelScreenshotGroups } from '../utils/excelScreenshotParser.js';
@@ -10,7 +11,19 @@ function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export async function getAllQuestions({ examType, chapter, topic, difficulty, search, isPYQ, author, tag, subject, conceptCode } = {}) {
+export async function getAllQuestions({
+  examType,
+  chapter,
+  topic,
+  difficulty,
+  search,
+  isPYQ,
+  author,
+  tag,
+  subject,
+  conceptCode,
+  includeUsage,
+} = {}) {
   const filter = {};
   // Mongo/Mongoose matches a scalar against an array field as "array
   // contains this value" — no $in needed for a single filter value.
@@ -25,7 +38,14 @@ export async function getAllQuestions({ examType, chapter, topic, difficulty, se
   if (subject) filter.subject = { $regex: `^${escapeRegex(subject)}$`, $options: 'i' };
   if (conceptCode) filter.conceptCodes = conceptCode.toUpperCase();
 
-  return Question.find(filter).sort({ createdAt: -1 }).lean();
+  const questions = await Question.find(filter).sort({ createdAt: -1 }).lean();
+  // Usage lookup costs an extra query across every Test — only worth it for
+  // the Question Bank's own management view, not the (often much more
+  // frequent) picker inside Test Editor, so it's opt-in.
+  if (!includeUsage || questions.length === 0) return questions;
+
+  const usageByQuestionId = await getTestUsageForQuestions(questions.map((q) => q._id));
+  return questions.map((q) => ({ ...q, usedInTests: usageByQuestionId.get(q._id.toString()) || [] }));
 }
 
 export async function getTaxonomy({ examType } = {}) {
@@ -69,10 +89,65 @@ export async function updateQuestion(id, payload) {
   return question;
 }
 
+/** Removes a question's id from every test that references it — both the
+ * flat, authoritative questionIds array and every section's own questionIds
+ * sub-array (sections derive the flat array at save time, but a raw pull
+ * has to touch both explicitly; a no-op on whichever doesn't apply to a
+ * given test is harmless). Without this, resolveQuestionsWithSections()
+ * silently drops the dangling id at read time, but the test's own
+ * questionIds/section counts stay stale until a mentor happens to re-save it. */
+async function pullQuestionsFromTests(ids) {
+  await Test.updateMany(
+    { $or: [{ questionIds: { $in: ids } }, { 'sections.questionIds': { $in: ids } }] },
+    { $pull: { questionIds: { $in: ids }, 'sections.$[].questionIds': { $in: ids } } }
+  );
+}
+
 export async function deleteQuestion(id) {
   const question = await Question.findByIdAndDelete(id).lean();
   if (!question) throw new ApiError(404, 'Question not found');
+  await pullQuestionsFromTests([id]);
   return question;
+}
+
+/** Bulk variant for the Question Bank's "Delete Selected" / "Select All"
+ * actions — one cascade-cleanup pass across all affected tests instead of
+ * one per question. */
+export async function deleteQuestions(ids) {
+  const result = await Question.deleteMany({ _id: { $in: ids } });
+  await pullQuestionsFromTests(ids);
+  return { deletedCount: result.deletedCount };
+}
+
+/** For the Question Bank list: which published/draft tests (by _id/title)
+ * currently reference each of these question ids, so a mentor can see
+ * "already used in Test X" before reusing or deleting a question. Computed
+ * live from Test rather than stored on Question, so it can never go stale
+ * (e.g. after a question is removed from a test, or the test itself is
+ * deleted) the way a denormalized field would. */
+export async function getTestUsageForQuestions(ids) {
+  const tests = await Test.find({
+    $or: [{ questionIds: { $in: ids } }, { 'sections.questionIds': { $in: ids } }],
+  })
+    .select('title questionIds sections.questionIds')
+    .lean();
+
+  const usageByQuestionId = new Map();
+  const idSet = new Set(ids.map((id) => id.toString()));
+  const record = (questionId, test) => {
+    const key = questionId.toString();
+    if (!idSet.has(key)) return;
+    if (!usageByQuestionId.has(key)) usageByQuestionId.set(key, []);
+    const list = usageByQuestionId.get(key);
+    if (!list.some((t) => t._id.toString() === test._id.toString())) {
+      list.push({ _id: test._id, title: test.title });
+    }
+  };
+  tests.forEach((test) => {
+    (test.questionIds || []).forEach((qid) => record(qid, test));
+    (test.sections || []).forEach((s) => (s.questionIds || []).forEach((qid) => record(qid, test)));
+  });
+  return usageByQuestionId;
 }
 
 function resolveExamTypes({ rowOrTagExamTypes, batchExamType }) {

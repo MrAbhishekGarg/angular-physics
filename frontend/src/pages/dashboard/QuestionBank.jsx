@@ -7,12 +7,15 @@ import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import QuestionEditor from '../../components/dashboard/QuestionEditor.jsx';
+import MathText from '../../components/common/MathText.jsx';
+import { assetUrl } from '../../data/assetUrl.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useQuestions } from '../../hooks/useQuestions.js';
 import { questionService } from '../../services/questionService.js';
 import { questionOfDayService } from '../../services/questionOfDayService.js';
 import { EXAM_TRACKS } from '../../data/examTracks.js';
 import formStyles from './DashboardForm.module.css';
+import styles from './QuestionBank.module.css';
 
 const DIFFICULTY_TONE = { easy: 'success', medium: 'accent', hard: 'default' };
 
@@ -31,6 +34,10 @@ export default function QuestionBank() {
     tag: '',
     subject: '',
     conceptCode: '',
+    // Fixed, not user-editable — powers the "Used in: ..." badge below,
+    // computed live from Test rather than stored on Question so it can
+    // never go stale.
+    includeUsage: 'true',
   });
   const { data: questions, loading, error, refetch } = useQuestions(filters);
   const [editingQuestion, setEditingQuestion] = useState(null);
@@ -70,12 +77,21 @@ export default function QuestionBank() {
     });
   };
 
+  const allVisibleSelected = questions && questions.length > 0 && questions.every((q) => selectedIds.has(q._id));
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      if (allVisibleSelected) return new Set();
+      return new Set((questions || []).map((q) => q._id));
+    });
+  };
+
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`Delete ${selectedIds.size} selected question(s) from the bank? This can't be undone.`)) return;
+    if (!window.confirm(`Delete ${selectedIds.size} selected question(s) from the bank? This also removes them from any test that uses them, and can't be undone.`))
+      return;
     setBulkDeleting(true);
     try {
-      await Promise.all([...selectedIds].map((id) => questionService.remove(id)));
+      await questionService.bulkRemove([...selectedIds]);
       setSelectedIds(new Set());
       await refetch();
     } finally {
@@ -164,7 +180,15 @@ export default function QuestionBank() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--ap-space-sm)', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <h2 style={{ color: 'var(--ap-primary)', margin: 0 }}>{questions ? `${questions.length} question(s)` : 'Questions'}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                {canEdit && questions && questions.length > 0 && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                    <input type="checkbox" checked={Boolean(allVisibleSelected)} onChange={toggleSelectAll} />
+                    Select All
+                  </label>
+                )}
+                <h2 style={{ color: 'var(--ap-primary)', margin: 0 }}>{questions ? `${questions.length} question(s)` : 'Questions'}</h2>
+              </div>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 {canEdit && selectedIds.size > 0 && (
                   <Button size="sm" variant="danger" disabled={bulkDeleting} onClick={handleBulkDelete}>
@@ -206,15 +230,49 @@ export default function QuestionBank() {
                             aria-label="Select question"
                           />
                         )}
-                        <strong>{q.text.slice(0, 100)}</strong>
                       </div>
                       <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                         {q.isPYQ && <Badge tone="highlight">PYQ{q.pyqYear ? ` ${q.pyqYear}` : ''}</Badge>}
                         <Badge tone={DIFFICULTY_TONE[q.difficulty]}>{q.difficulty}</Badge>
+                        <Badge tone="default">{q.type}</Badge>
                       </div>
                     </div>
+
+                    {/* Rendered exactly as a student would see it during an exam — real
+                        KaTeX math via MathText, not raw truncated text — so a mentor can
+                        actually judge a question before reusing or deleting it. */}
+                    {q.text?.trim() && <MathText as="p" className={styles.stem} text={q.text} />}
+                    {q.imageUrl && <img src={assetUrl(q.imageUrl)} alt="" className={styles.img} />}
+
+                    {q.type === 'numerical' ? (
+                      <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', marginBottom: '0.5rem' }}>
+                        Numerical answer: <strong style={{ color: 'var(--ap-success, #0d9488)' }}>{q.correctNumericAnswer}</strong>
+                      </p>
+                    ) : (
+                      <div className={styles.options}>
+                        {(q.options || []).map((opt, oi) => {
+                          const isCorrect = (q.correctOptionIndexes || []).includes(oi);
+                          return (
+                            <div key={oi} className={`${styles.option} ${isCorrect ? styles.optionCorrect : ''}`}>
+                              <span className={styles.optionLetter}>{String.fromCharCode(65 + oi)})</span>
+                              <span style={{ flex: 1 }}>
+                                {opt.text?.trim() && <MathText text={opt.text} />}
+                                {opt.imageUrl && <img src={assetUrl(opt.imageUrl)} alt="" className={styles.optionImg} />}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {q.usedInTests?.length > 0 && (
+                      <p className={styles.usage}>
+                        Used in: {q.usedInTests.map((t) => t.title).join(', ')}
+                      </p>
+                    )}
+
                     <p style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}>
-                      {q.examTypes?.length > 0 ? q.examTypes.join(', ') : 'Unmapped'} · {q.type} ·{' '}
+                      {q.examTypes?.length > 0 ? q.examTypes.join(', ') : 'Unmapped'} ·{' '}
                       {q.chapter || 'no chapter'} {q.topic ? `· ${q.topic}` : ''} · {q.marks} marks
                       {q.subject ? ` · ${q.subject}` : ''}
                       {q.author ? ` · by ${q.author}` : ''}
