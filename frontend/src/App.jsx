@@ -23,6 +23,19 @@ function isPublicRoute(pathname) {
   return PUBLIC_ROUTE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
+// The live exam screen (/dashboard/student/tests/:id) already renders its
+// own self-contained header (candidate name, timer, subject) — stacking the
+// site's marketing Header/Footer on top of that isn't just visual clutter,
+// it's an integrity risk: their nav links (Home, Courses, the hamburger
+// menu, About/Contact/Terms in the footer) give a student mid-test a way to
+// navigate away, and on a tall mobile layout the footer sits right where a
+// thumb scrolling past the answer buttons would land. Excludes the
+// non-exam siblings under the same prefix (the tests list, history, and the
+// post-submit result page) which are safe to keep normal site chrome on.
+function isExamRoute(pathname) {
+  return /^\/dashboard\/student\/tests\/(?!history$)[^/]+$/.test(pathname);
+}
+
 function FloatingWidgets() {
   const { pathname } = useLocation();
   if (!isPublicRoute(pathname)) return null;
@@ -34,15 +47,27 @@ function FloatingWidgets() {
   );
 }
 
+function SiteChrome({ children }) {
+  const { pathname } = useLocation();
+  if (isExamRoute(pathname)) return children;
+  return (
+    <>
+      <Header />
+      {children}
+      <Footer />
+    </>
+  );
+}
+
 export default function App() {
   return (
     <HelmetProvider>
       <BrowserRouter>
         <ThemeProvider>
           <AuthProvider>
-            <Header />
-            <AppRoutes />
-            <Footer />
+            <SiteChrome>
+              <AppRoutes />
+            </SiteChrome>
             <FloatingWidgets />
           </AuthProvider>
         </ThemeProvider>

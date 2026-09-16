@@ -23,6 +23,11 @@ export default function TestManager() {
     await refetch();
   };
 
+  const handlePublish = async (test) => {
+    await testService.update(test._id, { status: 'published' });
+    await refetch();
+  };
+
   return (
     <>
       <SEO title="Manage Tests" description="Create and manage test series for students." path="/dashboard/mentor/tests" />
@@ -68,6 +73,11 @@ export default function TestManager() {
                     {(test.courseIds || []).map((c) => c.title || c).join(', ') || 'no courses assigned'}
                   </p>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {canEdit && test.status === 'draft' && test.questionIds?.length > 0 && (
+                      <Button size="sm" onClick={() => handlePublish(test)}>
+                        Publish
+                      </Button>
+                    )}
                     {canEdit && (
                       <Button as={Link} to={`/dashboard/mentor/tests/${test._id}/edit`} size="sm" variant="ghost">
                         Edit
