@@ -9,7 +9,6 @@ const STUDENT_NAV = [
     section: null,
     items: [
       { to: '/dashboard/student', label: 'Dashboard', end: true },
-      { to: '/dashboard/student/my-course', label: 'My Course' },
       { to: '/dashboard/student/notes', label: 'Notes' },
       { to: '/dashboard/student/tests', label: 'Tests' },
       { to: '/dashboard/student/worksheets', label: 'DPPs & Assignments' },
@@ -33,7 +32,6 @@ const MENTOR_NAV = [
       { to: '/dashboard/mentor', label: 'Dashboard', end: true },
       { to: '/dashboard/mentor/students', label: 'All Students', sectionKey: 'students' },
       { to: '/dashboard/mentor/enquiries', label: 'Enquiries', sectionKey: 'enquiries' },
-      { to: '/dashboard/mentor/course-fees', label: 'Course Fees', sectionKey: 'course-fees' },
     ],
   },
   {

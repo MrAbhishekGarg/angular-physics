@@ -19,6 +19,7 @@ const emptyForm = {
   track: EXAM_TRACKS[0].key,
   tagline: '',
   description: '',
+  courseType: 'recorded',
   feeType: 'one-time',
   price: '',
   strikePrice: '',
@@ -40,6 +41,7 @@ function courseToForm(course) {
     track: course.track,
     tagline: course.tagline,
     description: course.description,
+    courseType: course.courseType === 'live' ? 'live' : 'recorded',
     feeType: course.feeType === 'monthly' ? 'monthly' : 'one-time',
     price: course.price,
     strikePrice: course.strikePrice ?? '',
@@ -117,13 +119,15 @@ export default function CourseEditor() {
       track: form.track,
       tagline: form.tagline,
       description: form.description,
+      courseType: form.courseType,
       feeType: form.feeType,
       // `price` stays a required top-level number in the schema regardless
-      // of feeType (a monthly course just doesn't display it) — 0 keeps a
-      // monthly course from needing a meaningless one-time price typed in.
-      price: form.feeType === 'monthly' ? 0 : Number(form.price),
-      strikePrice: form.feeType === 'monthly' || form.strikePrice === '' ? undefined : Number(form.strikePrice),
-      monthlyFee: form.feeType === 'monthly' ? Number(form.monthlyFee) || 0 : undefined,
+      // of feeType/courseType (a monthly or live course just doesn't display
+      // it) — 0 keeps those from needing a meaningless one-time price typed in.
+      price: form.courseType === 'live' || form.feeType === 'monthly' ? 0 : Number(form.price),
+      strikePrice:
+        form.courseType === 'live' || form.feeType === 'monthly' || form.strikePrice === '' ? undefined : Number(form.strikePrice),
+      monthlyFee: form.courseType === 'recorded' && form.feeType === 'monthly' ? Number(form.monthlyFee) || 0 : undefined,
       currency: form.currency,
       durationWeeks: Number(form.durationWeeks),
       level: form.level,
@@ -203,6 +207,13 @@ export default function CourseEditor() {
 
               <div className={formStyles.row}>
                 <label>
+                  Course Type
+                  <select name="courseType" value={form.courseType} onChange={handleChange}>
+                    <option value="recorded">Recorded</option>
+                    <option value="live">Live</option>
+                  </select>
+                </label>
+                <label>
                   Track
                   <select name="track" value={form.track} onChange={handleChange}>
                     {EXAM_TRACKS.map((t) => (
@@ -212,6 +223,9 @@ export default function CourseEditor() {
                     ))}
                   </select>
                 </label>
+              </div>
+
+              <div className={formStyles.row}>
                 <label>
                   Level
                   <select name="level" value={form.level} onChange={handleChange}>
@@ -222,34 +236,43 @@ export default function CourseEditor() {
                 </label>
               </div>
 
-              <div className={formStyles.row}>
-                <label>
-                  Pricing type
-                  <select name="feeType" value={form.feeType} onChange={handleChange}>
-                    <option value="one-time">One-time</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
-                </label>
-                {form.feeType === 'monthly' ? (
-                  <label>
-                    Monthly Fee (₹)
-                    <input type="number" name="monthlyFee" required min="0" value={form.monthlyFee} onChange={handleChange} />
-                  </label>
-                ) : (
-                  <label>
-                    Price (₹)
-                    <input type="number" name="price" required min="0" value={form.price} onChange={handleChange} />
-                  </label>
-                )}
-              </div>
+              {form.courseType === 'live' ? (
+                <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)' }}>
+                  Live courses don't show a public price. A mentor/admin negotiates the fee and security deposit with each
+                  student individually at registration.
+                </p>
+              ) : (
+                <>
+                  <div className={formStyles.row}>
+                    <label>
+                      Pricing type
+                      <select name="feeType" value={form.feeType} onChange={handleChange}>
+                        <option value="one-time">One-time</option>
+                        <option value="monthly">Monthly</option>
+                      </select>
+                    </label>
+                    {form.feeType === 'monthly' ? (
+                      <label>
+                        Monthly Fee (₹)
+                        <input type="number" name="monthlyFee" required min="0" value={form.monthlyFee} onChange={handleChange} />
+                      </label>
+                    ) : (
+                      <label>
+                        Price (₹)
+                        <input type="number" name="price" required min="0" value={form.price} onChange={handleChange} />
+                      </label>
+                    )}
+                  </div>
 
-              {form.feeType === 'one-time' && (
-                <div className={formStyles.row}>
-                  <label>
-                    Strike Price (optional)
-                    <input type="number" name="strikePrice" min="0" value={form.strikePrice} onChange={handleChange} />
-                  </label>
-                </div>
+                  {form.feeType === 'one-time' && (
+                    <div className={formStyles.row}>
+                      <label>
+                        Strike Price (optional)
+                        <input type="number" name="strikePrice" min="0" value={form.strikePrice} onChange={handleChange} />
+                      </label>
+                    </div>
+                  )}
+                </>
               )}
 
               <div className={formStyles.row}>

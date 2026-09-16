@@ -36,8 +36,6 @@ import AdminStudents from '../pages/dashboard/AdminStudents.jsx';
 import JobDashboard from '../pages/dashboard/JobDashboard.jsx';
 import JobSchedule from '../pages/dashboard/JobSchedule.jsx';
 import JobScheduleBatches from '../pages/dashboard/JobScheduleBatches.jsx';
-import CourseFees from '../pages/dashboard/CourseFees.jsx';
-import MyCourseFee from '../pages/dashboard/MyCourseFee.jsx';
 import AllStudents from '../pages/dashboard/AllStudents.jsx';
 import Enquiries from '../pages/dashboard/Enquiries.jsx';
 import StudentDetail from '../pages/dashboard/StudentDetail.jsx';
@@ -260,14 +258,6 @@ export default function AppRoutes() {
         }
       />
       <Route
-        path="/dashboard/mentor/course-fees"
-        element={
-          <ProtectedRoute role="mentor" section="course-fees">
-            <CourseFees />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/dashboard/mentor/students"
         element={
           <ProtectedRoute role="mentor" section="students">
@@ -360,14 +350,6 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute role="student">
             <DoubtsPanel />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dashboard/student/my-course"
-        element={
-          <ProtectedRoute role="student">
-            <MyCourseFee />
           </ProtectedRoute>
         }
       />
