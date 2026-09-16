@@ -9,6 +9,65 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { questionService } from '../../services/questionService.js';
 import { EXAM_TRACKS } from '../../data/examTracks.js';
 import formStyles from './DashboardForm.module.css';
+import styles from './QuestionUpload.module.css';
+
+// One card per method — shown on its own landing grid instead of every
+// method's full form being rendered (and scrolled past) all at once. Each
+// id matches a branch in the render switch below.
+const METHODS = [
+  {
+    id: 'quick-add',
+    icon: '⚡',
+    title: 'Quick Add',
+    blurb: 'Type or paste one question directly — saves immediately, no batching.',
+  },
+  {
+    id: 'screenshot-builder',
+    icon: '🖼️',
+    title: 'Screenshot Builder',
+    blurb: 'Build questions one at a time, pasting a screenshot per option, previewed as you go.',
+  },
+  {
+    id: 'ai-pdf',
+    icon: '🤖',
+    title: 'AI-Extracted from a PDF',
+    blurb: "Send a question paper to Claude, get back a JSON file with genuine diagrams flagged.",
+  },
+  {
+    id: 'docx',
+    icon: '📄',
+    title: 'Screenshots in a Word Doc',
+    blurb: 'Paste straight from a PDF into Word using Q1./[A]/[B] markers, plus a mapping sheet.',
+  },
+  {
+    id: 'screenshots-excel',
+    icon: '🖇️',
+    title: 'Screenshots + Excel Mapping',
+    blurb: 'Screenshot every question and option separately, upload them all with a mapping sheet.',
+  },
+  {
+    id: 'excel-embedded',
+    icon: '📊',
+    title: 'Excel with Pasted Screenshots',
+    blurb: 'One Excel file — paste screenshots directly into the stem/option cells.',
+  },
+];
+
+function MethodPicker({ onSelect }) {
+  return (
+    <div className={styles.grid}>
+      {METHODS.map((m) => (
+        <button key={m.id} type="button" className={styles.methodCard} onClick={() => onSelect(m.id)}>
+          <span className={styles.methodIcon} aria-hidden="true">
+            {m.icon}
+          </span>
+          <strong className={styles.methodTitle}>{m.title}</strong>
+          <span className={styles.methodBlurb}>{m.blurb}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /**
  * A hard failure (whole upload rejected — corrupt file, unreadable sheet)
@@ -46,7 +105,7 @@ function UploadFeedback({ message, warnings, failed }) {
 export default function QuestionUpload() {
   const { user } = useAuth();
   const canCreate = !user?.restrictedActions?.includes('questions-create');
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState(null);
   const [quickAddMessage, setQuickAddMessage] = useState('');
 
   const [docxForm, setDocxForm] = useState({
@@ -173,9 +232,21 @@ export default function QuestionUpload() {
             That's in <Link to="/dashboard/mentor/questions">Question Bank</Link>.
           </p>
 
-          {canCreate && <ScreenshotQuestionBuilder examType={undefined} onUploaded={() => {}} />}
+          {!selectedMethod && canCreate && <MethodPicker onSelect={setSelectedMethod} />}
 
-          {canCreate && (
+          {selectedMethod && (
+            <div className={styles.backBtn}>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedMethod(null)}>
+                ← Back to methods
+              </Button>
+            </div>
+          )}
+
+          {canCreate && selectedMethod === 'screenshot-builder' && (
+            <ScreenshotQuestionBuilder examType={undefined} onUploaded={() => {}} />
+          )}
+
+          {canCreate && selectedMethod === 'ai-pdf' && (
             <div className={formStyles.card}>
               <strong>Bulk Upload — AI-Extracted from a PDF</strong>
               <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
@@ -194,7 +265,7 @@ export default function QuestionUpload() {
             </div>
           )}
 
-          {canCreate && (
+          {canCreate && selectedMethod === 'docx' && (
             <div className={formStyles.card}>
               <strong>Bulk Upload — Screenshots in a Word Doc</strong>
               <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
@@ -319,7 +390,7 @@ export default function QuestionUpload() {
             </div>
           )}
 
-          {canCreate && (
+          {canCreate && selectedMethod === 'screenshots-excel' && (
             <div className={formStyles.card}>
               <strong>Bulk Upload — Screenshots + Excel Mapping</strong>
               <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
@@ -440,7 +511,7 @@ export default function QuestionUpload() {
             </div>
           )}
 
-          {canCreate && (
+          {canCreate && selectedMethod === 'excel-embedded' && (
             <div className={formStyles.card}>
               <strong>Bulk Upload — Excel with Pasted Screenshots</strong>
               <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
@@ -548,20 +619,15 @@ export default function QuestionUpload() {
             </div>
           )}
 
-          {canCreate && (
+          {canCreate && selectedMethod === 'quick-add' && (
             <div className={formStyles.card}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <strong>Quick Add — single question, typed or pasted</strong>
-                <Button size="sm" variant="ghost" onClick={() => setShowQuickAdd((v) => !v)}>
-                  {showQuickAdd ? 'Close' : 'Open'}
-                </Button>
-              </div>
+              <strong>Quick Add — single question, typed or pasted</strong>
               <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', margin: '0.3rem 0' }}>
                 Type a question directly (or paste screenshots into it) and it saves to the bank immediately — no
                 batching or review step. Best for adding just one or two questions.
               </p>
               {quickAddMessage && <p style={{ color: 'var(--ap-success)', fontSize: '0.85rem' }}>{quickAddMessage}</p>}
-              {showQuickAdd && <QuestionEditor onSaved={() => setQuickAddMessage('Question added to the bank.')} />}
+              <QuestionEditor onSaved={() => setQuickAddMessage('Question added to the bank.')} />
             </div>
           )}
         </div>

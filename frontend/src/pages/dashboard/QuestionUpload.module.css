@@ -1,0 +1,47 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--ap-space-sm);
+  margin: var(--ap-space-md) 0;
+}
+
+.methodCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  text-align: left;
+  padding: var(--ap-space-sm);
+  background: var(--ap-bg);
+  border: 1.5px solid var(--ap-border);
+  border-radius: var(--ap-radius);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+.methodCard:hover {
+  border-color: var(--ap-accent);
+  box-shadow: var(--ap-shadow-sm);
+  transform: translateY(-2px);
+}
+
+.methodIcon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.methodTitle {
+  font-family: var(--ap-font-heading);
+  font-size: 1rem;
+  color: var(--ap-text);
+}
+
+.methodBlurb {
+  font-size: 0.82rem;
+  color: var(--ap-text-muted);
+  line-height: 1.4;
+}
+
+.backBtn {
+  margin-bottom: 0.75rem;
+}
