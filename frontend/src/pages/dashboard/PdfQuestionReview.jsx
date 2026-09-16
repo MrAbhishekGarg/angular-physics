@@ -4,6 +4,7 @@ import SEO from '../../components/seo/SEO.jsx';
 import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
 import Button from '../../components/common/Button.jsx';
 import MathText from '../../components/common/MathText.jsx';
+import { assetUrl } from '../../data/assetUrl.js';
 import { questionService } from '../../services/questionService.js';
 import { EXAM_TRACKS } from '../../data/examTracks.js';
 import formStyles from './DashboardForm.module.css';
@@ -104,7 +105,7 @@ function ViewCard({ q, index, total, onPrev, onNext, onEdit }) {
 
       {q.imageUrl ? (
         <div className={styles.diagramPreview}>
-          <img src={q.imageUrl} alt={`Diagram for question ${q.questionNumber}`} />
+          <img src={assetUrl(q.imageUrl)} alt={`Diagram for question ${q.questionNumber}`} />
         </div>
       ) : (
         q.needsImage && (
@@ -136,7 +137,7 @@ function ViewCard({ q, index, total, onPrev, onNext, onEdit }) {
               <span className={styles.optLabel}>{LETTERS[i]}</span>
               <span>
                 <MathText text={opt.text} />
-                {opt.imageUrl && <img src={opt.imageUrl} alt={`Option ${LETTERS[i]}`} className={styles.optImg} />}
+                {opt.imageUrl && <img src={assetUrl(opt.imageUrl)} alt={`Option ${LETTERS[i]}`} className={styles.optImg} />}
               </span>
             </div>
           ))}
@@ -171,7 +172,7 @@ function EditForm({ q, onChange, onOptionChange, onDone }) {
       <div style={{ margin: '0.6rem 0' }}>
         {q.imageUrl ? (
           <div className={styles.diagramPreview}>
-            <img src={q.imageUrl} alt="Question" />
+            <img src={assetUrl(q.imageUrl)} alt="Question" />
             <Button type="button" size="sm" variant="ghost" onClick={() => onChange({ imageUrl: undefined })}>
               Remove image
             </Button>
@@ -192,7 +193,7 @@ function EditForm({ q, onChange, onOptionChange, onDone }) {
               </div>
               {opt.imageUrl ? (
                 <div className={styles.diagramPreview}>
-                  <img src={opt.imageUrl} alt={`Option ${LETTERS[i]}`} />
+                  <img src={assetUrl(opt.imageUrl)} alt={`Option ${LETTERS[i]}`} />
                   <Button type="button" size="sm" variant="ghost" onClick={() => onOptionChange(i, { imageUrl: undefined })}>
                     Remove image
                   </Button>
