@@ -2,7 +2,6 @@ import SEO from '../components/seo/SEO.jsx';
 import JsonLd, { organizationSchema } from '../components/seo/JsonLd.jsx';
 import Hero from '../components/home/Hero.jsx';
 import MentorSpotlight from '../components/home/MentorSpotlight.jsx';
-import FeaturedCourses from '../components/home/FeaturedCourses.jsx';
 import Testimonials from '../components/home/Testimonials.jsx';
 import Toppers from '../components/home/Toppers.jsx';
 import QuestionOfDay from '../components/home/QuestionOfDay.jsx';
@@ -25,7 +24,6 @@ export default function Home() {
       <main>
         <Hero />
         <MentorSpotlight />
-        <FeaturedCourses />
         <Testimonials />
         <Toppers />
         <QuestionOfDay />

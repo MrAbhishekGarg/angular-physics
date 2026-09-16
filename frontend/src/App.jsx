@@ -16,7 +16,7 @@ import { ThemeProvider } from './context/ThemeContext.jsx';
 // row landing in the same bottom-right corner as "Find My Course"), so this
 // is an allow-list of public routes rather than a deny-list of dashboard
 // sub-routes — it can't miss a spot the way the narrower check could.
-const PUBLIC_ROUTE_PREFIXES = ['/courses', '/blog', '/mentor', '/about', '/contact', '/login', '/signup'];
+const PUBLIC_ROUTE_PREFIXES = ['/blog', '/mentor', '/about', '/contact', '/login', '/signup'];
 
 function isPublicRoute(pathname) {
   if (pathname === '/') return true;

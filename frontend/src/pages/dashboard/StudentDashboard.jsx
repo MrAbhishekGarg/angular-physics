@@ -3,7 +3,6 @@ import SEO from '../../components/seo/SEO.jsx';
 import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
 import SectionHeading from '../../components/common/SectionHeading.jsx';
 import Stat from '../../components/common/Stat.jsx';
-import Button from '../../components/common/Button.jsx';
 import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
@@ -79,11 +78,6 @@ export default function StudentDashboard() {
 
                 <div className={styles.sectionRow}>
                   <h2 className={styles.sectionTitle}>Your Courses</h2>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <Button as={Link} to="/courses" variant="ghost" size="sm">
-                      Browse More Courses
-                    </Button>
-                  </div>
                 </div>
 
                 {data.enrollments.length === 0 ? (

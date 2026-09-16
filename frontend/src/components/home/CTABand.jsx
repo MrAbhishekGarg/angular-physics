@@ -6,8 +6,8 @@ import styles from './CTABand.module.css';
 export default function CTABand({
   title = 'Ready to find your angle in Physics?',
   subtitle = 'Join a batch mentored by Abhishek Garg today.',
-  ctaLabel = 'Explore Courses',
-  ctaTo = '/courses',
+  ctaLabel = 'Contact Us',
+  ctaTo = '/contact',
 }) {
   return (
     <section className={styles.band}>

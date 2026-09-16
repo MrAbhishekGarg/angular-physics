@@ -20,6 +20,12 @@ const courseSchema = new mongoose.Schema(
     tagline: { type: String, required: true },
     description: { type: String, required: true },
     mentor: { type: String, default: 'Abhishek Garg' },
+    // 'recorded': one-time public price, self-checkout (optionally discounted
+    // via a Coupon at redemption). 'live': no public price at all — a
+    // mentor/admin negotiates the fee (and security deposit) per student at
+    // registration, tracked through CourseFeeBatch/CourseFeeStudent instead
+    // of this course's own price fields.
+    courseType: { type: String, enum: ['live', 'recorded'], required: true, default: 'recorded' },
     // 'one-time' uses price/strikePrice below; 'monthly' uses monthlyFee —
     // kept as a top-level choice made at course-launch time so the editor
     // never asks a course creator two competing "how much" questions.

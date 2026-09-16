@@ -36,8 +36,8 @@ export default function Hero() {
               All India Ranks.
             </p>
             <div className={styles.ctas}>
-              <Button as={Link} to="/courses" size="lg">
-                View Courses
+              <Button as={Link} to="/contact" size="lg">
+                Contact Us
               </Button>
               <Button as={Link} to={loginCtaTarget} variant="ghostInverse" size="lg">
                 {user ? 'Go to Dashboard' : 'Login to Courses'}
