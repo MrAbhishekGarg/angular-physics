@@ -12,7 +12,10 @@ import { useQuestions } from '../../hooks/useQuestions.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { testService } from '../../services/testService.js';
 import { EXAM_TRACKS, getTrackMeta } from '../../data/examTracks.js';
+import MathText from '../../components/common/MathText.jsx';
+import { assetUrl } from '../../data/assetUrl.js';
 import formStyles from './DashboardForm.module.css';
+import styles from './TestEditor.module.css';
 
 const emptyForm = {
   title: '',
@@ -119,7 +122,9 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
           <strong>Selected</strong>
           {section.questions.map((q) => (
             <div key={q._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.3rem 0' }}>
-              <span style={{ fontSize: '0.85rem' }}>{q.text.slice(0, 90)}</span>
+              <span style={{ fontSize: '0.85rem' }}>
+                <MathText as="span" text={q.text.slice(0, 90)} />
+              </span>
               <Button type="button" size="sm" variant="ghost" onClick={() => removeSelected(q._id)}>
                 Remove
               </Button>
@@ -187,33 +192,61 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
         {bankLoading ? (
           <Spinner label="Loading bank…" />
         ) : (
-          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-            {(bankQuestions || []).map((q) => (
-              <label
-                key={q._id}
-                style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', padding: '0.4rem 0', borderBottom: '1px solid var(--ap-border)' }}
-              >
-                <input type="checkbox" checked={section.questionIds.includes(q._id)} onChange={() => toggleQuestion(q)} style={{ marginTop: '0.2rem' }} />
-                <span style={{ fontSize: '0.85rem', flex: 1 }}>
-                  {q.text.slice(0, 90)}
-                  <br />
-                  <span style={{ color: 'var(--ap-text-muted)', fontSize: '0.75rem' }}>
-                    {q.chapter || 'no chapter'} {q.topic ? `· ${q.topic}` : ''} · {q.difficulty}
-                    {q.author ? ` · by ${q.author}` : ''}
-                    {q.tags?.length > 0 ? ` · ${q.tags.join(', ')}` : ''}
-                    {q.conceptCodes?.length > 0 ? ` · ${q.conceptCodes.join(', ')}` : ''}
-                  </span>
-                </span>
-                <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                  {q.isPYQ && <Badge tone="highlight">PYQ{q.pyqYear ? ` ${q.pyqYear}` : ''}</Badge>}
-                  <Badge tone="default">{q.type}</Badge>
-                </div>
-              </label>
-            ))}
-            {bankQuestions && bankQuestions.length === 0 && (
-              <p style={{ color: 'var(--ap-text-muted)', fontSize: '0.85rem' }}>No bank questions match these filters yet.</p>
-            )}
-          </div>
+          <>
+            <p className={styles.bankCount}>
+              {(bankQuestions || []).length} question{(bankQuestions || []).length === 1 ? '' : 's'} found
+            </p>
+            <div className={styles.bankList}>
+              {(bankQuestions || []).map((q) => {
+                const isPicked = section.questionIds.includes(q._id);
+                const correctSet = new Set(q.correctOptionIndexes || []);
+                return (
+                  <div key={q._id} className={`${styles.bankCard} ${isPicked ? styles.bankCardSelected : ''}`}>
+                    <div className={styles.bankCardHead}>
+                      <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                        {q.isPYQ && <Badge tone="highlight">PYQ{q.pyqYear ? ` ${q.pyqYear}` : ''}</Badge>}
+                        <Badge tone="default">{q.type}</Badge>
+                        <Badge tone="default">{q.difficulty}</Badge>
+                      </div>
+                      <Button type="button" size="sm" variant={isPicked ? 'secondary' : 'primary'} onClick={() => toggleQuestion(q)}>
+                        {isPicked ? '✓ Added' : '+ Add'}
+                      </Button>
+                    </div>
+
+                    {q.text?.trim() && <MathText as="p" className={styles.bankStem} text={q.text} />}
+                    {q.imageUrl && <img src={assetUrl(q.imageUrl)} alt="" className={styles.bankImg} />}
+
+                    {q.type === 'numerical' ? (
+                      <p style={{ fontSize: '0.82rem', color: 'var(--ap-text-muted)' }}>
+                        Numerical answer: <strong style={{ color: 'var(--ap-success, #0d9488)' }}>{q.correctNumericAnswer}</strong>
+                      </p>
+                    ) : (
+                      <div className={styles.bankOptions}>
+                        {(q.options || []).map((opt, oi) => (
+                          <div key={oi} className={`${styles.bankOption} ${correctSet.has(oi) ? styles.bankOptionCorrect : ''}`}>
+                            <span className={styles.bankOptionLetter}>{String.fromCharCode(65 + oi)})</span>
+                            <span style={{ flex: 1 }}>
+                              {opt.text?.trim() && <MathText text={opt.text} />}
+                              {opt.imageUrl && <img src={assetUrl(opt.imageUrl)} alt="" className={styles.bankOptionImg} />}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <p className={styles.bankMeta}>
+                      {q.chapter || 'no chapter'} {q.topic ? `· ${q.topic}` : ''} {q.author ? `· by ${q.author}` : ''}
+                      {q.tags?.length > 0 ? ` · ${q.tags.join(', ')}` : ''}
+                      {q.conceptCodes?.length > 0 ? ` · ${q.conceptCodes.join(', ')}` : ''}
+                    </p>
+                  </div>
+                );
+              })}
+              {bankQuestions && bankQuestions.length === 0 && (
+                <p style={{ color: 'var(--ap-text-muted)', fontSize: '0.85rem' }}>No bank questions match these filters yet.</p>
+              )}
+            </div>
+          </>
         )}
       </div>
 
