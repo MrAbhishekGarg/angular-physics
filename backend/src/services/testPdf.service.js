@@ -32,6 +32,83 @@ function totalMarks(test) {
   return test.questions.reduce((sum, q) => sum + (q.marks || 0), 0);
 }
 
+// pdfkit's built-in Helvetica only supports WinAnsiEncoding (roughly
+// Latin-1) — no Greek letters, arrows, √, ≤/≠, or arbitrary superscripts.
+// Drawing those code points directly renders as blank/garbled boxes, which
+// is worse than the raw LaTeX source. So the PDF gets a readable ASCII
+// degrade instead of true typesetting (the web app renders the real thing
+// via KaTeX) — this only needs to cover the macros this app's question
+// bank actually uses.
+const GREEK_WORDS = {
+  '\\alpha': 'alpha',
+  '\\beta': 'beta',
+  '\\theta': 'theta',
+  '\\lambda': 'lambda',
+  '\\mu': 'mu',
+  '\\rho': 'rho',
+  '\\pi': 'pi',
+  '\\Omega': 'Omega',
+};
+
+function stripBraces(str) {
+  return str.replace(/^\{(.*)\}$/, '$1');
+}
+
+// Covers stray Unicode symbols mentors/extractions type directly into plain
+// prose (outside any $...$ span) that Helvetica/WinAnsi still can't render.
+const GLOBAL_UNICODE_SWAPS = [
+  [/→/g, '->'],
+  [/≈/g, '~'],
+  [/≤/g, '<='],
+  [/≥/g, '>='],
+  [/≠/g, '!='],
+  [/∞/g, 'infinity'],
+  [/√/g, 'sqrt'],
+  [/∠/g, 'angle '],
+];
+
+function formatMathForPdf(raw) {
+  if (!raw) return raw;
+  let result = raw.replace(/\$([^$]*)\$/g, (_, expr) => {
+    let s = expr;
+    // A single pass can't resolve a macro whose argument is itself another
+    // macro (e.g. \dfrac{1}{\sqrt{2}} — the \dfrac regex needs brace-free
+    // groups, so it only matches once \sqrt has already been reduced).
+    // Looping to a fixed point handles arbitrary nesting depth.
+    for (let i = 0; i < 6; i += 1) {
+      const before = s;
+      s = s.replace(/\\left|\\right/g, '');
+      s = s.replace(/\\[,;!]|\\ /g, ' ');
+      s = s.replace(/\\d?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+      s = s.replace(/\\d?frac([a-zA-Z0-9])([a-zA-Z0-9])/g, '($1)/($2)');
+      s = s.replace(/\\sqrt\{([^{}]*)\}/g, 'sqrt($1)');
+      s = s.replace(/\\vec\{([^{}]*)\}/g, '$1');
+      s = s.replace(/\\text\{([^{}]*)\}/g, '$1');
+      s = s.replace(/\\times/g, 'x');
+      s = s.replace(/\\cdot/g, '.');
+      s = s.replace(/\\le/g, '<=');
+      s = s.replace(/\\neq/g, '!=');
+      s = s.replace(/\\rightarrow|\\to/g, '->');
+      s = s.replace(/\\infty/g, 'infinity');
+      s = s.replace(/\\angle/g, 'angle ');
+      s = s.replace(/\\AA/g, 'A');
+      Object.entries(GREEK_WORDS).forEach(([macro, word]) => {
+        s = s.split(macro).join(word);
+      });
+      // ^{...}/_{...} keep their braces as parens; ^x/_x (single token) stay bare.
+      s = s.replace(/\^\{([^{}]*)\}/g, '^($1)');
+      s = s.replace(/_\{([^{}]*)\}/g, '_($1)');
+      if (s === before) break;
+    }
+    s = stripBraces(s.trim());
+    return s.replace(/\s+/g, ' ').trim();
+  });
+  GLOBAL_UNICODE_SWAPS.forEach(([pattern, replacement]) => {
+    result = result.replace(pattern, replacement);
+  });
+  return result;
+}
+
 // question.imageUrl is a served path like "/uploads/question-images/xyz.png" —
 // resolve it back to the file on disk. pdfkit needs a real path/buffer, not a URL.
 function resolveImagePath(imageUrl) {
@@ -111,6 +188,15 @@ function drawFooter(doc, pageNumber) {
  * it to the HTTP response.
  */
 export function generateTestPdf(test, { includeAnswers = false } = {}) {
+  test = {
+    ...test,
+    questions: test.questions.map((q) => ({
+      ...q,
+      text: formatMathForPdf(q.text),
+      options: (q.options || []).map((o) => ({ ...o, text: formatMathForPdf(o.text) })),
+    })),
+  };
+
   const doc = new PDFDocument({
     size: 'A4',
     margins: { top: MARGIN_TOP, bottom: 60, left: MARGIN_SIDE, right: MARGIN_SIDE },
