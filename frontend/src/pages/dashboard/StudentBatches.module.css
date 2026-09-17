@@ -1,0 +1,131 @@
+.card {
+  border-left: 4px solid var(--ap-accent);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+  background: linear-gradient(135deg, var(--ap-accent), var(--ap-primary-light));
+}
+
+.titleBlock {
+  flex: 1;
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.description {
+  font-size: 0.85rem;
+  color: var(--ap-text-muted);
+  margin: 0.25rem 0 0;
+}
+
+.actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+
+.panel {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--ap-border);
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.searchWrap {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ap-text-muted);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding-left: 2rem;
+}
+
+.studentList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius);
+  padding: 0.4rem 0.6rem;
+  background: var(--ap-bg-muted);
+}
+
+.studentRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 400;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.2rem;
+  border-radius: 6px;
+}
+
+.studentRow:hover {
+  background: var(--ap-bg);
+}
+
+.studentEmail {
+  color: var(--ap-text-muted);
+}
+
+.emptyNote {
+  font-size: 0.82rem;
+  color: var(--ap-text-muted);
+  padding: 0.4rem 0.2rem;
+}
+
+.saveRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.savedTick {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ap-success);
+}
