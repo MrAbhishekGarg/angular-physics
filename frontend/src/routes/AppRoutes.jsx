@@ -37,6 +37,7 @@ import JobDashboard from '../pages/dashboard/JobDashboard.jsx';
 import JobSchedule from '../pages/dashboard/JobSchedule.jsx';
 import JobScheduleBatches from '../pages/dashboard/JobScheduleBatches.jsx';
 import AllStudents from '../pages/dashboard/AllStudents.jsx';
+import StudentBatches from '../pages/dashboard/StudentBatches.jsx';
 import Enquiries from '../pages/dashboard/Enquiries.jsx';
 import StudentDetail from '../pages/dashboard/StudentDetail.jsx';
 import DoubtsManager from '../pages/dashboard/DoubtsManager.jsx';
@@ -262,6 +263,14 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute role="mentor" section="students">
             <AllStudents />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/mentor/batches"
+        element={
+          <ProtectedRoute role="mentor" section="students">
+            <StudentBatches />
           </ProtectedRoute>
         }
       />

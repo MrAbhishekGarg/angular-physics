@@ -39,6 +39,7 @@ const MENTOR_NAV = [
     items: [
       { to: '/dashboard/mentor', label: 'Dashboard', icon: '🏠', end: true },
       { to: '/dashboard/mentor/students', label: 'All Students', icon: '👥', sectionKey: 'students' },
+      { to: '/dashboard/mentor/batches', label: 'Batches', icon: '🗂️', sectionKey: 'students' },
       { to: '/dashboard/mentor/enquiries', label: 'Enquiries', icon: '📨', sectionKey: 'enquiries' },
     ],
   },

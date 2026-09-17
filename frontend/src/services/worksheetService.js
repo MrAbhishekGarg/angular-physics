@@ -13,7 +13,9 @@ export const worksheetService = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  setDriveLink: (id, driveUrl) => api.patch(`/worksheets/${id}/drive-link`, { driveUrl }),
   assign: (id, courseIds) => api.post(`/worksheets/${id}/assign`, { courseIds }),
+  assignBatches: (id, batchIds) => api.post(`/worksheets/${id}/assign-batches`, { batchIds }),
   getAvailable: () => api.get('/worksheets/available'),
   downloadUrl: (id) => `${api.defaults.baseURL}/worksheets/${id}/download`,
   complete: (id) => api.post(`/worksheets/${id}/complete`),

@@ -5,7 +5,7 @@ import Button from '../../components/common/Button.jsx';
 import Badge from '../../components/common/Badge.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
-import { useNotes } from '../../hooks/useNotes.js';
+import { useAvailableNotes } from '../../hooks/useNotes.js';
 import { noteService } from '../../services/noteService.js';
 import { paymentService } from '../../services/paymentService.js';
 import { useAuth } from '../../hooks/useAuth.js';
@@ -15,7 +15,7 @@ import formStyles from './DashboardForm.module.css';
 
 export default function NotesLibrary() {
   const { user } = useAuth();
-  const { data: notes, loading, error, refetch } = useNotes();
+  const { data: notes, loading, error, refetch } = useAvailableNotes();
   const [busyId, setBusyId] = useState(null);
   const [actionError, setActionError] = useState('');
 
@@ -59,6 +59,7 @@ export default function NotesLibrary() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 'var(--ap-space-sm)' }}>
               {(notes || []).map((note) => {
                 const track = getTrackMeta(note.track);
+                const hasFile = Boolean(note.fileKey || note.driveUrl);
                 return (
                   <div key={note._id} className={formStyles.card}>
                     <div className={formStyles.cardHeader}>
@@ -70,12 +71,12 @@ export default function NotesLibrary() {
                     <strong>{note.title}</strong>
                     <p style={{ color: 'var(--ap-text-muted)', fontSize: '0.85rem' }}>{note.description}</p>
                     {note.category === 'free' ? (
-                      <Button size="sm" onClick={() => handleDownload(note)} disabled={!note.fileKey}>
-                        {note.fileKey ? 'Download' : 'No file yet'}
+                      <Button size="sm" onClick={() => handleDownload(note)} disabled={!hasFile}>
+                        {hasFile ? 'Download' : 'No file yet'}
                       </Button>
                     ) : (
-                      <Button size="sm" disabled={busyId === note._id || !note.fileKey} onClick={() => handleBuy(note)}>
-                        {busyId === note._id ? 'Processing…' : note.fileKey ? `Buy for ${formatPrice(note.price, note.currency)}` : 'No file yet'}
+                      <Button size="sm" disabled={busyId === note._id || !hasFile} onClick={() => handleBuy(note)}>
+                        {busyId === note._id ? 'Processing…' : hasFile ? `Buy for ${formatPrice(note.price, note.currency)}` : 'No file yet'}
                       </Button>
                     )}
                   </div>

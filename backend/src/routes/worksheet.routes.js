@@ -6,7 +6,9 @@ import {
   updateWorksheet,
   deleteWorksheet,
   uploadWorksheetFile,
+  setWorksheetDriveLink,
   assignWorksheet,
+  assignWorksheetBatches,
   listAvailableWorksheets,
   downloadWorksheet,
   completeWorksheet,
@@ -29,6 +31,8 @@ router.post('/', authenticate, authorize('mentor'), requireSection('worksheets')
 router.put('/:id', authenticate, authorize('mentor'), requireSection('worksheets'), updateWorksheet);
 router.delete('/:id', authenticate, authorize('mentor'), requireSection('worksheets'), deleteWorksheet);
 router.post('/:id/file', authenticate, authorize('mentor'), requireSection('worksheets'), uploadMiddleware, uploadWorksheetFile);
+router.patch('/:id/drive-link', authenticate, authorize('mentor'), requireSection('worksheets'), setWorksheetDriveLink);
 router.post('/:id/assign', authenticate, authorize('mentor'), requireSection('worksheets'), assignWorksheet);
+router.post('/:id/assign-batches', authenticate, authorize('mentor'), requireSection('worksheets'), assignWorksheetBatches);
 
 export default router;

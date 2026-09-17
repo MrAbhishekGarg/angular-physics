@@ -8,49 +8,17 @@ import ErrorState from '../../components/common/ErrorState.jsx';
 import Pagination from '../../components/common/Pagination.jsx';
 import { useWorksheets } from '../../hooks/useWorksheets.js';
 import { useMentorCourses } from '../../hooks/useCourses.js';
+import { useStudentBatches } from '../../hooks/useStudentBatches.js';
 import { useWorksheetProgress } from '../../hooks/useWorksheetProgress.js';
+import CheckboxAssignPanel, { idOf } from '../../components/dashboard/CheckboxAssignPanel.jsx';
 import { worksheetService } from '../../services/worksheetService.js';
 import { EXAM_TRACKS } from '../../data/examTracks.js';
+import { WORKSHEET_TYPES, WORKSHEET_TYPE_LABEL, WORKSHEET_TYPE_TONE } from '../../data/worksheetTypes.js';
 import formStyles from './DashboardForm.module.css';
 import dashboardStyles from './Dashboard.module.css';
 
 const emptyForm = { title: '', type: 'dpp', examType: EXAM_TRACKS[0].key, chapter: '', topic: '', deadlineAt: '' };
 const PAGE_SIZE = 20;
-
-function AssignPanel({ worksheet, courses, onAssigned }) {
-  const [selected, setSelected] = useState((worksheet.courseIds || []).map((c) => (typeof c === 'string' ? c : c._id)));
-  const [busy, setBusy] = useState(false);
-
-  const toggle = (courseId) => {
-    setSelected((ids) => (ids.includes(courseId) ? ids.filter((id) => id !== courseId) : [...ids, courseId]));
-  };
-
-  const handleSave = async () => {
-    setBusy(true);
-    try {
-      await worksheetService.assign(worksheet._id, selected);
-      await onAssigned();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div style={{ marginTop: '0.5rem' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-        {(courses || []).map((c) => (
-          <label key={c._id} className={formStyles.checkboxLabel} style={{ fontWeight: 400, fontSize: '0.85rem' }}>
-            <input type="checkbox" checked={selected.includes(c._id)} onChange={() => toggle(c._id)} />
-            {c.title}
-          </label>
-        ))}
-      </div>
-      <Button size="sm" disabled={busy} onClick={handleSave} style={{ marginTop: '0.4rem' }}>
-        {busy ? 'Saving…' : 'Save Assignment'}
-      </Button>
-    </div>
-  );
-}
 
 function StatusPanel({ worksheetId }) {
   const { data: progress, loading, error } = useWorksheetProgress(worksheetId, true);
@@ -106,14 +74,18 @@ function StatusPanel({ worksheetId }) {
 export default function WorksheetManager() {
   const { data: worksheets, loading, error, refetch } = useWorksheets();
   const { data: courses } = useMentorCourses();
+  const { data: batches } = useStudentBatches();
   const [page, setPage] = useState(1);
   const totalPages = worksheets ? Math.max(1, Math.ceil(worksheets.length / PAGE_SIZE)) : 1;
   const pagedWorksheets = worksheets ? worksheets.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : [];
   const [form, setForm] = useState(emptyForm);
+  const [sourceMode, setSourceMode] = useState('upload');
   const [file, setFile] = useState(null);
+  const [driveUrl, setDriveUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [batchExpandedId, setBatchExpandedId] = useState(null);
   const [statusOpenId, setStatusOpenId] = useState(null);
 
   const courseTitleById = Object.fromEntries((courses || []).map((c) => [c._id, c.title]));
@@ -127,9 +99,11 @@ export default function WorksheetManager() {
     try {
       const payload = { ...form, deadlineAt: form.deadlineAt || null };
       const worksheet = await worksheetService.create(payload);
-      if (file) await worksheetService.uploadFile(worksheet._id, file);
+      if (sourceMode === 'upload' && file) await worksheetService.uploadFile(worksheet._id, file);
+      if (sourceMode === 'drive' && driveUrl.trim()) await worksheetService.setDriveLink(worksheet._id, driveUrl.trim());
       setForm(emptyForm);
       setFile(null);
+      setDriveUrl('');
       await refetch();
     } catch (err) {
       setFormError(err.message);
@@ -167,13 +141,23 @@ export default function WorksheetManager() {
                     <div key={w._id} className={formStyles.card}>
                       <div className={formStyles.cardHeader}>
                         <strong>{w.title}</strong>
-                        <Badge tone={w.type === 'dpp' ? 'accent' : 'launching'}>{w.type === 'dpp' ? 'DPP' : 'Assignment'}</Badge>
+                        <Badge tone={WORKSHEET_TYPE_TONE[w.type]}>{WORKSHEET_TYPE_LABEL[w.type]}</Badge>
                       </div>
                       <p style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}>
-                        {w.examType || '—'} {w.chapter ? `· ${w.chapter}` : ''} · {w.fileName || 'no file uploaded yet'}
+                        {w.examType || '—'} {w.chapter ? `· ${w.chapter}` : ''} ·{' '}
+                        {w.source === 'drive' && w.driveUrl ? (
+                          <a href={w.driveUrl} target="_blank" rel="noreferrer">
+                            Google Drive link
+                          </a>
+                        ) : (
+                          w.fileName || 'no file uploaded yet'
+                        )}
                       </p>
                       <p style={{ fontSize: '0.8rem' }}>
-                        Assigned to: {(w.courseIds || []).length === 0 ? 'none' : w.courseIds.map((c) => c.title || courseTitleById[c]).join(', ')}
+                        Courses: {(w.courseIds || []).length === 0 ? 'none' : w.courseIds.map((c) => c.title || courseTitleById[c]).join(', ')}
+                      </p>
+                      <p style={{ fontSize: '0.8rem' }}>
+                        Batches: {(w.batchIds || []).length === 0 ? 'none' : w.batchIds.map((b) => b.name || b).join(', ')}
                       </p>
                       <p style={{ fontSize: '0.8rem' }}>
                         Deadline:{' '}
@@ -201,8 +185,25 @@ export default function WorksheetManager() {
                       )}
 
                       <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-                        <Button size="sm" variant="ghost" onClick={() => setExpandedId((id) => (id === w._id ? null : w._id))}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setExpandedId((id) => (id === w._id ? null : w._id));
+                            setBatchExpandedId(null);
+                          }}
+                        >
                           {expandedId === w._id ? 'Close' : 'Assign to Course(s)'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setBatchExpandedId((id) => (id === w._id ? null : w._id));
+                            setExpandedId(null);
+                          }}
+                        >
+                          {batchExpandedId === w._id ? 'Close' : 'Assign to Batch(es)'}
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => setStatusOpenId((id) => (id === w._id ? null : w._id))}>
                           {statusOpenId === w._id ? 'Close' : 'Student Status'}
@@ -212,7 +213,28 @@ export default function WorksheetManager() {
                         </Button>
                       </div>
 
-                      {expandedId === w._id && <AssignPanel worksheet={w} courses={courses} onAssigned={refetch} />}
+                      {expandedId === w._id && (
+                        <CheckboxAssignPanel
+                          initialSelectedIds={(w.courseIds || []).map(idOf)}
+                          options={courses}
+                          labelKey="title"
+                          onSave={async (selected) => {
+                            await worksheetService.assign(w._id, selected);
+                            await refetch();
+                          }}
+                        />
+                      )}
+                      {batchExpandedId === w._id && (
+                        <CheckboxAssignPanel
+                          initialSelectedIds={(w.batchIds || []).map(idOf)}
+                          options={batches}
+                          labelKey="name"
+                          onSave={async (selected) => {
+                            await worksheetService.assignBatches(w._id, selected);
+                            await refetch();
+                          }}
+                        />
+                      )}
                       {statusOpenId === w._id && <StatusPanel worksheetId={w._id} />}
                     </div>
                   ))
@@ -232,8 +254,11 @@ export default function WorksheetManager() {
                 <label>
                   Type
                   <select name="type" value={form.type} onChange={handleChange}>
-                    <option value="dpp">DPP (Daily Practice Problem)</option>
-                    <option value="assignment">Assignment</option>
+                    {WORKSHEET_TYPES.map((t) => (
+                      <option key={t.key} value={t.key}>
+                        {t.label}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label>
@@ -264,10 +289,34 @@ export default function WorksheetManager() {
                 <input type="datetime-local" name="deadlineAt" value={form.deadlineAt} onChange={handleChange} />
               </label>
 
-              <label>
-                PDF file (up to 25MB)
-                <input type="file" accept=".pdf" required onChange={(e) => setFile(e.target.files[0])} />
-              </label>
+              <div className={formStyles.row} role="radiogroup" aria-label="Worksheet source">
+                <label style={{ flexDirection: 'row', alignItems: 'center', gap: '0.4rem', fontWeight: 400 }}>
+                  <input type="radio" name="wsSourceMode" checked={sourceMode === 'upload'} onChange={() => setSourceMode('upload')} />
+                  Upload a file
+                </label>
+                <label style={{ flexDirection: 'row', alignItems: 'center', gap: '0.4rem', fontWeight: 400 }}>
+                  <input type="radio" name="wsSourceMode" checked={sourceMode === 'drive'} onChange={() => setSourceMode('drive')} />
+                  Link a Google Drive file
+                </label>
+              </div>
+
+              {sourceMode === 'upload' ? (
+                <label>
+                  PDF file (up to 25MB)
+                  <input type="file" accept=".pdf" required onChange={(e) => setFile(e.target.files[0])} />
+                </label>
+              ) : (
+                <label>
+                  Google Drive share link (set to "Anyone with the link can view")
+                  <input
+                    type="url"
+                    required
+                    value={driveUrl}
+                    onChange={(e) => setDriveUrl(e.target.value)}
+                    placeholder="https://drive.google.com/file/d/.../view"
+                  />
+                </label>
+              )}
 
               <div className={formStyles.actions}>
                 <Button type="submit" disabled={busy}>

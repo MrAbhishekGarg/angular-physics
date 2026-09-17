@@ -8,6 +8,7 @@ import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { useAvailableWorksheets } from '../../hooks/useWorksheets.js';
 import { worksheetService } from '../../services/worksheetService.js';
+import { WORKSHEET_TYPE_LABEL, WORKSHEET_TYPE_TONE } from '../../data/worksheetTypes.js';
 import formStyles from './DashboardForm.module.css';
 
 const STATUS_TONE = { 'not downloaded': 'default', downloaded: 'accent', completed: 'success' };
@@ -66,7 +67,7 @@ export default function WorksheetsLibrary() {
                 <div className={formStyles.cardHeader}>
                   <strong>{w.title}</strong>
                   <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                    <Badge tone={w.type === 'dpp' ? 'accent' : 'launching'}>{w.type === 'dpp' ? 'DPP' : 'Assignment'}</Badge>
+                    <Badge tone={WORKSHEET_TYPE_TONE[w.type]}>{WORKSHEET_TYPE_LABEL[w.type]}</Badge>
                     <Badge tone={STATUS_TONE[status]}>{status}</Badge>
                     {w.deadlineAt && (
                       <Badge tone={expired ? 'accent' : 'highlight'}>

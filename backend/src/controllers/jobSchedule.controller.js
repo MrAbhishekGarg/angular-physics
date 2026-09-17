@@ -15,10 +15,6 @@ const CONTENT_TYPE_BY_EXT = {
   '.webp': 'image/webp',
 };
 
-function isImagePath(storedPath) {
-  return path.extname(storedPath).toLowerCase() !== '.pdf';
-}
-
 export const ingestSchedule = asyncHandler(async (req, res) => {
   const { upload, classes, warnings } = await jobScheduleService.ingestScheduleFile(req.file, { date: req.body.date });
   return ApiResponse(res, 201, { upload, classes, warnings }, { extracted: classes.length });
@@ -37,10 +33,16 @@ export const listClasses = asyncHandler(async (req, res) => {
 
 export const listUploads = asyncHandler(async (req, res) => {
   const uploads = await JobScheduleUpload.find().sort({ date: -1 }).lean();
+  // isImage is stored directly for every upload made after this field was
+  // added — this fallback only matters for pre-existing rows that predate
+  // it, so their image preview doesn't silently stop rendering.
   return ApiResponse(
     res,
     200,
-    uploads.map((u) => ({ ...u, isImage: isImagePath(u.storedPath) })),
+    uploads.map((u) => ({
+      ...u,
+      isImage: u.isImage ?? (u.storedPath ? path.extname(u.storedPath).toLowerCase() !== '.pdf' : false),
+    })),
     { count: uploads.length }
   );
 });
@@ -108,6 +110,9 @@ export const deleteTopicPlan = asyncHandler(async (req, res) => {
 export const downloadScheduleFile = asyncHandler(async (req, res) => {
   const upload = await JobScheduleUpload.findById(req.params.id).lean();
   if (!upload) throw new ApiError(404, 'Schedule upload not found');
+  if (!upload.storedPath) {
+    throw new ApiError(404, "This schedule was parsed from a PDF — the source file isn't kept once its classes are extracted, to save storage.");
+  }
 
   const absolutePath = path.join(JOB_SCHEDULE_UPLOADS_DIR, upload.storedPath);
   if (!fs.existsSync(absolutePath)) throw new ApiError(404, 'File not found on server');

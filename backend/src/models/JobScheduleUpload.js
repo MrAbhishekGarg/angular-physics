@@ -13,7 +13,13 @@ const jobScheduleUploadSchema = new mongoose.Schema(
   {
     date: { type: Date, required: true, unique: true, index: true },
     originalFilename: { type: String, default: '' },
-    storedPath: { type: String, required: true },
+    // Empty for a PDF upload — once its classes are extracted, the source
+    // PDF is never written to disk at all (nothing left in it worth keeping
+    // once the structured data is out). Only an image upload — which has no
+    // text layer to extract and is kept purely as an on-screen reference —
+    // actually has a file behind this path.
+    storedPath: { type: String, default: '' },
+    isImage: { type: Boolean, default: false },
     extractedCount: { type: Number, default: 0 },
     warnings: { type: [String], default: [] },
   },

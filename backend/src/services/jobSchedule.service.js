@@ -67,9 +67,17 @@ export async function ingestScheduleFile(file, { date: explicitDate } = {}) {
     warnings = parsed.warnings;
   }
 
-  const ext = EXT_BY_MIME[file.mimetype] || path.extname(file.originalname).toLowerCase() || '.bin';
-  const filename = `${day.toISOString().slice(0, 10)}-${Date.now()}${ext}`;
-  fs.writeFileSync(path.join(JOB_SCHEDULE_UPLOADS_DIR, filename), file.buffer);
+  // A PDF is fully consumed by extraction above — nothing in it is worth
+  // keeping once its classes exist as structured JobClass rows, so it's
+  // never written to disk at all. An image has no text layer to extract, so
+  // it IS the content (the mentor references it visually) and still gets
+  // archived.
+  let filename = '';
+  if (isImage) {
+    const ext = EXT_BY_MIME[file.mimetype] || path.extname(file.originalname).toLowerCase() || '.bin';
+    filename = `${day.toISOString().slice(0, 10)}-${Date.now()}${ext}`;
+    fs.writeFileSync(path.join(JOB_SCHEDULE_UPLOADS_DIR, filename), file.buffer);
+  }
 
   // Re-uploading a day (a corrected PDF, or the same one again) used to be
   // rejected outright once that date already had an upload. Instead this
@@ -81,6 +89,7 @@ export async function ingestScheduleFile(file, { date: explicitDate } = {}) {
   if (upload) {
     upload.originalFilename = file.originalname || '';
     upload.storedPath = filename;
+    upload.isImage = isImage;
     upload.extractedCount = classes.length;
     upload.warnings = warnings;
     await upload.save();
@@ -91,7 +100,8 @@ export async function ingestScheduleFile(file, { date: explicitDate } = {}) {
     upload = await JobScheduleUpload.create({
       date: day,
       originalFilename: file.originalname || '',
-      storedPath: filename, // relative — JOB_SCHEDULE_UPLOADS_DIR may differ across environments
+      storedPath: filename, // relative — JOB_SCHEDULE_UPLOADS_DIR may differ across environments; empty for a PDF (see above)
+      isImage,
       extractedCount: classes.length,
       warnings,
     });
@@ -230,7 +240,7 @@ export async function deleteClass(id) {
     const remaining = await JobClass.countDocuments({ sourceUploadId: deleted.sourceUploadId });
     if (remaining === 0) {
       const upload = await JobScheduleUpload.findByIdAndDelete(deleted.sourceUploadId).lean();
-      if (upload) {
+      if (upload?.storedPath) {
         const filePath = path.join(JOB_SCHEDULE_UPLOADS_DIR, upload.storedPath);
         fs.rm(filePath, { force: true }, () => {}); // best-effort — a missing file here is never worth failing the delete over
       }
@@ -256,8 +266,10 @@ export async function deleteUpload(id) {
 
   await JobClass.deleteMany({ sourceUploadId: id });
 
-  const filePath = path.join(JOB_SCHEDULE_UPLOADS_DIR, upload.storedPath);
-  fs.rm(filePath, { force: true }, () => {});
+  if (upload.storedPath) {
+    const filePath = path.join(JOB_SCHEDULE_UPLOADS_DIR, upload.storedPath);
+    fs.rm(filePath, { force: true }, () => {});
+  }
 
   return upload;
 }

@@ -9,6 +9,9 @@ import Pagination from '../../components/common/Pagination.jsx';
 import { useNotes } from '../../hooks/useNotes.js';
 import { noteService } from '../../services/noteService.js';
 import { useAuth } from '../../hooks/useAuth.js';
+import { useMentorCourses } from '../../hooks/useCourses.js';
+import { useStudentBatches } from '../../hooks/useStudentBatches.js';
+import CheckboxAssignPanel, { idOf } from '../../components/dashboard/CheckboxAssignPanel.jsx';
 import { EXAM_TRACKS } from '../../data/examTracks.js';
 import { formatPrice } from '../../data/courseFormat.js';
 import formStyles from './DashboardForm.module.css';
@@ -25,14 +28,20 @@ export default function NotesManager() {
   const { user } = useAuth();
   const canManagePaid = user?.canManagePaidContent !== false;
   const { data: notes, loading, error, refetch } = useNotes();
+  const { data: courses } = useMentorCourses();
+  const { data: batches } = useStudentBatches();
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
   const totalPages = notes ? Math.max(1, Math.ceil(notes.length / PAGE_SIZE)) : 1;
   const pagedNotes = notes ? notes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : [];
   const [form, setForm] = useState(emptyForm);
+  const [sourceMode, setSourceMode] = useState('upload');
   const [file, setFile] = useState(null);
+  const [driveUrl, setDriveUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState('');
+  const [courseExpandedId, setCourseExpandedId] = useState(null);
+  const [batchExpandedId, setBatchExpandedId] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -52,9 +61,11 @@ export default function NotesManager() {
         price: form.category === 'premium' ? Number(form.price) : 0,
       };
       const note = await noteService.create(payload);
-      if (file) await noteService.uploadFile(note._id, file);
+      if (sourceMode === 'upload' && file) await noteService.uploadFile(note._id, file);
+      if (sourceMode === 'drive' && driveUrl.trim()) await noteService.setDriveLink(note._id, driveUrl.trim());
       setForm(emptyForm);
       setFile(null);
+      setDriveUrl('');
       await refetch();
     } catch (err) {
       setFormError(err.message);
@@ -94,12 +105,76 @@ export default function NotesManager() {
                       </div>
                       <p style={{ color: 'var(--ap-text-muted)', fontSize: '0.85rem' }}>{note.description}</p>
                       <p style={{ fontSize: '0.8rem' }}>
-                        {note.track} · {note.fileName || 'no file uploaded yet'}
+                        {note.track} ·{' '}
+                        {note.source === 'drive' && note.driveUrl ? (
+                          <a href={note.driveUrl} target="_blank" rel="noreferrer">
+                            Google Drive link
+                          </a>
+                        ) : (
+                          note.fileName || 'no file uploaded yet'
+                        )}
                       </p>
-                      {(note.category !== 'premium' || canManagePaid) && (
-                        <Button size="sm" variant="danger" onClick={() => handleDelete(note)}>
-                          Delete
+                      <p style={{ fontSize: '0.8rem' }}>
+                        Courses:{' '}
+                        {(note.courseIds || []).length === 0
+                          ? 'none (visible to all students)'
+                          : note.courseIds.map((c) => c.title || c).join(', ')}
+                      </p>
+                      <p style={{ fontSize: '0.8rem' }}>
+                        Batches:{' '}
+                        {(note.batchIds || []).length === 0
+                          ? 'none (visible to all students)'
+                          : note.batchIds.map((b) => b.name || b).join(', ')}
+                      </p>
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.3rem' }}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setCourseExpandedId((id) => (id === note._id ? null : note._id));
+                            setBatchExpandedId(null);
+                          }}
+                        >
+                          {courseExpandedId === note._id ? 'Close' : 'Assign to Course(s)'}
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setBatchExpandedId((id) => (id === note._id ? null : note._id));
+                            setCourseExpandedId(null);
+                          }}
+                        >
+                          {batchExpandedId === note._id ? 'Close' : 'Assign to Batch(es)'}
+                        </Button>
+                        {(note.category !== 'premium' || canManagePaid) && (
+                          <Button size="sm" variant="danger" onClick={() => handleDelete(note)}>
+                            Delete
+                          </Button>
+                        )}
+                      </div>
+
+                      {courseExpandedId === note._id && (
+                        <CheckboxAssignPanel
+                          initialSelectedIds={(note.courseIds || []).map(idOf)}
+                          options={courses}
+                          labelKey="title"
+                          onSave={async (selected) => {
+                            await noteService.assignCourses(note._id, selected);
+                            await refetch();
+                          }}
+                        />
+                      )}
+                      {batchExpandedId === note._id && (
+                        <CheckboxAssignPanel
+                          initialSelectedIds={(note.batchIds || []).map(idOf)}
+                          options={batches}
+                          labelKey="name"
+                          onSave={async (selected) => {
+                            await noteService.assignBatches(note._id, selected);
+                            await refetch();
+                          }}
+                        />
                       )}
                     </div>
                   ))
@@ -153,15 +228,39 @@ export default function NotesManager() {
                 </label>
               )}
 
-              <label>
-                File (PDF, DOC/DOCX, PPT/PPTX — up to 25MB)
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.ppt,.pptx"
-                  required
-                  onChange={(e) => setFile(e.target.files[0])}
-                />
-              </label>
+              <div className={formStyles.row} role="radiogroup" aria-label="Note source">
+                <label style={{ flexDirection: 'row', alignItems: 'center', gap: '0.4rem', fontWeight: 400 }}>
+                  <input type="radio" name="sourceMode" checked={sourceMode === 'upload'} onChange={() => setSourceMode('upload')} />
+                  Upload a file
+                </label>
+                <label style={{ flexDirection: 'row', alignItems: 'center', gap: '0.4rem', fontWeight: 400 }}>
+                  <input type="radio" name="sourceMode" checked={sourceMode === 'drive'} onChange={() => setSourceMode('drive')} />
+                  Link a Google Drive file
+                </label>
+              </div>
+
+              {sourceMode === 'upload' ? (
+                <label>
+                  File (PDF, DOC/DOCX, PPT/PPTX — up to 25MB)
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx"
+                    required
+                    onChange={(e) => setFile(e.target.files[0])}
+                  />
+                </label>
+              ) : (
+                <label>
+                  Google Drive share link (set to "Anyone with the link can view")
+                  <input
+                    type="url"
+                    required
+                    value={driveUrl}
+                    onChange={(e) => setDriveUrl(e.target.value)}
+                    placeholder="https://drive.google.com/file/d/.../view"
+                  />
+                </label>
+              )}
 
               <div className={formStyles.actions}>
                 <Button type="submit" disabled={busy}>

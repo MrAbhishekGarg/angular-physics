@@ -43,9 +43,19 @@ export const uploadWorksheetFile = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, worksheet);
 });
 
+export const setWorksheetDriveLink = asyncHandler(async (req, res) => {
+  const worksheet = await worksheetService.setWorksheetDriveLink(req.params.id, req.body.driveUrl);
+  return ApiResponse(res, 200, worksheet);
+});
+
 export const assignWorksheet = asyncHandler(async (req, res) => {
   assertCoursesAssigned(req.user, req.body.courseIds || []);
   const worksheet = await worksheetService.assignWorksheetToCourses(req.params.id, req.body.courseIds || []);
+  return ApiResponse(res, 200, worksheet);
+});
+
+export const assignWorksheetBatches = asyncHandler(async (req, res) => {
+  const worksheet = await worksheetService.assignWorksheetToBatches(req.params.id, req.body.batchIds || []);
   return ApiResponse(res, 200, worksheet);
 });
 
@@ -55,13 +65,16 @@ export const listAvailableWorksheets = asyncHandler(async (req, res) => {
 });
 
 export const downloadWorksheet = asyncHandler(async (req, res) => {
-  const { absolutePath, fileName } = await worksheetService.resolveWorksheetFileForDownload(req.params.id, req.user);
-
-  if (!fs.existsSync(absolutePath)) throw new ApiError(404, 'File not found on server');
+  const result = await worksheetService.resolveWorksheetFileForDownload(req.params.id, req.user);
 
   if (req.user.role !== 'mentor' && req.user.role !== 'admin') {
     await worksheetService.markWorksheetDownloaded(req.params.id, req.user.id);
   }
+
+  if (result.redirectUrl) return res.redirect(302, result.redirectUrl);
+
+  const { absolutePath, fileName } = result;
+  if (!fs.existsSync(absolutePath)) throw new ApiError(404, 'File not found on server');
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);

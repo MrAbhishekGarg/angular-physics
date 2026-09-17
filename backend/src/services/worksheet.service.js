@@ -2,9 +2,11 @@ import path from 'path';
 import Worksheet from '../models/Worksheet.js';
 import WorksheetProgress from '../models/WorksheetProgress.js';
 import Enrollment from '../models/Enrollment.js';
+import StudentBatch from '../models/StudentBatch.js';
 import { ApiError } from '../utils/ApiError.js';
 import { SECURE_UPLOADS_ROOT } from '../middleware/upload.js';
 import { hasStudentAccess } from '../utils/studentAccess.js';
+import { getBatchIdsForStudent } from './studentBatch.service.js';
 
 const ACTIVE_STATUSES = ['active', 'completed'];
 
@@ -14,15 +16,24 @@ async function getEligibleCourseIds(studentId) {
   return enrollments.map((e) => e.courseId.toString());
 }
 
+async function getEligibleBatchIds(studentId) {
+  if (!(await hasStudentAccess(studentId, 'worksheets'))) return [];
+  return getBatchIdsForStudent(studentId);
+}
+
 export async function getAllWorksheets({ type, examType } = {}) {
   const filter = {};
   if (type) filter.type = type;
   if (examType) filter.examType = examType;
-  return Worksheet.find(filter).populate('courseIds', 'title track').sort({ createdAt: -1 }).lean();
+  return Worksheet.find(filter)
+    .populate('courseIds', 'title track')
+    .populate('batchIds', 'name')
+    .sort({ createdAt: -1 })
+    .lean();
 }
 
 export async function getWorksheetById(id) {
-  const worksheet = await Worksheet.findById(id).populate('courseIds', 'title track').lean();
+  const worksheet = await Worksheet.findById(id).populate('courseIds', 'title track').populate('batchIds', 'name').lean();
   if (!worksheet) throw new ApiError(404, 'Worksheet not found');
   return worksheet;
 }
@@ -45,7 +56,28 @@ export async function deleteWorksheet(id) {
 }
 
 export async function setWorksheetFile(id, { fileKey, fileName, fileSizeBytes }) {
-  const worksheet = await Worksheet.findByIdAndUpdate(id, { fileKey, fileName, fileSizeBytes }, { new: true }).lean();
+  const worksheet = await Worksheet.findByIdAndUpdate(
+    id,
+    { $set: { source: 'upload', fileKey, fileName, fileSizeBytes }, $unset: { driveUrl: '' } },
+    { new: true }
+  ).lean();
+  if (!worksheet) throw new ApiError(404, 'Worksheet not found');
+  return worksheet;
+}
+
+/**
+ * Alternative to setWorksheetFile — points the worksheet at a file the
+ * mentor already hosts on Google Drive instead of uploading it to our own
+ * server. Clears any previously-uploaded file's metadata so a worksheet
+ * only ever has one active source at a time.
+ */
+export async function setWorksheetDriveLink(id, driveUrl) {
+  if (!driveUrl?.trim()) throw new ApiError(400, 'Drive URL is required');
+  const worksheet = await Worksheet.findByIdAndUpdate(
+    id,
+    { $set: { source: 'drive', driveUrl: driveUrl.trim() }, $unset: { fileKey: '', fileName: '', fileSizeBytes: '' } },
+    { new: true }
+  ).lean();
   if (!worksheet) throw new ApiError(404, 'Worksheet not found');
   return worksheet;
 }
@@ -69,10 +101,21 @@ export async function assignWorksheetToCourses(id, courseIds) {
   return worksheet.toObject();
 }
 
-export async function getAvailableWorksheetsForStudent(studentId) {
-  const courseIds = await getEligibleCourseIds(studentId);
-  const worksheets = await Worksheet.find({ courseIds: { $in: courseIds } })
+/** Replaces batchIds wholesale — independent of assignWorksheetToCourses, no usage history (batches aren't course-scoped). */
+export async function assignWorksheetToBatches(id, batchIds) {
+  const worksheet = await Worksheet.findByIdAndUpdate(id, { batchIds: batchIds || [] }, { new: true, runValidators: true })
     .populate('courseIds', 'title track')
+    .populate('batchIds', 'name')
+    .lean();
+  if (!worksheet) throw new ApiError(404, 'Worksheet not found');
+  return worksheet;
+}
+
+export async function getAvailableWorksheetsForStudent(studentId) {
+  const [courseIds, batchIds] = await Promise.all([getEligibleCourseIds(studentId), getEligibleBatchIds(studentId)]);
+  const worksheets = await Worksheet.find({ $or: [{ courseIds: { $in: courseIds } }, { batchIds: { $in: batchIds } }] })
+    .populate('courseIds', 'title track')
+    .populate('batchIds', 'name')
     .sort({ createdAt: -1 })
     .lean();
 
@@ -118,24 +161,31 @@ export async function markWorksheetCompleted(worksheetId, studentId) {
 /**
  * Per-student status for one worksheet, for the mentor's dashboard —
  * resolves "eligible students" from the worksheet's assigned courseIds
- * (mirrors getEligibleCourseIds, inverted: courseIds -> studentIds) and
- * left-joins WorksheetProgress so students who haven't interacted with it
- * yet still show up as "not downloaded".
+ * (mirrors getEligibleCourseIds, inverted: courseIds -> studentIds) UNION
+ * the assigned batches' own membership, and left-joins WorksheetProgress so
+ * students who haven't interacted with it yet still show up as "not
+ * downloaded".
  */
 export async function getWorksheetProgressForMentor(worksheetId) {
   const worksheet = await Worksheet.findById(worksheetId).lean();
   if (!worksheet) throw new ApiError(404, 'Worksheet not found');
 
-  const enrollments = await Enrollment.find({
-    courseId: { $in: worksheet.courseIds },
-    status: { $in: ACTIVE_STATUSES },
-  })
-    .populate('studentId', 'name email')
-    .lean();
+  const [enrollments, batches] = await Promise.all([
+    Enrollment.find({
+      courseId: { $in: worksheet.courseIds },
+      status: { $in: ACTIVE_STATUSES },
+    })
+      .populate('studentId', 'name email')
+      .lean(),
+    StudentBatch.find({ _id: { $in: worksheet.batchIds || [] } }).populate('studentIds', 'name email').lean(),
+  ]);
 
   const studentById = new Map();
   enrollments.forEach((e) => {
     if (e.studentId) studentById.set(e.studentId._id.toString(), e.studentId);
+  });
+  batches.forEach((b) => {
+    (b.studentIds || []).forEach((s) => studentById.set(s._id.toString(), s));
   });
 
   const progress = await WorksheetProgress.find({ worksheetId })
@@ -159,17 +209,21 @@ export async function getWorksheetProgressForMentor(worksheetId) {
 export async function resolveWorksheetFileForDownload(id, user) {
   const worksheet = await Worksheet.findById(id).lean();
   if (!worksheet) throw new ApiError(404, 'Worksheet not found');
-  if (!worksheet.fileKey) throw new ApiError(404, 'This worksheet has no file uploaded yet');
+  if (worksheet.source !== 'drive' && !worksheet.fileKey) throw new ApiError(404, 'This worksheet has no file uploaded yet');
+  if (worksheet.source === 'drive' && !worksheet.driveUrl) throw new ApiError(404, 'This worksheet has no file uploaded yet');
 
   if (user.role !== 'mentor' && user.role !== 'admin') {
-    const courseIds = await getEligibleCourseIds(user.id);
-    const assigned = (worksheet.courseIds || []).map((cid) => cid.toString());
-    const eligible = assigned.some((cid) => courseIds.includes(cid));
+    const [courseIds, batchIds] = await Promise.all([getEligibleCourseIds(user.id), getEligibleBatchIds(user.id)]);
+    const assignedCourses = (worksheet.courseIds || []).map((cid) => cid.toString());
+    const assignedBatches = (worksheet.batchIds || []).map((bid) => bid.toString());
+    const eligible = assignedCourses.some((cid) => courseIds.includes(cid)) || assignedBatches.some((bid) => batchIds.includes(bid));
     if (!eligible) throw new ApiError(403, 'This worksheet is not available for your enrolled courses');
     if (worksheet.deadlineAt && worksheet.deadlineAt < new Date()) {
       throw new ApiError(403, 'The deadline for downloading this worksheet has passed');
     }
   }
+
+  if (worksheet.source === 'drive') return { redirectUrl: worksheet.driveUrl };
 
   return {
     absolutePath: path.join(SECURE_UPLOADS_ROOT, 'worksheets', worksheet.fileKey),
