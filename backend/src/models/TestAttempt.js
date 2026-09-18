@@ -28,6 +28,12 @@ const testAttemptSchema = new mongoose.Schema(
     studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     startedAt: { type: Date, required: true },
     submittedAt: { type: Date },
+    // Updated by a lightweight heartbeat ping from the exam screen (every
+    // ~15s, independent of answer autosave) — lets a mentor see which
+    // students are actively taking a test right now: "in-progress" status
+    // alone doesn't distinguish a student mid-exam from one who closed the
+    // tab an hour ago and never came back.
+    lastPingAt: { type: Date },
     durationMinutes: { type: Number, required: true },
     answers: { type: [answerSchema], default: [] },
     status: { type: String, enum: ['in-progress', 'submitted'], default: 'in-progress' },

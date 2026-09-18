@@ -268,6 +268,13 @@ export async function submitAttempt(attemptId, studentId, { answers = [], procto
   const questions = await resolveQuestions(test.questionIds);
 
   const answerByIndex = new Map(answers.map((a) => [a.questionIndex, a]));
+  // Fallback to whatever the periodic autosave already persisted for a
+  // question the final submit payload doesn't cover — a real bug once let a
+  // stale client-side submit fire with an empty/incomplete answers array
+  // (see TestAttempt.jsx's handleSubmitRef fix) and silently wipe a whole
+  // exam's worth of already-autosaved answers. This merge means a submit
+  // can only ADD to or match what's already saved, never erase it.
+  const previouslySavedByIndex = new Map((attempt.answers || []).map((a) => [a.questionIndex, a]));
 
   let score = 0;
   let maxScore = 0;
@@ -278,7 +285,7 @@ export async function submitAttempt(attemptId, studentId, { answers = [], procto
 
   questions.forEach((question, index) => {
     maxScore += question.marks || 0;
-    const rawAnswer = answerByIndex.get(index);
+    const rawAnswer = answerByIndex.get(index) || previouslySavedByIndex.get(index);
     const { outcome, points } = gradeQuestion(question, rawAnswer);
     score += points;
     if (outcome === 'correct' || outcome === 'partial') correctCount += 1;
@@ -332,27 +339,111 @@ export async function saveAttemptProgress(attemptId, studentId, answers = []) {
     selectedOptionIndexes: a.selectedOptionIndexes || [],
     numericAnswer: a.numericAnswer,
   }));
+  attempt.lastPingAt = new Date();
   await attempt.save();
   return { saved: true };
 }
 
-export async function getAttemptsForTest(testId) {
-  const attempts = await TestAttempt.find({ testId, isPreview: { $ne: true }, archived: { $ne: true } })
-    .populate('studentId', 'name email')
-    .sort({ score: -1, createdAt: -1 })
-    .lean();
+// How stale a heartbeat can be before a student no longer counts as "online
+// now" — generous relative to the ~15s ping interval so one missed beat
+// (a brief network hiccup) doesn't flicker a student in and out of the list.
+const LIVE_WINDOW_MS = 45 * 1000;
 
-  // Reset attempts are archived, not deleted, so a full count (including
-  // archived ones) tells a mentor how many times a student has actually
-  // given this test, not just whether their current attempt is active.
-  const allForTest = await TestAttempt.find({ testId, isPreview: { $ne: true } }).select('studentId').lean();
+/**
+ * Lightweight heartbeat, independent of answer autosave — a student who's
+ * just reading a question without changing an answer wouldn't otherwise
+ * trigger any request for a while, which would make them look "offline"
+ * even mid-exam. Called on its own timer from the exam screen.
+ */
+export async function pingAttempt(attemptId, studentId) {
+  const attempt = await TestAttempt.findById(attemptId).select('studentId status');
+  if (!attempt) throw new ApiError(404, 'Attempt not found');
+  if (attempt.studentId.toString() !== studentId) throw new ApiError(403, 'Not your attempt');
+  if (attempt.status !== 'in-progress') return { pinged: false };
+  await TestAttempt.updateOne({ _id: attemptId }, { $set: { lastPingAt: new Date() } });
+  return { pinged: true };
+}
+
+/** Students actively taking this specific test right now, for the mentor's live view. */
+export async function getLiveAttemptsForTest(testId) {
+  const since = new Date(Date.now() - LIVE_WINDOW_MS);
+  const attempts = await TestAttempt.find({
+    testId,
+    status: 'in-progress',
+    isPreview: { $ne: true },
+    lastPingAt: { $gte: since },
+  })
+    .populate('studentId', 'name email')
+    .select('studentId startedAt lastPingAt')
+    .sort({ lastPingAt: -1 })
+    .lean();
+  return attempts.map((a) => ({ studentId: a.studentId._id, name: a.studentId.name, email: a.studentId.email, startedAt: a.startedAt }));
+}
+
+/** Per-test online-right-now counts across every test a mentor can see — for a badge on the Manage Tests list. */
+export async function getLiveSummaryForAllTests() {
+  const since = new Date(Date.now() - LIVE_WINDOW_MS);
+  const rows = await TestAttempt.aggregate([
+    { $match: { status: 'in-progress', isPreview: { $ne: true }, lastPingAt: { $gte: since } } },
+    { $group: { _id: '$testId', count: { $sum: 1 } } },
+  ]);
+  return Object.fromEntries(rows.map((r) => [r._id.toString(), r.count]));
+}
+
+/**
+ * Every attempt for this test — including archived (reset) ones. A reset
+ * only archives an attempt, it never deletes it (see resetAttempt below),
+ * so a mentor/admin reviewing a student's history needs to see EVERY past
+ * attempt's own full score/mistakes, not just whichever one is currently
+ * active. Each row carries `attemptNumber` (1 = oldest) and `isCurrent`
+ * (the one non-archived attempt, if any) so the UI can label them clearly
+ * without hiding anything.
+ */
+export async function getAttemptsForTest(testId) {
+  const rawAttempts = await TestAttempt.find({ testId, isPreview: { $ne: true } })
+    .populate('studentId', 'name email')
+    .sort({ createdAt: 1 })
+    .lean();
+  // A deleted student account leaves studentId un-populatable (null) — drop
+  // just that attempt rather than letting one orphaned ref 500 the whole
+  // results page for every other student.
+  const attempts = rawAttempts.filter((a) => a.studentId);
+
   const countByStudent = new Map();
-  allForTest.forEach((a) => {
-    const key = a.studentId.toString();
+  attempts.forEach((a) => {
+    const key = a.studentId._id.toString();
     countByStudent.set(key, (countByStudent.get(key) || 0) + 1);
   });
 
-  return attempts.map((a) => ({ ...a, attemptCount: countByStudent.get(a.studentId._id.toString()) || 1 }));
+  const seenByStudent = new Map();
+  return attempts
+    .map((a) => {
+      const key = a.studentId._id.toString();
+      const attemptNumber = (seenByStudent.get(key) || 0) + 1;
+      seenByStudent.set(key, attemptNumber);
+      return { ...a, attemptNumber, attemptCount: countByStudent.get(key) || 1, isCurrent: !a.archived };
+    })
+    .sort((a, b) => {
+      // Group by student (by name, for a stable readable order), most
+      // recent attempt first within each student.
+      const nameCompare = (a.studentId.name || '').localeCompare(b.studentId.name || '');
+      if (nameCompare !== 0) return nameCompare;
+      return b.attemptNumber - a.attemptNumber;
+    });
+}
+
+/**
+ * Permanently deletes one attempt's data — unlike resetAttempt (which
+ * archives, keeping history), this is real, irreversible deletion.
+ * Admin-only (see test.routes.js) since a mentor should reach for "Reset"
+ * (give a fresh attempt while keeping the old one for the record) in the
+ * ordinary course of things; hard delete is for when the data itself
+ * shouldn't exist (e.g. a test run purely to debug the exam software).
+ */
+export async function deleteAttempt(attemptId) {
+  const deleted = await TestAttempt.findByIdAndDelete(attemptId).lean();
+  if (!deleted) throw new ApiError(404, 'Attempt not found');
+  return deleted;
 }
 
 /**
@@ -475,6 +566,108 @@ export async function getQuestionAnalysisForTest(testId) {
       accuracyPercent: attemptedCount > 0 ? Math.round((correctCount / attemptedCount) * 100) : null,
     };
   });
+}
+
+function median(sortedValues) {
+  const n = sortedValues.length;
+  if (n === 0) return null;
+  const mid = Math.floor(n / 2);
+  return n % 2 === 0 ? (sortedValues[mid - 1] + sortedValues[mid]) / 2 : sortedValues[mid];
+}
+
+const SCORE_BUCKETS = [
+  { label: '0-20%', min: 0, max: 20 },
+  { label: '20-40%', min: 20, max: 40 },
+  { label: '40-60%', min: 40, max: 60 },
+  { label: '60-80%', min: 60, max: 80 },
+  { label: '80-100%', min: 80, max: 100 },
+];
+
+/**
+ * Full statistical report for one test — score distribution/average/
+ * median, chapter-wise accuracy across everyone who took it, and a
+ * per-option pick distribution per question (which wrong options students
+ * actually gravitate toward, not just "correct vs wrong"). All computed
+ * from the same submitted/non-archived/non-preview attempt set used
+ * elsewhere in this file, and the same gradeQuestion() used everywhere
+ * else so the numbers can never drift from how attempts are actually
+ * scored.
+ */
+export async function getTestStatistics(testId) {
+  const test = await Test.findById(testId).lean();
+  if (!test) throw new ApiError(404, 'Test not found');
+  const questions = await resolveQuestions(test.questionIds);
+
+  const attempts = await TestAttempt.find({
+    testId,
+    status: 'submitted',
+    archived: { $ne: true },
+    isPreview: { $ne: true },
+  }).lean();
+
+  const scorePercents = attempts
+    .filter((a) => a.maxScore > 0)
+    .map((a) => (a.score / a.maxScore) * 100)
+    .sort((a, b) => a - b);
+
+  const summary = scorePercents.length
+    ? {
+        count: scorePercents.length,
+        average: Math.round((scorePercents.reduce((s, v) => s + v, 0) / scorePercents.length) * 10) / 10,
+        median: Math.round(median(scorePercents) * 10) / 10,
+        highest: Math.round(scorePercents[scorePercents.length - 1] * 10) / 10,
+        lowest: Math.round(scorePercents[0] * 10) / 10,
+      }
+    : null;
+
+  const distribution = SCORE_BUCKETS.map((b) => ({
+    label: b.label,
+    count: scorePercents.filter((p) => (b.max === 100 ? p >= b.min && p <= b.max : p >= b.min && p < b.max)).length,
+  }));
+
+  const chapterStats = new Map();
+  const optionDistribution = questions.map((q, index) => {
+    const chapter = q.chapter || 'Untagged';
+    if (!chapterStats.has(chapter)) chapterStats.set(chapter, { correct: 0, total: 0 });
+    const chapterStat = chapterStats.get(chapter);
+
+    const counts = (q.options || []).map(() => 0);
+    let unattemptedCount = 0;
+    attempts.forEach((a) => {
+      const answer = a.answers.find((x) => x.questionIndex === index);
+      const { outcome } = gradeQuestion(q, answer);
+      if (outcome !== 'unattempted') {
+        chapterStat.total += 1;
+        if (outcome === 'correct' || outcome === 'partial') chapterStat.correct += 1;
+      }
+      if (!answer?.selectedOptionIndexes?.length) {
+        unattemptedCount += 1;
+        return;
+      }
+      answer.selectedOptionIndexes.forEach((oi) => {
+        if (counts[oi] !== undefined) counts[oi] += 1;
+      });
+    });
+
+    return {
+      questionIndex: index,
+      text: q.text,
+      type: q.type,
+      correctOptionIndexes: q.correctOptionIndexes || [],
+      optionCounts: counts,
+      unattemptedCount,
+    };
+  });
+
+  const chapterBreakdown = [...chapterStats.entries()]
+    .map(([chapter, s]) => ({
+      chapter,
+      attempted: s.total,
+      accuracyPercent: s.total > 0 ? Math.round((s.correct / s.total) * 100) : null,
+    }))
+    .sort((a, b) => (a.accuracyPercent ?? 101) - (b.accuracyPercent ?? 101));
+
+  return { summary, distribution, chapterBreakdown, optionDistribution, totalSubmitted: attempts.length };
 }
 
 export async function getMyAttempts(studentId) {

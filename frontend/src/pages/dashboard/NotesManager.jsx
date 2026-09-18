@@ -12,6 +12,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useMentorCourses } from '../../hooks/useCourses.js';
 import { useStudentBatches } from '../../hooks/useStudentBatches.js';
 import CheckboxAssignPanel, { idOf } from '../../components/dashboard/CheckboxAssignPanel.jsx';
+import PublishTargetFields from '../../components/dashboard/PublishTargetFields.jsx';
 import { EXAM_TRACKS } from '../../data/examTracks.js';
 import { formatPrice } from '../../data/courseFormat.js';
 import formStyles from './DashboardForm.module.css';
@@ -38,6 +39,8 @@ export default function NotesManager() {
   const [sourceMode, setSourceMode] = useState('upload');
   const [file, setFile] = useState(null);
   const [driveUrl, setDriveUrl] = useState('');
+  const [publishCourseIds, setPublishCourseIds] = useState([]);
+  const [publishBatchIds, setPublishBatchIds] = useState([]);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState('');
   const [courseExpandedId, setCourseExpandedId] = useState(null);
@@ -63,9 +66,13 @@ export default function NotesManager() {
       const note = await noteService.create(payload);
       if (sourceMode === 'upload' && file) await noteService.uploadFile(note._id, file);
       if (sourceMode === 'drive' && driveUrl.trim()) await noteService.setDriveLink(note._id, driveUrl.trim());
+      if (publishCourseIds.length > 0) await noteService.assignCourses(note._id, publishCourseIds);
+      if (publishBatchIds.length > 0) await noteService.assignBatches(note._id, publishBatchIds);
       setForm(emptyForm);
       setFile(null);
       setDriveUrl('');
+      setPublishCourseIds([]);
+      setPublishBatchIds([]);
       await refetch();
     } catch (err) {
       setFormError(err.message);
@@ -261,6 +268,15 @@ export default function NotesManager() {
                   />
                 </label>
               )}
+
+              <PublishTargetFields
+                courses={courses}
+                batches={batches}
+                selectedCourseIds={publishCourseIds}
+                selectedBatchIds={publishBatchIds}
+                onCourseIdsChange={setPublishCourseIds}
+                onBatchIdsChange={setPublishBatchIds}
+              />
 
               <div className={formStyles.actions}>
                 <Button type="submit" disabled={busy}>

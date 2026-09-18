@@ -251,7 +251,10 @@ export default function QuestionBank() {
                           />
                         )}
                       </div>
-                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--ap-text-muted)' }}>
+                          {q.seqId ? `Q-${q.seqId}` : '—'}
+                        </span>
                         {q.isPYQ && <Badge tone="highlight">PYQ{q.pyqYear ? ` ${q.pyqYear}` : ''}</Badge>}
                         <Badge tone={DIFFICULTY_TONE[q.difficulty]}>{q.difficulty}</Badge>
                         <Badge tone="default">{q.type}</Badge>

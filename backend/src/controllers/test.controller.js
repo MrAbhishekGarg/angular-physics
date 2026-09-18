@@ -62,6 +62,21 @@ export const saveAttemptProgress = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, result);
 });
 
+export const pingAttempt = asyncHandler(async (req, res) => {
+  const result = await testService.pingAttempt(req.params.attemptId, req.user.id);
+  return ApiResponse(res, 200, result);
+});
+
+export const getLiveAttemptsForTest = asyncHandler(async (req, res) => {
+  const students = await testService.getLiveAttemptsForTest(req.params.id);
+  return ApiResponse(res, 200, students, { count: students.length });
+});
+
+export const getLiveSummaryForAllTests = asyncHandler(async (req, res) => {
+  const summary = await testService.getLiveSummaryForAllTests();
+  return ApiResponse(res, 200, summary);
+});
+
 export const listAttemptsForTest = asyncHandler(async (req, res) => {
   const attempts = await testService.getAttemptsForTest(req.params.id);
   return ApiResponse(res, 200, attempts, { count: attempts.length });
@@ -77,6 +92,11 @@ export const getQuestionAnalysisForTest = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, analysis, { count: analysis.length });
 });
 
+export const getTestStatistics = asyncHandler(async (req, res) => {
+  const stats = await testService.getTestStatistics(req.params.id);
+  return ApiResponse(res, 200, stats);
+});
+
 export const listMyAttempts = asyncHandler(async (req, res) => {
   const attempts = await testService.getMyAttempts(req.user.id);
   return ApiResponse(res, 200, attempts, { count: attempts.length });
@@ -90,6 +110,11 @@ export const getAttemptResult = asyncHandler(async (req, res) => {
 export const resetAttempt = asyncHandler(async (req, res) => {
   const attempt = await testService.resetAttempt(req.params.attemptId);
   return ApiResponse(res, 200, attempt);
+});
+
+export const deleteAttempt = asyncHandler(async (req, res) => {
+  await testService.deleteAttempt(req.params.attemptId);
+  return ApiResponse(res, 200, { deleted: true });
 });
 
 export const createPracticeTest = asyncHandler(async (req, res) => {

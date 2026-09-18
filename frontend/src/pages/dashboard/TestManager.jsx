@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../../components/seo/SEO.jsx';
 import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
@@ -23,6 +23,27 @@ export default function TestManager() {
   const [page, setPage] = useState(1);
   const totalPages = tests ? Math.max(1, Math.ceil(tests.length / PAGE_SIZE)) : 1;
   const pagedTests = tests ? tests.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : [];
+
+  // { [testId]: countOnlineNow } — polled so a mentor sees live activity
+  // without opening each test individually (heartbeat-based, no websockets).
+  const [liveSummary, setLiveSummary] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    const poll = () => {
+      testService
+        .getLiveSummary()
+        .then((data) => {
+          if (!cancelled) setLiveSummary(data);
+        })
+        .catch(() => {});
+    };
+    poll();
+    const interval = setInterval(poll, 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleDelete = async (test) => {
     if (!window.confirm(`Delete "${test.title}"? This also deletes all student attempts.`)) return;
@@ -62,7 +83,12 @@ export default function TestManager() {
             {pagedTests.map((test) => (
                 <div key={test._id} className={formStyles.card}>
                   <div className={formStyles.cardHeader}>
-                    <strong>{test.title}</strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <strong>{test.title}</strong>
+                      <span style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--ap-text-muted)' }}>
+                        {test.seqId ? `T-${test.seqId}` : '—'}
+                      </span>
+                    </div>
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <Badge tone={test.status === 'published' ? 'success' : 'default'}>{test.status}</Badge>
                       <Badge tone={test.isPaid ? 'accent' : 'success'}>
@@ -71,6 +97,11 @@ export default function TestManager() {
                       {test.liveUntil && (
                         <Badge tone={new Date(test.liveUntil) < new Date() ? 'accent' : 'highlight'}>
                           {new Date(test.liveUntil) < new Date() ? 'Expired' : `Live until ${new Date(test.liveUntil).toLocaleString()}`}
+                        </Badge>
+                      )}
+                      {liveSummary[test._id] > 0 && (
+                        <Badge tone="success">
+                          ● {liveSummary[test._id]} online now
                         </Badge>
                       )}
                     </div>

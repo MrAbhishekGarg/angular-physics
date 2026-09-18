@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { TRACKS } from '../constants/tracks.js';
+import { getNextSequence } from '../utils/sequence.js';
 
 /**
  * An online Test or a self-generated practice session — `kind`
@@ -15,6 +16,12 @@ import { TRACKS } from '../constants/tracks.js';
  */
 const testSchema = new mongoose.Schema(
   {
+    // Human-readable reference id ("T-1", "T-2", ...) — a mentor can't read
+    // a Mongo ObjectId over the phone or into a support message. Only
+    // assigned to real mentor-authored tests (kind:'test'); self-generated
+    // practice sessions skip it so the sequence stays meaningful and isn't
+    // churned through by every student's one-off practice set.
+    seqId: { type: Number, index: true },
     title: { type: String, required: true },
     description: { type: String, default: '' },
     examType: { type: String, required: true, enum: TRACKS, index: true },
@@ -54,5 +61,12 @@ const testSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+testSchema.pre('validate', async function assignSeqId(next) {
+  if (this.isNew && this.seqId == null && this.kind !== 'practice') {
+    this.seqId = await getNextSequence('test');
+  }
+  next();
+});
 
 export default mongoose.models.Test || mongoose.model('Test', testSchema);

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import SEO from '../../components/seo/SEO.jsx';
 import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
 import Badge from '../../components/common/Badge.jsx';
@@ -514,6 +514,17 @@ export default function StudentDetail() {
     await refetch();
   };
 
+  const handleDeleteAttempt = async (attempt) => {
+    if (
+      !window.confirm(
+        `Permanently delete this attempt (#${attempt.attemptNumber}) of "${attempt.testId?.title}"? This cannot be undone — use "Reset" instead if you just want to let them retake it.`
+      )
+    )
+      return;
+    await testService.deleteAttempt(attempt._id);
+    await refetch();
+  };
+
   const handleToggleStatus = async () => {
     const nextStatus = data.student.status === 'active' ? 'inactive' : 'active';
     if (nextStatus === 'inactive' && !window.confirm(`Deactivate ${data.student.name}? They won't be able to log in until reactivated.`)) return;
@@ -661,6 +672,9 @@ export default function StudentDetail() {
                 )}
 
                 <h2 style={{ color: 'var(--ap-primary)' }}>Test Attempts</h2>
+                <p style={{ fontSize: '0.82rem', color: 'var(--ap-text-muted)', marginTop: '-0.3rem' }}>
+                  Every attempt is listed, including past ones from a reset retake.
+                </p>
                 {data.attempts.length === 0 ? (
                   <ErrorState message="No test attempts yet." />
                 ) : (
@@ -669,31 +683,49 @@ export default function StudentDetail() {
                       <thead>
                         <tr>
                           <th>Test</th>
+                          <th>Attempt</th>
                           <th>Status</th>
-                          <th>Attempts</th>
                           <th>Score</th>
                           <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {data.attempts.map((a) => (
-                          <tr key={a._id}>
+                          <tr key={a._id} style={a.isCurrent ? undefined : { opacity: 0.75 }}>
                             <td>
                               {a.testId?.title} <Badge tone="default">{a.testId?.kind || 'test'}</Badge>
                             </td>
-                            <td>{a.status}</td>
                             <td>
-                              <Badge tone={a.attemptCount > 1 ? 'accent' : 'default'}>
-                                {a.attemptCount} attempt{a.attemptCount === 1 ? '' : 's'}
+                              <Badge tone={a.isCurrent ? 'default' : 'launching'}>
+                                #{a.attemptNumber} of {a.attemptCount}
                               </Badge>
+                              {!a.isCurrent && (
+                                <>
+                                  <br />
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--ap-text-muted)' }}>archived (reset)</span>
+                                </>
+                              )}
                             </td>
+                            <td>{a.status}</td>
                             <td>{a.status === 'submitted' ? `${a.score} / ${a.maxScore}` : '—'}</td>
                             <td>
-                              {a.status === 'submitted' && canResetAttempts && (
-                                <Button size="sm" variant="ghost" onClick={() => handleReset(a)}>
-                                  Reset Attempt
-                                </Button>
-                              )}
+                              <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                                {a.status === 'submitted' && (
+                                  <Button as={Link} to={`/dashboard/mentor/tests/attempts/${a._id}/result`} size="sm" variant="ghost">
+                                    Full Report
+                                  </Button>
+                                )}
+                                {a.isCurrent && a.status === 'submitted' && canResetAttempts && (
+                                  <Button size="sm" variant="ghost" onClick={() => handleReset(a)}>
+                                    Reset Attempt
+                                  </Button>
+                                )}
+                                {isAdmin && (
+                                  <Button size="sm" variant="danger" onClick={() => handleDeleteAttempt(a)}>
+                                    Delete
+                                  </Button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}

@@ -89,9 +89,21 @@ export default function TestAttempt() {
     [answers, state.attempt, navigate, user]
   );
 
+  // Assigned fresh on every render (not via useEffect) so anything reading
+  // this ref always gets the handleSubmit closing over the LATEST answers —
+  // same pattern useProctoring.js already uses for onExceededRef, and for
+  // the same reason: the countdown timer's setInterval below is created
+  // once and must never call a stale closure, or a timeout auto-submit
+  // sends whatever `answers` existed at mount (often empty) instead of what
+  // the student actually selected. This was a real bug: a student's full
+  // exam submitted with zero recorded answers because the timer's auto-
+  // submit fired with a `handleSubmit` frozen from the first render.
+  const handleSubmitRef = useRef(handleSubmit);
+  handleSubmitRef.current = handleSubmit;
+
   const { counts, countsRef } = useProctoring({
     enabled: Boolean(state.attempt) && !submitting,
-    onExceeded: (finalCounts) => handleSubmit(true, finalCounts),
+    onExceeded: (finalCounts) => handleSubmitRef.current(true, finalCounts),
   });
 
   useEffect(() => {
@@ -101,14 +113,13 @@ export default function TestAttempt() {
         const next = r - 1;
         if (next <= 0) {
           clearInterval(interval);
-          handleSubmit(true, countsRef.current);
+          handleSubmitRef.current(true, countsRef.current);
           return 0;
         }
         return next;
       });
     }, 1000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.attempt, submitting]);
 
   // Autosave answers to the server as the student works, debounced — this is
@@ -129,6 +140,48 @@ export default function TestAttempt() {
     }, 1500);
     return () => clearTimeout(saveTimerRef.current);
   }, [answers, state.attempt, submitting]);
+
+  // Best-effort flush of whatever hasn't been autosaved yet if the tab is
+  // hidden/closed inside that 1.5s debounce window — a normal axios POST can
+  // get cancelled mid-flight on unload, but sendBeacon is specifically
+  // designed to survive it. Reads current values via refs (updated every
+  // render below) so this only needs to register its listeners once.
+  const answersFlushRef = useRef({ answers, attemptId: null, submitting });
+  answersFlushRef.current = { answers, attemptId: state.attempt?._id, submitting };
+  useEffect(() => {
+    const flush = () => {
+      const { answers: currentAnswers, attemptId, submitting: isSubmitting } = answersFlushRef.current;
+      if (!attemptId || isSubmitting) return;
+      const answersArray = Object.entries(currentAnswers).map(([questionIndex, a]) => ({
+        questionIndex: Number(questionIndex),
+        ...a,
+      }));
+      const blob = new Blob([JSON.stringify({ answers: answersArray })], { type: 'application/json' });
+      navigator.sendBeacon?.(`${testService.progressUrl(attemptId)}`, blob);
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden) flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
+
+  // Presence heartbeat — independent of answer autosave, since a student
+  // just reading a question without changing anything wouldn't otherwise
+  // send any request for a while. Lets a mentor see who's actively taking
+  // this test right now (test.service.js's getLiveAttemptsForTest).
+  useEffect(() => {
+    if (!state.attempt || submitting) return;
+    testService.ping(state.attempt._id).catch(() => {});
+    const interval = setInterval(() => {
+      testService.ping(state.attempt._id).catch(() => {});
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [state.attempt, submitting]);
 
   if (state.loading) return <Spinner label="Starting test…" />;
   if (state.error) {

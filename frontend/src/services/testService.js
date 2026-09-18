@@ -8,17 +8,26 @@ export const testService = {
   update: (id, payload) => api.put(`/tests/${id}`, payload),
   remove: (id) => api.delete(`/tests/${id}`),
   listAttempts: (id) => api.get(`/tests/${id}/attempts`),
+  getLiveAttempts: (id) => api.get(`/tests/${id}/live`),
+  getLiveSummary: () => api.get('/tests/live-summary'),
   getAttendance: (id) => api.get(`/tests/${id}/attendance`),
   getQuestionAnalysis: (id) => api.get(`/tests/${id}/question-analysis`),
+  getStatistics: (id) => api.get(`/tests/${id}/statistics`),
   pdfUrl: (id) => `${api.defaults.baseURL}/tests/${id}/pdf`,
   answerPdfUrl: (id) => `${api.defaults.baseURL}/tests/${id}/answer-pdf`,
   resetAttempt: (attemptId) => api.post(`/tests/attempts/${attemptId}/reset`),
+  deleteAttempt: (attemptId) => api.delete(`/tests/attempts/${attemptId}`),
 
   // student
   listAvailable: () => api.get('/tests/available'),
   start: (id) => api.post(`/tests/${id}/start`),
   submit: (attemptId, payload) => api.post(`/tests/attempts/${attemptId}/submit`, payload),
   saveProgress: (attemptId, payload) => api.post(`/tests/attempts/${attemptId}/progress`, payload),
+  ping: (attemptId) => api.post(`/tests/attempts/${attemptId}/ping`),
+  // Plain URL (not an axios call) for navigator.sendBeacon — used to flush a
+  // pending autosave on tab-hide/close, when a normal request can get cut
+  // off mid-flight.
+  progressUrl: (attemptId) => `${api.defaults.baseURL}/tests/attempts/${attemptId}/progress`,
   myAttempts: () => api.get('/tests/attempts/me'),
   getResult: (attemptId) => api.get(`/tests/attempts/${attemptId}/result`),
   startPractice: (payload) => api.post('/tests/practice', payload),

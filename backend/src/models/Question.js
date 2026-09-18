@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { TRACKS } from '../constants/tracks.js';
+import { getNextSequence } from '../utils/sequence.js';
 
 /**
  * The reusable question bank. Every bulk-uploaded or manually-authored
@@ -23,6 +24,9 @@ const optionSchema = new mongoose.Schema({ text: { type: String, default: '' }, 
 
 const questionSchema = new mongoose.Schema(
   {
+    // Human-readable reference id ("Q-1", "Q-2", ...) — a mentor can't read
+    // a Mongo ObjectId over the phone or into a support message.
+    seqId: { type: Number, index: true },
     type: { type: String, enum: ['mcq-single', 'mcq-multiple', 'numerical'], required: true },
     // Required only when there's no imageUrl either — a screenshot-only
     // question (see bulkCreateFromScreenshotsAndExcel) legitimately has no
@@ -77,5 +81,12 @@ const questionSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+questionSchema.pre('validate', async function assignSeqId(next) {
+  if (this.isNew && this.seqId == null) {
+    this.seqId = await getNextSequence('question');
+  }
+  next();
+});
 
 export default mongoose.models.Question || mongoose.model('Question', questionSchema);

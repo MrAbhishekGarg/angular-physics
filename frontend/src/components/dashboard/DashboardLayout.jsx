@@ -46,7 +46,6 @@ const MENTOR_NAV = [
   {
     section: 'Content',
     items: [
-      { to: '/dashboard/mentor/notes', label: 'Notes', icon: '📝', sectionKey: 'notes' },
       { to: '/dashboard/mentor/questions/upload', label: 'Question Uploading', icon: '📤', sectionKey: 'questions' },
       { to: '/dashboard/mentor/questions', label: 'Question Bank', icon: '🗂️', sectionKey: 'questions', end: true },
       { to: '/dashboard/mentor/concept-codes', label: 'Concept Codes', icon: '🏷️', sectionKey: 'concept-codes' },
@@ -59,6 +58,7 @@ const MENTOR_NAV = [
     items: [
       { to: '/dashboard/mentor/tests', label: 'Tests', icon: '📋', sectionKey: 'tests' },
       { to: '/dashboard/mentor/worksheets', label: 'Worksheets', icon: '🧾', sectionKey: 'worksheets' },
+      { to: '/dashboard/mentor/notes', label: 'Notes', icon: '📝', sectionKey: 'notes' },
     ],
   },
   {

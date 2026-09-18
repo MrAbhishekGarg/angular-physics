@@ -202,34 +202,44 @@ export async function getStudentAnalytics(studentId, email) {
  * reuses test.service.js's gradeQuestion rather than duplicating it).
  */
 export async function getStudentDetailAnalytics(studentId) {
-  const [enrollments, paidPurchases, activeAttempts, allAttempts, student] = await Promise.all([
+  const [enrollments, paidPurchases, allAttempts, student] = await Promise.all([
     Enrollment.find({ studentId }).populate('courseId', 'title slug track courseType').sort({ createdAt: -1 }).lean(),
     Purchase.find({ studentId, status: 'paid' }).lean(),
-    TestAttempt.find({ studentId, archived: { $ne: true } })
-      .populate('testId', 'title kind examType')
-      .sort({ createdAt: -1 })
-      .lean(),
-    // Reset attempts are archived, not deleted — a count across all of them
-    // (per test) tells a mentor how many times this student has actually
-    // given a test, not just whether their current attempt is active.
-    TestAttempt.find({ studentId }).select('testId').lean(),
+    // Every attempt, including archived (reset) ones — a reset only
+    // archives an attempt, it never deletes it, so a mentor/admin reviewing
+    // a student's history needs every past attempt's own score/mistakes
+    // visible, not just whichever one is currently active.
+    TestAttempt.find({ studentId }).populate('testId', 'title kind examType').sort({ testId: 1, createdAt: 1 }).lean(),
     User.findById(studentId).select('name email phone role status restrictedStudentAccess createdAt').lean(),
   ]);
   if (!student || student.role !== 'student') throw new ApiError(404, 'Student not found');
 
   const countByTest = new Map();
   allAttempts.forEach((a) => {
-    const key = a.testId.toString();
+    const key = a.testId._id.toString();
     countByTest.set(key, (countByTest.get(key) || 0) + 1);
   });
-  const attempts = activeAttempts.map((a) => ({ ...a, attemptCount: countByTest.get(a.testId._id.toString()) || 1 }));
+  const seenByTest = new Map();
+  const attempts = allAttempts
+    .map((a) => {
+      const key = a.testId._id.toString();
+      const attemptNumber = (seenByTest.get(key) || 0) + 1;
+      seenByTest.set(key, attemptNumber);
+      return { ...a, attemptNumber, attemptCount: countByTest.get(key) || 1, isCurrent: !a.archived };
+    })
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const purchasedNoteIds = paidPurchases.filter((p) => p.itemType === 'note').map((p) => p.itemId);
   const purchasedNotes = purchasedNoteIds.length
     ? await Note.find({ _id: { $in: purchasedNoteIds } }).select('title track category price currency').lean()
     : [];
 
-  const submittedAttempts = attempts.filter((a) => a.status === 'submitted');
+  // Stats (average, weak chapters) reflect only each test's CURRENT
+  // standing — a since-reset attempt's mistakes were superseded by a
+  // retake, so blending them in would double-count/distort the picture.
+  // The full `attempts` array above still includes every archived one for
+  // display; only these derived stats are narrowed.
+  const submittedAttempts = attempts.filter((a) => a.status === 'submitted' && a.isCurrent);
   const allQuestionIds = [
     ...new Set(
       submittedAttempts.flatMap((a) => a.answers.map((ans) => ans.questionId?.toString()).filter(Boolean))

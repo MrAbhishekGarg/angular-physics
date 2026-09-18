@@ -12,9 +12,14 @@ import {
   listAttemptsForTest,
   getAttendanceForTest,
   getQuestionAnalysisForTest,
+  getTestStatistics,
   listMyAttempts,
   getAttemptResult,
   resetAttempt,
+  deleteAttempt,
+  pingAttempt,
+  getLiveAttemptsForTest,
+  getLiveSummaryForAllTests,
   createPracticeTest,
   downloadTestPdf,
   downloadTestAnswerPdf,
@@ -35,16 +40,22 @@ router.get('/attempts/:attemptId/result', authenticate, getAttemptResult);
 // which is what makes /dashboard/mentor/tests/:id/preview work at all.
 router.post('/attempts/:attemptId/submit', authenticate, submitAttempt);
 router.post('/attempts/:attemptId/progress', authenticate, saveAttemptProgress);
+router.post('/attempts/:attemptId/ping', authenticate, pingAttempt);
 router.post('/attempts/:attemptId/reset', authenticate, authorize('mentor'), requireSection('tests'), resetAttempt);
+// Permanent deletion (unlike reset, which archives) — admin-only.
+router.delete('/attempts/:attemptId', authenticate, authorize('admin'), deleteAttempt);
 router.post('/practice', authenticate, authorize('student'), validateBody(['examType']), createPracticeTest);
 router.post('/:id/start', authenticate, startAttempt);
 
 // Mentor CRUD
 router.get('/', authenticate, authorize('mentor'), requireSection('tests'), listTestsMentor);
+router.get('/live-summary', authenticate, authorize('mentor'), requireSection('tests'), getLiveSummaryForAllTests);
 router.get('/:id', authenticate, authorize('mentor'), requireSection('tests'), getTestMentor);
 router.get('/:id/attempts', authenticate, authorize('mentor'), requireSection('tests'), listAttemptsForTest);
+router.get('/:id/live', authenticate, authorize('mentor'), requireSection('tests'), getLiveAttemptsForTest);
 router.get('/:id/attendance', authenticate, authorize('mentor'), requireSection('tests'), getAttendanceForTest);
 router.get('/:id/question-analysis', authenticate, authorize('mentor'), requireSection('tests'), getQuestionAnalysisForTest);
+router.get('/:id/statistics', authenticate, authorize('mentor'), requireSection('tests'), getTestStatistics);
 router.get('/:id/pdf', authenticate, authorize('mentor'), requireSection('tests'), downloadTestPdf);
 router.get('/:id/answer-pdf', authenticate, authorize('mentor'), requireSection('tests'), downloadTestAnswerPdf);
 router.post(

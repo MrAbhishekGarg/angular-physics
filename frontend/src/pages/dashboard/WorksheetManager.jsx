@@ -11,6 +11,7 @@ import { useMentorCourses } from '../../hooks/useCourses.js';
 import { useStudentBatches } from '../../hooks/useStudentBatches.js';
 import { useWorksheetProgress } from '../../hooks/useWorksheetProgress.js';
 import CheckboxAssignPanel, { idOf } from '../../components/dashboard/CheckboxAssignPanel.jsx';
+import PublishTargetFields from '../../components/dashboard/PublishTargetFields.jsx';
 import { worksheetService } from '../../services/worksheetService.js';
 import { EXAM_TRACKS } from '../../data/examTracks.js';
 import { WORKSHEET_TYPES, WORKSHEET_TYPE_LABEL, WORKSHEET_TYPE_TONE } from '../../data/worksheetTypes.js';
@@ -82,6 +83,8 @@ export default function WorksheetManager() {
   const [sourceMode, setSourceMode] = useState('upload');
   const [file, setFile] = useState(null);
   const [driveUrl, setDriveUrl] = useState('');
+  const [publishCourseIds, setPublishCourseIds] = useState([]);
+  const [publishBatchIds, setPublishBatchIds] = useState([]);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState('');
   const [expandedId, setExpandedId] = useState(null);
@@ -101,9 +104,13 @@ export default function WorksheetManager() {
       const worksheet = await worksheetService.create(payload);
       if (sourceMode === 'upload' && file) await worksheetService.uploadFile(worksheet._id, file);
       if (sourceMode === 'drive' && driveUrl.trim()) await worksheetService.setDriveLink(worksheet._id, driveUrl.trim());
+      if (publishCourseIds.length > 0) await worksheetService.assign(worksheet._id, publishCourseIds);
+      if (publishBatchIds.length > 0) await worksheetService.assignBatches(worksheet._id, publishBatchIds);
       setForm(emptyForm);
       setFile(null);
       setDriveUrl('');
+      setPublishCourseIds([]);
+      setPublishBatchIds([]);
       await refetch();
     } catch (err) {
       setFormError(err.message);
@@ -317,6 +324,15 @@ export default function WorksheetManager() {
                   />
                 </label>
               )}
+
+              <PublishTargetFields
+                courses={courses}
+                batches={batches}
+                selectedCourseIds={publishCourseIds}
+                selectedBatchIds={publishBatchIds}
+                onCourseIdsChange={setPublishCourseIds}
+                onBatchIdsChange={setPublishBatchIds}
+              />
 
               <div className={formStyles.actions}>
                 <Button type="submit" disabled={busy}>
