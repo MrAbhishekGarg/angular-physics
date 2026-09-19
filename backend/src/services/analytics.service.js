@@ -95,7 +95,7 @@ async function getNewContentForStudent(studentId) {
 
 export async function getMentorAnalytics() {
   const [
-    totalStudentIds,
+    totalStudentAccounts,
     totalEnrollments,
     pendingCount,
     enrollmentsByCourseRaw,
@@ -111,7 +111,13 @@ export async function getMentorAnalytics() {
     totalQuestions,
     openDoubtsCount,
   ] = await Promise.all([
-    Enrollment.distinct('studentId'),
+    // Registered student accounts — NOT Enrollment.distinct('studentId'),
+    // which used to be used here and quietly overcounts: removeStudent()
+    // deliberately deletes only the login (User doc) and leaves that
+    // student's Enrollment rows in place as historical records, so a
+    // distinct-over-Enrollment count keeps counting students long after
+    // their account (and any trace of them in the student roster) is gone.
+    User.countDocuments({ role: 'student' }),
     Enrollment.countDocuments(),
     Enrollment.countDocuments({ status: 'pending' }),
     Enrollment.aggregate([
@@ -154,7 +160,7 @@ export async function getMentorAnalytics() {
   );
 
   return {
-    totalStudents: totalStudentIds.length,
+    totalStudents: totalStudentAccounts,
     totalEnrollments,
     pendingCount,
     enrollmentsByCourse: enrollmentsByCourseRaw,
