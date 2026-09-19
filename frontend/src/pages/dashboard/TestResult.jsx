@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import SEO from '../../components/seo/SEO.jsx';
-import Container from '../../components/common/Container.jsx';
+import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import MathText from '../../components/common/MathText.jsx';
@@ -37,6 +37,7 @@ export default function TestResult() {
   const { attemptId } = useParams();
   const { user } = useAuth();
   const { data, loading, error, refetch } = useFetch(() => testService.getResult(attemptId), [attemptId]);
+  const layoutRole = isMentorRole(user?.role) ? 'mentor' : 'student';
   const backToResultsPath = isMentorRole(user?.role) ? '/dashboard/mentor/tests' : '/dashboard/student/tests/history';
 
   const isPracticeAttempt = data?.test?.kind === 'practice';
@@ -46,16 +47,20 @@ export default function TestResult() {
     practiceService.getMyProfile().then(setPracticeProfile).catch(() => {});
   }, [isPracticeAttempt, user?.role]);
 
-  if (loading) return <Spinner label="Loading result…" />;
+  if (loading) {
+    return (
+      <DashboardLayout role={layoutRole}>
+        <Spinner label="Loading result…" />
+      </DashboardLayout>
+    );
+  }
   if (error) {
     return (
-      <main>
-        <Container>
-          <div className={styles.wrap}>
-            <ErrorState message={error} onRetry={refetch} />
-          </div>
-        </Container>
-      </main>
+      <DashboardLayout role={layoutRole}>
+        <div className={styles.wrap}>
+          <ErrorState message={error} onRetry={refetch} />
+        </div>
+      </DashboardLayout>
     );
   }
   if (!data) return null;
@@ -64,12 +69,13 @@ export default function TestResult() {
   const rawPercent = attempt.maxScore > 0 ? (attempt.score / attempt.maxScore) * 100 : 0;
   const ringPercent = Math.min(100, Math.max(0, Math.round(rawPercent)));
 
+  const sections = test.sections || [];
+
   return (
     <>
       <SEO title="Test Result" description="Your test result and answer review." path="/dashboard/student/tests" />
-      <main>
-        <Container>
-          <div className={styles.wrap}>
+      <DashboardLayout role={layoutRole}>
+        <div className={styles.wrap}>
             <Link to={backToResultsPath}>← Back to {isMentorRole(user?.role) ? 'tests' : 'results'}</Link>
             <h1 className={styles.title}>{test.title}</h1>
 
@@ -139,15 +145,32 @@ export default function TestResult() {
               </p>
             )}
 
+            <div className={styles.quickNav}>
+              <span className={styles.quickNavLabel}>Jump to:</span>
+              {sections.length > 0 &&
+                sections.map((s) => (
+                  <a key={s.name} href={`#q-${s.startIndex}`} className={styles.quickNavSection}>
+                    {s.name}
+                  </a>
+                ))}
+              <div className={styles.quickNavChips}>
+                {test.questions.map((_, index) => (
+                  <a key={index} href={`#q-${index}`} className={styles.quickNavChip}>
+                    {index + 1}
+                  </a>
+                ))}
+              </div>
+            </div>
+
             <h2 className={styles.reviewHeading}>Answer Review</h2>
             {test.questions.map((q, index) => {
               const answer = attempt.answers.find((a) => a.questionIndex === index);
               const outcome = questionOutcome(q, answer);
               const meta = OUTCOME_META[outcome];
-              const section = (test.sections || []).find((s) => s.startIndex === index);
+              const section = sections.find((s) => s.startIndex === index);
 
               return (
-                <div key={index}>
+                <div key={index} id={`q-${index}`}>
                   {section && (
                     <h3 className={styles.sectionHeading}>
                       {section.name}
@@ -213,9 +236,8 @@ export default function TestResult() {
                 </div>
               );
             })}
-          </div>
-        </Container>
-      </main>
+        </div>
+      </DashboardLayout>
     </>
   );
 }

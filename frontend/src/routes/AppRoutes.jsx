@@ -43,7 +43,9 @@ import StudentDetail from '../pages/dashboard/StudentDetail.jsx';
 import DoubtsManager from '../pages/dashboard/DoubtsManager.jsx';
 import DoubtsPanel from '../pages/dashboard/DoubtsPanel.jsx';
 import PracticeGenerator from '../pages/dashboard/PracticeGenerator.jsx';
+import PracticeSession from '../pages/dashboard/PracticeSession.jsx';
 import PracticeStats from '../pages/dashboard/PracticeStats.jsx';
+import StudentProfile from '../pages/dashboard/StudentProfile.jsx';
 import NotFound from '../pages/NotFound.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 
@@ -364,10 +366,26 @@ export default function AppRoutes() {
         }
       />
       <Route
+        path="/dashboard/student/practice/session/:id"
+        element={
+          <ProtectedRoute role="student">
+            <PracticeSession />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/dashboard/student/doubts"
         element={
           <ProtectedRoute role="student">
             <DoubtsPanel />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/student/profile"
+        element={
+          <ProtectedRoute role="student">
+            <StudentProfile />
           </ProtectedRoute>
         }
       />

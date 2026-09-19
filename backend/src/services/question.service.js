@@ -562,7 +562,7 @@ export async function commitExtractedQuestions(extractedQuestions, excelBuffer, 
  * questions (empty examTypes) — sampling into "JEE Main practice" a
  * question nobody tagged as JEE Main relevant would be surprising.
  */
-export async function generateQuestionSet({ examType, chapter, topic, difficulty, isPYQ, year, author, type, excludeIds, count = 10 }) {
+export async function generateQuestionSet({ examType, chapter, topic, difficulty, isPYQ, year, author, type, tag, excludeIds, count = 10 }) {
   if (!examType) throw new ApiError(400, 'examType is required');
   const filter = { examTypes: examType };
   if (chapter) filter.chapter = chapter;
@@ -573,9 +573,14 @@ export async function generateQuestionSet({ examType, chapter, topic, difficulty
     if (year) filter.pyqYear = Number(year);
   }
   // Author doubles as "book/source" — lets a mentor auto-pick e.g. "every
-  // Irodov-tagged question" the same way a student's category presets do.
+  // Irodov-authored question" when building a test by hand.
   if (author) filter.author = { $regex: `^${escapeRegex(author)}$`, $options: 'i' };
   if (type) filter.type = type;
+  // Backs the student-facing Practice Room categories (see
+  // constants/practiceCategories.js) — each category is just "questions
+  // tagged X", so a mentor grows a category purely by tagging new uploads,
+  // never by a student supplying their own filter combination.
+  if (tag) filter.tags = { $regex: `^${escapeRegex(tag)}$`, $options: 'i' };
   // Never auto-pick a subjective question into a live test — it isn't
   // wired into test-taking/scoring yet (see Question.js).
   if (!type) filter.type = { $ne: 'subjective' };

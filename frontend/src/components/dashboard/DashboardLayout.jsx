@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useTheme } from '../../hooks/useTheme.js';
 import { notificationService } from '../../services/notificationService.js';
 import TrackPromptModal from './TrackPromptModal.jsx';
+import { getTrackMeta } from '../../data/examTracks.js';
 import styles from './DashboardLayout.module.css';
 
 // sectionKey here matches backend/src/constants/studentAccess.js — an admin
@@ -23,6 +24,7 @@ const STUDENT_NAV = [
       { to: '/dashboard/student/worksheets', label: 'DPPs & Assignments', icon: '🧾', sectionKey: 'worksheets' },
       { to: '/dashboard/student/practice', label: 'Practice by Topic', icon: '🎯', sectionKey: 'tests' },
       { to: '/dashboard/student/doubts', label: 'Doubts', icon: '❓', sectionKey: 'doubts' },
+      { to: '/dashboard/student/profile', label: 'My Profile', icon: '⚙️' },
     ],
   },
 ];
@@ -176,6 +178,7 @@ function NotificationsBell() {
 function DashboardTopbar({ menuOpen, onToggleMenu }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const trackMeta = user?.role === 'student' ? getTrackMeta(user.track) : null;
 
   return (
     <header className={styles.topbar}>
@@ -193,6 +196,11 @@ function DashboardTopbar({ menuOpen, onToggleMenu }) {
           <Logo variant={theme === 'dark' ? 'light' : 'dark'} />
         </div>
         <div className={styles.topbarActions}>
+          {trackMeta && (
+            <Link to="/dashboard/student/profile" className={styles.trackBadge} title="Change in My Profile">
+              {trackMeta.icon} {trackMeta.shortLabel}
+            </Link>
+          )}
           <button
             type="button"
             className={styles.themeToggle}

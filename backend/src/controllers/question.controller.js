@@ -143,7 +143,7 @@ export const commitExtractedQuestions = asyncHandler(async (req, res) => {
 });
 
 export const generateQuestionSet = asyncHandler(async (req, res) => {
-  const { examType, chapter, topic, difficulty, isPYQ, year, author, type, excludeIds, count } = req.body;
+  const { examType, chapter, topic, difficulty, isPYQ, year, author, type, tag, excludeIds, count } = req.body;
   const questions = await questionService.generateQuestionSet({
     examType,
     chapter,
@@ -153,6 +153,7 @@ export const generateQuestionSet = asyncHandler(async (req, res) => {
     year,
     author,
     type,
+    tag,
     excludeIds,
     count,
   });

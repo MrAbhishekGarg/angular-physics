@@ -8,6 +8,7 @@ import { hasPurchased } from './payment.service.js';
 import { generateQuestionSet } from './question.service.js';
 import { hasStudentAccess } from '../utils/studentAccess.js';
 import { recordPracticeSession } from './practice.service.js';
+import { PRACTICE_CATEGORIES } from '../constants/practiceCategories.js';
 
 const ACTIVE_STATUSES = ['active', 'completed'];
 
@@ -740,19 +741,27 @@ export async function resetAttempt(attemptId) {
 }
 
 /**
- * Student self-serve topic/chapter-wise practice: samples matching bank
- * questions, spins up a private practice Test scoped to just this student
- * (isProctored:false, no course/payment gating), and immediately starts an
- * attempt — one round trip into the same TestAttempt flow already built.
+ * Student self-serve practice: samples matching bank questions for one of
+ * the fixed, admin-defined categories (see constants/practiceCategories.js
+ * — PYQ, Advanced Numericals, IRODOV, etc.), spins up a private practice
+ * Test scoped to just this student (isProctored:false, no course/payment
+ * gating), and immediately starts an attempt.
+ *
+ * Deliberately takes a `categoryKey` rather than trusting client-supplied
+ * chapter/topic/difficulty/author filters directly — a student can only
+ * ever pick among the categories a mentor/admin has defined; the actual
+ * question pool behind each category grows only as new questions are
+ * uploaded, never by a student constructing their own filter combination.
  */
-export async function createPracticeTest(studentId, { examType, chapter, topic, difficulty, isPYQ, year, author, type, count }) {
+export async function createPracticeTest(studentId, { examType, categoryKey, count }) {
   if (!(await hasStudentAccess(studentId, 'tests'))) throw new ApiError(403, 'Test access has been restricted for your account');
-  const questions = await generateQuestionSet({ examType, chapter, topic, difficulty, isPYQ, year, author, type, count });
+  const category = PRACTICE_CATEGORIES.find((c) => c.key === categoryKey);
+  if (!category) throw new ApiError(400, 'Unknown practice category');
 
-  const label = chapter || topic || examType;
-  const pyqLabel = isPYQ ? ` PYQ${year ? ` ${year}` : ''}` : '';
+  const questions = await generateQuestionSet({ examType, count, ...category.filters });
+
   const test = await Test.create({
-    title: `Practice:${pyqLabel} ${label}${difficulty ? ` (${difficulty})` : ''}`,
+    title: `Practice: ${category.label}`,
     examType,
     durationMinutes: Math.max(10, questions.length * 2),
     status: 'published',

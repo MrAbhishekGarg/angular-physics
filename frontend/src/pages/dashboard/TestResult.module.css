@@ -26,6 +26,69 @@
   );
 }
 
+.quickNav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  background: var(--ap-bg-muted);
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius);
+  padding: 0.6rem 0.85rem;
+  margin-bottom: var(--ap-space-md);
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+}
+
+.quickNavLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ap-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.quickNavSection {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ap-primary);
+  text-decoration: none;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--ap-bg);
+  border: 1px solid var(--ap-border);
+}
+.quickNavSection:hover {
+  border-color: var(--ap-accent);
+}
+
+.quickNavChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+
+.quickNavChip {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--ap-border);
+  background: var(--ap-bg);
+  color: var(--ap-text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.quickNavChip:hover {
+  border-color: var(--ap-accent);
+  color: var(--ap-accent);
+}
+
 .practiceBanner {
   display: flex;
   align-items: center;

@@ -128,6 +128,13 @@ export default function QuestionBank() {
               <Link to="/dashboard/mentor/questions/upload">Question Uploading</Link>.
             </p>
 
+            <p style={{ fontSize: '0.82rem', color: 'var(--ap-text-muted)', background: 'var(--ap-bg-muted)', border: '1px solid var(--ap-border)', borderRadius: 'var(--ap-radius)', padding: '0.6rem 0.85rem' }}>
+              <strong>Practice Room categories are tag-driven:</strong> tag a question with{' '}
+              <code>pyq-practice</code>, <code>advanced-numericals</code>, <code>irodov</code>, <code>hc-verma</code>, or{' '}
+              <code>theoretical</code> (via the Tag field below) to make it eligible for that category's random pick —
+              students never build their own filter sets.
+            </p>
+
             <div className={formStyles.card}>
               <div className={formStyles.form}>
                 <div className={formStyles.row}>

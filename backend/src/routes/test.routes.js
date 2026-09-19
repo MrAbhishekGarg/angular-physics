@@ -44,7 +44,7 @@ router.post('/attempts/:attemptId/ping', authenticate, pingAttempt);
 router.post('/attempts/:attemptId/reset', authenticate, authorize('mentor'), requireSection('tests'), resetAttempt);
 // Permanent deletion (unlike reset, which archives) — admin-only.
 router.delete('/attempts/:attemptId', authenticate, authorize('admin'), deleteAttempt);
-router.post('/practice', authenticate, authorize('student'), validateBody(['examType']), createPracticeTest);
+router.post('/practice', authenticate, authorize('student'), validateBody(['examType', 'categoryKey']), createPracticeTest);
 router.post('/:id/start', authenticate, startAttempt);
 
 // Mentor CRUD
