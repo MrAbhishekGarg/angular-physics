@@ -4,6 +4,7 @@ import Logo from '../common/Logo.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useTheme } from '../../hooks/useTheme.js';
 import { notificationService } from '../../services/notificationService.js';
+import TrackPromptModal from './TrackPromptModal.jsx';
 import styles from './DashboardLayout.module.css';
 
 // sectionKey here matches backend/src/constants/studentAccess.js — an admin
@@ -40,6 +41,7 @@ const MENTOR_NAV = [
       { to: '/dashboard/mentor', label: 'Dashboard', icon: '🏠', end: true },
       { to: '/dashboard/mentor/students', label: 'All Students', icon: '👥', sectionKey: 'students' },
       { to: '/dashboard/mentor/batches', label: 'Batches', icon: '🗂️', sectionKey: 'students' },
+      { to: '/dashboard/mentor/practice-stats', label: 'Practice Stats', icon: '🎮', sectionKey: 'students' },
       { to: '/dashboard/mentor/enquiries', label: 'Enquiries', icon: '📨', sectionKey: 'enquiries' },
     ],
   },
@@ -245,6 +247,7 @@ export default function DashboardLayout({ role, children }) {
 
   return (
     <div className={styles.page} data-admin={user?.role === 'admin' ? 'true' : undefined}>
+      {user?.role === 'student' && !user.track && <TrackPromptModal />}
       <DashboardTopbar menuOpen={menuOpen} onToggleMenu={() => setMenuOpen((v) => !v)} />
       <div className={styles.shell}>
         <div className={styles.layout}>

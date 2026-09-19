@@ -43,6 +43,7 @@ export const authenticate = asyncHandler(async (req, res, next) => {
     assignedCourseIds: (user.assignedCourseIds || []).map((cid) => cid.toString()),
     canManagePaidContent: user.canManagePaidContent !== false,
     restrictedStudentAccess: user.restrictedStudentAccess || [],
+    track: user.track || null,
   };
   next();
 });

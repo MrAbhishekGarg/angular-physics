@@ -5,6 +5,7 @@ export const authService = {
   login: (payload) => api.post('/auth/login', payload),
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
+  updateMyTrack: (track) => api.patch('/auth/me/track', { track }),
 
   // Admin-only mentor account management
   listMentors: () => api.get('/auth/mentors'),

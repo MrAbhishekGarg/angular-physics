@@ -37,8 +37,14 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const updateTrack = useCallback(async (track) => {
+    const updated = await authService.updateMyTrack(track);
+    setUser(updated);
+    return updated;
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, refreshUser, updateTrack }}>
       {children}
     </AuthContext.Provider>
   );

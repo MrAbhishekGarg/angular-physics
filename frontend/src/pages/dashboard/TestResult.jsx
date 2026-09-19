@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import SEO from '../../components/seo/SEO.jsx';
 import Container from '../../components/common/Container.jsx';
@@ -7,6 +8,7 @@ import MathText from '../../components/common/MathText.jsx';
 import { useFetch } from '../../hooks/useFetch.js';
 import { useAuth, isMentorRole } from '../../hooks/useAuth.js';
 import { testService } from '../../services/testService.js';
+import { practiceService } from '../../services/practiceService.js';
 import { assetUrl } from '../../data/assetUrl.js';
 import styles from './TestResult.module.css';
 
@@ -37,6 +39,13 @@ export default function TestResult() {
   const { data, loading, error, refetch } = useFetch(() => testService.getResult(attemptId), [attemptId]);
   const backToResultsPath = isMentorRole(user?.role) ? '/dashboard/mentor/tests' : '/dashboard/student/tests/history';
 
+  const isPracticeAttempt = data?.test?.kind === 'practice';
+  const [practiceProfile, setPracticeProfile] = useState(null);
+  useEffect(() => {
+    if (!isPracticeAttempt || user?.role !== 'student') return;
+    practiceService.getMyProfile().then(setPracticeProfile).catch(() => {});
+  }, [isPracticeAttempt, user?.role]);
+
   if (loading) return <Spinner label="Loading result…" />;
   if (error) {
     return (
@@ -63,6 +72,28 @@ export default function TestResult() {
           <div className={styles.wrap}>
             <Link to={backToResultsPath}>← Back to {isMentorRole(user?.role) ? 'tests' : 'results'}</Link>
             <h1 className={styles.title}>{test.title}</h1>
+
+            {isPracticeAttempt && practiceProfile && (
+              <div className={styles.practiceBanner}>
+                <span style={{ fontSize: '1.6rem' }}>🎮</span>
+                <div className={styles.practiceStat}>
+                  <span className={styles.practiceStatValue}>Lv {practiceProfile.levelInfo.level}</span>
+                  <span className={styles.practiceStatLabel}>Level</span>
+                </div>
+                <div className={styles.practiceStat}>
+                  <span className={styles.practiceStatValue}>{practiceProfile.xp} XP</span>
+                  <span className={styles.practiceStatLabel}>Total</span>
+                </div>
+                <div className={styles.practiceStat}>
+                  <span className={styles.practiceStatValue}>🔥 {practiceProfile.currentStreak}</span>
+                  <span className={styles.practiceStatLabel}>Day Streak</span>
+                </div>
+                <span style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)' }}>
+                  {practiceProfile.levelInfo.xpIntoLevel} / {practiceProfile.levelInfo.xpForNextLevel} XP to Level{' '}
+                  {practiceProfile.levelInfo.level + 1}
+                </span>
+              </div>
+            )}
 
             <div className={styles.summary}>
               <div className={styles.ring} style={{ background: `conic-gradient(var(--ap-accent) ${ringPercent}%, var(--ap-bg-muted) 0)` }}>

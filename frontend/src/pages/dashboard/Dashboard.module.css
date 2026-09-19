@@ -2,6 +2,44 @@
   padding: var(--ap-space-xl) 0;
 }
 
+.practiceCta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  margin: var(--ap-space-md) 0 var(--ap-space-lg);
+  border-radius: var(--ap-radius);
+  background: linear-gradient(135deg, var(--ap-accent), color-mix(in srgb, var(--ap-accent) 60%, var(--ap-primary)));
+  color: #fff;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+.practiceCta:hover {
+  transform: translateY(-2px);
+}
+
+.practiceCtaIcon {
+  font-size: 2rem;
+}
+
+.practiceCtaText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.practiceCtaText strong {
+  font-size: 1.05rem;
+}
+.practiceCtaText span {
+  font-size: 0.82rem;
+  opacity: 0.9;
+}
+
+.practiceCtaArrow {
+  margin-left: auto;
+  font-size: 1.4rem;
+}
+
 /* Individual elevated cards with a cycling accent rail, not one fused
    gray bar — a row of undifferentiated numbers reads as a single blob at
    a glance; separate cards scan as distinct, comparable metrics instead. */

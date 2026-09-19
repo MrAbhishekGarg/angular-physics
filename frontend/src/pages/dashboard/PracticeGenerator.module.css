@@ -1,0 +1,99 @@
+.statsBar {
+  display: flex;
+  align-items: center;
+  gap: var(--ap-space-lg);
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ap-accent) 12%, var(--ap-bg)), var(--ap-bg));
+  border: 1px solid var(--ap-accent);
+  border-radius: var(--ap-radius);
+  padding: 0.9rem var(--ap-space-lg);
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 68px;
+}
+
+.statValue {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--ap-primary);
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  color: var(--ap-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.xpBarWrap {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.xpBarTrack {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ap-border);
+  overflow: hidden;
+}
+
+.xpBarFill {
+  height: 100%;
+  background: var(--ap-accent);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.xpBarLabel {
+  font-size: 0.75rem;
+  color: var(--ap-text-muted);
+}
+
+.categoriesHeading {
+  color: var(--ap-primary);
+  margin: var(--ap-space-lg) 0 0.6rem;
+}
+
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.categoryCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  text-align: left;
+  padding: 1rem;
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius);
+  background: var(--ap-surface, #fff);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.categoryCard:hover:not(:disabled) {
+  border-color: var(--ap-accent);
+  transform: translateY(-2px);
+}
+.categoryCard:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.categoryIcon {
+  font-size: 1.6rem;
+}
+
+.categoryDesc {
+  font-size: 0.78rem;
+  color: var(--ap-text-muted);
+}

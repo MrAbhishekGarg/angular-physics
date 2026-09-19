@@ -43,6 +43,7 @@ import StudentDetail from '../pages/dashboard/StudentDetail.jsx';
 import DoubtsManager from '../pages/dashboard/DoubtsManager.jsx';
 import DoubtsPanel from '../pages/dashboard/DoubtsPanel.jsx';
 import PracticeGenerator from '../pages/dashboard/PracticeGenerator.jsx';
+import PracticeStats from '../pages/dashboard/PracticeStats.jsx';
 import NotFound from '../pages/NotFound.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 
@@ -271,6 +272,14 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute role="mentor" section="students">
             <StudentBatches />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/mentor/practice-stats"
+        element={
+          <ProtectedRoute role="mentor" section="students">
+            <PracticeStats />
           </ProtectedRoute>
         }
       />

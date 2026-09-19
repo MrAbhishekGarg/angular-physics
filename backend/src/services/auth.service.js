@@ -7,6 +7,7 @@ import { adminSafeUser, matchesAdminCredentials } from '../utils/adminUser.js';
 import { MENTOR_SECTIONS } from '../constants/mentorSections.js';
 import { MENTOR_ACTIONS } from '../constants/mentorActions.js';
 import { STUDENT_ACCESS_MODULES } from '../constants/studentAccess.js';
+import { TRACKS } from '../constants/tracks.js';
 
 const SALT_ROUNDS = 10;
 
@@ -26,20 +27,28 @@ function toSafeUser(user) {
     canManagePaidContent: user.canManagePaidContent !== false,
     restrictedStudentAccess: user.restrictedStudentAccess || [],
     status: user.status || 'active',
+    track: user.track || null,
   };
 }
 
-export async function registerStudent({ name, email, password, phone }) {
+export async function registerStudent({ name, email, password, phone, track }) {
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
   try {
     // role is always 'student' here — there is no open public signup for
     // mentor accounts, those are created by an admin (see createMentor).
-    const user = await User.create({ name, email, passwordHash, phone, role: 'student' });
+    const user = await User.create({ name, email, passwordHash, phone, role: 'student', track: track || null });
     return toSafeUser(user);
   } catch (err) {
     if (err.code === 11000) throw new ApiError(409, 'Email already registered');
     throw err;
   }
+}
+
+export async function updateOwnTrack(userId, track) {
+  if (!TRACKS.includes(track)) throw new ApiError(400, 'Invalid track');
+  const user = await User.findByIdAndUpdate(userId, { track }, { new: true });
+  if (!user) throw new ApiError(404, 'User not found');
+  return toSafeUser(user);
 }
 
 export async function authenticateUser({ email, password }) {

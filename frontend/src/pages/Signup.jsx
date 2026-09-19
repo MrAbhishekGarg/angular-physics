@@ -4,9 +4,10 @@ import SEO from '../components/seo/SEO.jsx';
 import Container from '../components/common/Container.jsx';
 import Button from '../components/common/Button.jsx';
 import { useAuth } from '../hooks/useAuth.js';
+import { EXAM_TRACKS } from '../data/examTracks.js';
 import styles from './Auth.module.css';
 
-const initialForm = { name: '', email: '', password: '', phone: '' };
+const initialForm = { name: '', email: '', password: '', phone: '', track: '' };
 
 export default function Signup() {
   const { signup } = useAuth();
@@ -80,6 +81,19 @@ export default function Signup() {
                   value={form.password}
                   onChange={handleChange}
                 />
+              </label>
+              <label>
+                What are you preparing for?
+                <select name="track" required value={form.track} onChange={handleChange}>
+                  <option value="" disabled>
+                    Select one
+                  </option>
+                  {EXAM_TRACKS.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.icon} {t.label}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <Button type="submit" disabled={status === 'submitting'}>

@@ -4,11 +4,16 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 import { COOKIE_NAME, cookieOptions, signToken } from '../utils/token.js';
 
 export const signup = asyncHandler(async (req, res) => {
-  const { name, email, password, phone } = req.body;
-  const user = await authService.registerStudent({ name, email, password, phone });
+  const { name, email, password, phone, track } = req.body;
+  const user = await authService.registerStudent({ name, email, password, phone, track });
   const token = signToken({ _id: user.id, role: user.role });
   res.cookie(COOKIE_NAME, token, cookieOptions());
   return ApiResponse(res, 201, user);
+});
+
+export const updateMyTrack = asyncHandler(async (req, res) => {
+  const user = await authService.updateOwnTrack(req.user.id, req.body.track);
+  return ApiResponse(res, 200, user);
 });
 
 export const login = asyncHandler(async (req, res) => {

@@ -7,6 +7,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { hasPurchased } from './payment.service.js';
 import { generateQuestionSet } from './question.service.js';
 import { hasStudentAccess } from '../utils/studentAccess.js';
+import { recordPracticeSession } from './practice.service.js';
 
 const ACTIVE_STATUSES = ['active', 'completed'];
 
@@ -323,6 +324,16 @@ export async function submitAttempt(attemptId, studentId, { answers = [], procto
   attempt.proctoring = { tabSwitchCount, blurCount, fullscreenExitCount, flagged };
 
   await attempt.save();
+
+  if (test.kind === 'practice') {
+    // Best-effort gamification bookkeeping — must never be able to fail or
+    // slow down a real submit, since this same function also handles every
+    // proctored exam submission (see the exam-timeout bug this session
+    // already fixed once). A failure here just means one session's XP is
+    // lost, not a broken exam.
+    recordPracticeSession(studentId, { correctCount, wrongCount, questionCount: questions.length }).catch(() => {});
+  }
+
   return attempt.toObject();
 }
 
@@ -734,9 +745,9 @@ export async function resetAttempt(attemptId) {
  * (isProctored:false, no course/payment gating), and immediately starts an
  * attempt — one round trip into the same TestAttempt flow already built.
  */
-export async function createPracticeTest(studentId, { examType, chapter, topic, difficulty, isPYQ, year, count }) {
+export async function createPracticeTest(studentId, { examType, chapter, topic, difficulty, isPYQ, year, author, type, count }) {
   if (!(await hasStudentAccess(studentId, 'tests'))) throw new ApiError(403, 'Test access has been restricted for your account');
-  const questions = await generateQuestionSet({ examType, chapter, topic, difficulty, isPYQ, year, count });
+  const questions = await generateQuestionSet({ examType, chapter, topic, difficulty, isPYQ, year, author, type, count });
 
   const label = chapter || topic || examType;
   const pyqLabel = isPYQ ? ` PYQ${year ? ` ${year}` : ''}` : '';

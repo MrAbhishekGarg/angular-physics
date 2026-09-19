@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../../components/seo/SEO.jsx';
 import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
@@ -10,6 +11,8 @@ import EnrollmentCard from '../../components/dashboard/EnrollmentCard.jsx';
 import RecommendationPanel from '../../components/dashboard/RecommendationPanel.jsx';
 import { useStudentAnalytics } from '../../hooks/useAnalytics.js';
 import { useAuth } from '../../hooks/useAuth.js';
+import { practiceService } from '../../services/practiceService.js';
+import { getTrackMeta } from '../../data/examTracks.js';
 import styles from './Dashboard.module.css';
 
 const NEW_CONTENT_LABEL = { test: 'Test', dpp: 'DPP', assignment: 'Assignment', video: 'Video Lecture', note: 'Notes' };
@@ -66,13 +69,35 @@ function FeeStatusCard({ enrollment }) {
 export default function StudentDashboard() {
   const { user } = useAuth();
   const { data, loading, error, refetch } = useStudentAnalytics();
+  const [practiceProfile, setPracticeProfile] = useState(null);
+  useEffect(() => {
+    practiceService.getMyProfile().then(setPracticeProfile).catch(() => {});
+  }, []);
+  const trackMeta = getTrackMeta(user?.track);
 
   return (
     <>
       <SEO title="Student Dashboard" description="Track your enrolled courses and progress." path="/dashboard/student" />
       <DashboardLayout role="student">
         <div className={styles.wrap}>
-          <SectionHeading align="left" eyebrow="Student Dashboard" title={`Welcome back, ${user?.name}`} />
+          <SectionHeading
+            align="left"
+            eyebrow="Student Dashboard"
+            title={`Welcome back, ${user?.name}${trackMeta ? ` — ${trackMeta.label} track` : ''}`}
+          />
+
+            <Link to="/dashboard/student/practice" className={styles.practiceCta}>
+              <span className={styles.practiceCtaIcon}>🎮</span>
+              <div className={styles.practiceCtaText}>
+                <strong>{practiceProfile?.totalSessionsCompleted > 0 ? 'Continue practicing' : 'Start practicing'}</strong>
+                <span>
+                  {practiceProfile
+                    ? `Level ${practiceProfile.levelInfo.level} · ${practiceProfile.xp} XP · 🔥 ${practiceProfile.currentStreak}-day streak`
+                    : 'Enter the Practice Room for gamified, topic-wise questions'}
+                </span>
+              </div>
+              <span className={styles.practiceCtaArrow}>→</span>
+            </Link>
 
             {loading && <Spinner label="Loading your dashboard…" />}
             {error && <ErrorState message={error} onRetry={refetch} />}

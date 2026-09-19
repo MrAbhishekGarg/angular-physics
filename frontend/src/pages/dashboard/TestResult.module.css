@@ -26,6 +26,38 @@
   );
 }
 
+.practiceBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--ap-space-lg);
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ap-accent) 14%, var(--ap-bg)), var(--ap-bg));
+  border: 1px solid var(--ap-accent);
+  border-radius: var(--ap-radius);
+  padding: 0.85rem var(--ap-space-lg);
+  margin: 0 0 var(--ap-space-md);
+}
+
+.practiceStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 70px;
+}
+
+.practiceStatValue {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--ap-primary);
+}
+
+.practiceStatLabel {
+  font-size: 0.72rem;
+  color: var(--ap-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .ring {
   position: relative;
   width: 140px;

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { TRACKS } from '../constants/tracks.js';
 
 const userSchema = new mongoose.Schema(
   {
@@ -48,6 +49,12 @@ const userSchema = new mongoose.Schema(
     // so deactivating someone already logged in takes effect immediately
     // rather than waiting for their session to expire).
     status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+    // Only meaningful for role: 'student' — which exam the student is
+    // preparing for, collected at signup and used to personalize the
+    // student home/practice experience. null means not asked yet (every
+    // student who registered before this field existed), which the
+    // frontend prompts for once via a one-time modal.
+    track: { type: String, enum: TRACKS, default: null },
   },
   { timestamps: true }
 );
