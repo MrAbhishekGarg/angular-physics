@@ -35,6 +35,8 @@ export default function QuestionBank() {
     tag: '',
     subject: '',
     conceptCode: '',
+    type: '',
+    uploadedWithin: '',
     // Fixed, not user-editable — powers the "Used in: ..." badge below,
     // computed live from Test rather than stored on Question so it can
     // never go stale.
@@ -189,6 +191,27 @@ export default function QuestionBank() {
                     Concept Code
                     <input name="conceptCode" value={filters.conceptCode} onChange={handleFilterChange} placeholder="Filter by concept code" />
                   </label>
+                  <label>
+                    Question type
+                    <select name="type" value={filters.type} onChange={handleFilterChange}>
+                      <option value="">All</option>
+                      <option value="mcq-single">Single-answer MCQ</option>
+                      <option value="mcq-multiple">Multi-answer MCQ</option>
+                      <option value="numerical">Numerical</option>
+                      <option value="subjective">Subjective</option>
+                    </select>
+                  </label>
+                </div>
+                <div className={formStyles.row}>
+                  <label>
+                    Uploaded
+                    <select name="uploadedWithin" value={filters.uploadedWithin} onChange={handleFilterChange}>
+                      <option value="">Any time</option>
+                      <option value="24h">Last 24 hours</option>
+                      <option value="7d">Last 7 days</option>
+                      <option value="30d">Last 30 days</option>
+                    </select>
+                  </label>
                 </div>
               </div>
             </div>
@@ -255,9 +278,13 @@ export default function QuestionBank() {
                         <span style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--ap-text-muted)' }}>
                           {q.seqId ? `Q-${q.seqId}` : '—'}
                         </span>
+                        <Badge tone={q.usedInTests?.length > 0 ? 'launching' : 'default'}>
+                          Used {q.usedInTests?.length || 0}x
+                        </Badge>
                         {q.isPYQ && <Badge tone="highlight">PYQ{q.pyqYear ? ` ${q.pyqYear}` : ''}</Badge>}
                         <Badge tone={DIFFICULTY_TONE[q.difficulty]}>{q.difficulty}</Badge>
                         <Badge tone="default">{q.type}</Badge>
+                        {q.type === 'subjective' && <Badge tone="accent">Reference only — not usable in a live test yet</Badge>}
                       </div>
                     </div>
 
@@ -267,7 +294,13 @@ export default function QuestionBank() {
                     {q.text?.trim() && <MathText as="p" className={styles.stem} text={q.text} />}
                     {q.imageUrl && <img src={assetUrl(q.imageUrl)} alt="" className={styles.img} />}
 
-                    {q.type === 'numerical' ? (
+                    {q.type === 'subjective' ? (
+                      q.modelAnswer?.trim() && (
+                        <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', marginBottom: '0.5rem' }}>
+                          <strong>Model answer:</strong> <MathText text={q.modelAnswer} />
+                        </p>
+                      )
+                    ) : q.type === 'numerical' ? (
                       <p style={{ fontSize: '0.85rem', color: 'var(--ap-text-muted)', marginBottom: '0.5rem' }}>
                         Numerical answer: <strong style={{ color: 'var(--ap-success, #0d9488)' }}>{q.correctNumericAnswer}</strong>
                       </p>

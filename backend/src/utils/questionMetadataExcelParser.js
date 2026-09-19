@@ -124,7 +124,7 @@ export async function parseQuestionMetadataFromExcelBuffer(buffer) {
     }
 
     const typeRaw = headerMap.type ? cellText(row.getCell(headerMap.type)).toLowerCase().replace(/\s+/g, '-') : '';
-    const type = ['mcq-single', 'mcq-multiple', 'numerical'].includes(typeRaw) ? typeRaw : null;
+    const type = ['mcq-single', 'mcq-multiple', 'numerical', 'subjective'].includes(typeRaw) ? typeRaw : null;
     if (typeRaw && !type) {
       warnings.push(`Row ${r} (Q${number}): unrecognized type "${typeRaw}" — ignored, type will be inferred instead.`);
     }

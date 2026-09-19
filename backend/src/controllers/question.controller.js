@@ -12,7 +12,8 @@ function parseTagsField(raw) {
 }
 
 export const listQuestions = asyncHandler(async (req, res) => {
-  const { examType, chapter, topic, difficulty, search, isPYQ, author, tag, subject, conceptCode, includeUsage } = req.query;
+  const { examType, chapter, topic, difficulty, search, isPYQ, author, tag, subject, conceptCode, type, uploadedWithin, includeUsage } =
+    req.query;
   const questions = await questionService.getAllQuestions({
     examType,
     chapter,
@@ -24,6 +25,8 @@ export const listQuestions = asyncHandler(async (req, res) => {
     tag,
     subject,
     conceptCode,
+    type,
+    uploadedWithin,
     includeUsage: includeUsage === 'true',
   });
   return ApiResponse(res, 200, questions, { count: questions.length });
@@ -140,8 +143,19 @@ export const commitExtractedQuestions = asyncHandler(async (req, res) => {
 });
 
 export const generateQuestionSet = asyncHandler(async (req, res) => {
-  const { examType, chapter, topic, difficulty, isPYQ, year, count } = req.body;
-  const questions = await questionService.generateQuestionSet({ examType, chapter, topic, difficulty, isPYQ, year, count });
+  const { examType, chapter, topic, difficulty, isPYQ, year, author, type, excludeIds, count } = req.body;
+  const questions = await questionService.generateQuestionSet({
+    examType,
+    chapter,
+    topic,
+    difficulty,
+    isPYQ,
+    year,
+    author,
+    type,
+    excludeIds,
+    count,
+  });
   return ApiResponse(res, 200, questions, { count: questions.length });
 });
 

@@ -9,9 +9,10 @@ const TYPE_LABELS = {
   'mcq-single': 'Single-answer MCQ',
   'mcq-multiple': 'Multi-answer MCQ',
   numerical: 'Numerical answer',
+  subjective: 'Subjective (long-answer)',
 };
 
-const ALL_TYPES = ['mcq-single', 'mcq-multiple', 'numerical'];
+const ALL_TYPES = ['mcq-single', 'mcq-multiple', 'numerical', 'subjective'];
 const DIFFICULTIES = ['easy', 'medium', 'hard'];
 
 export const emptyQuestion = (examType) => ({
@@ -21,6 +22,7 @@ export const emptyQuestion = (examType) => ({
   correctOptionIndexes: [],
   correctNumericAnswer: undefined,
   numericTolerance: 0,
+  modelAnswer: '',
   marks: 4,
   negativeMarks: 1,
   // A question can be tagged to several exams, exactly one, or none at all
@@ -187,7 +189,11 @@ export default function QuestionEditor({ initialQuestion, examType: defaultExamT
             <select
               value={question.type}
               onChange={(e) =>
-                update({ type: e.target.value, correctOptionIndexes: [], options: e.target.value === 'numerical' ? [] : question.options })
+                update({
+                  type: e.target.value,
+                  correctOptionIndexes: [],
+                  options: e.target.value === 'numerical' || e.target.value === 'subjective' ? [] : question.options,
+                })
               }
             >
               {ALL_TYPES.map((t) => (
@@ -199,6 +205,11 @@ export default function QuestionEditor({ initialQuestion, examType: defaultExamT
             {isUnconventionalForNeet && (
               <span style={{ fontWeight: 400, fontSize: '0.75rem', color: 'var(--ap-warning)' }}>
                 NEET tests conventionally use single-answer MCQs only.
+              </span>
+            )}
+            {question.type === 'subjective' && (
+              <span style={{ fontWeight: 400, fontSize: '0.75rem', color: 'var(--ap-warning)' }}>
+                Storage/reference only for now — can't be added to a live test yet (no auto-grading for free text).
               </span>
             )}
           </label>
@@ -329,7 +340,12 @@ export default function QuestionEditor({ initialQuestion, examType: defaultExamT
           <PasteImageZone onFile={uploadImageFile} busy={imageBusy} error={imageError} />
         </div>
 
-        {question.type === 'numerical' ? (
+        {question.type === 'subjective' ? (
+          <label>
+            Model answer / grading rubric (optional — for your own reference when evaluating a student's response)
+            <textarea rows="4" value={question.modelAnswer} onChange={(e) => update({ modelAnswer: e.target.value })} />
+          </label>
+        ) : question.type === 'numerical' ? (
           <div className={formStyles.row}>
             <label>
               Correct answer

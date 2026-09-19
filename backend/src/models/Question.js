@@ -27,7 +27,12 @@ const questionSchema = new mongoose.Schema(
     // Human-readable reference id ("Q-1", "Q-2", ...) — a mentor can't read
     // a Mongo ObjectId over the phone or into a support message.
     seqId: { type: Number, index: true },
-    type: { type: String, enum: ['mcq-single', 'mcq-multiple', 'numerical'], required: true },
+    // 'subjective' = a long-answer/theory question with no auto-gradable
+    // answer — authoring/storage only for now (no options, no correct
+    // answer key). It isn't wired into live test-taking/scoring yet; that's
+    // a deliberately separate, later piece of work since free text can't be
+    // auto-graded the way MCQ/numerical can.
+    type: { type: String, enum: ['mcq-single', 'mcq-multiple', 'numerical', 'subjective'], required: true },
     // Required only when there's no imageUrl either — a screenshot-only
     // question (see bulkCreateFromScreenshotsAndExcel) legitimately has no
     // text at all, and Mongoose's default `required` check for a String
@@ -43,6 +48,10 @@ const questionSchema = new mongoose.Schema(
     correctOptionIndexes: { type: [Number], default: [] },
     correctNumericAnswer: { type: Number },
     numericTolerance: { type: Number, default: 0 },
+    // Reference answer / grading rubric for a subjective question — shown
+    // to a mentor manually evaluating a student's free-text response once
+    // that workflow exists; meaningless for every other type.
+    modelAnswer: { type: String, default: '' },
     marks: { type: Number, required: true, default: 4 },
     negativeMarks: { type: Number, required: true, default: 1 },
     // A question can belong to several exams (e.g. a mechanics question

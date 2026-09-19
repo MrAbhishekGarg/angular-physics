@@ -42,6 +42,11 @@ const testSchema = new mongoose.Schema(
     questionIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
     // Shown once before the student starts the exam.
     instructions: { type: String, default: '' },
+    // Optional — the mentor's intended total question count for this test
+    // (e.g. "this should end up with 45 questions"), purely to drive a
+    // progress indicator while building it. null/unset means no target was
+    // set; the test can still be published with any number of questions.
+    targetQuestionCount: { type: Number, default: null },
     // Optional grouping on top of the flat questionIds above — a test with
     // no sections (every test created before this field existed) behaves
     // exactly as before.

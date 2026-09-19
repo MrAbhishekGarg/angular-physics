@@ -93,3 +93,52 @@
   display: block;
   margin-top: 0.25rem;
 }
+
+.progressWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-radius: var(--ap-radius);
+  background: var(--ap-bg-muted);
+  border: 1px solid var(--ap-border);
+  margin-top: 0.6rem;
+}
+
+.progressTrack {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--ap-border);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ap-accent);
+  transition: width 0.3s ease;
+}
+.progressFillDone {
+  background: var(--ap-success, #0d9488);
+}
+
+.progressLabel {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ap-text-muted);
+  white-space: nowrap;
+}
+
+.autoFillPanel {
+  border: 1px dashed var(--ap-accent);
+  border-radius: var(--ap-radius);
+  padding: 0.75rem 0.85rem;
+  background: color-mix(in srgb, var(--ap-accent) 5%, var(--ap-bg-muted));
+  margin-bottom: 0.6rem;
+}
+
+.autoFillResult {
+  font-size: 0.8rem;
+  margin-top: 0.4rem;
+}

@@ -11,6 +11,7 @@ import { useMentorCourses } from '../../hooks/useCourses.js';
 import { useQuestions } from '../../hooks/useQuestions.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { testService } from '../../services/testService.js';
+import { questionService } from '../../services/questionService.js';
 import { EXAM_TRACKS, getTrackMeta } from '../../data/examTracks.js';
 import MathText from '../../components/common/MathText.jsx';
 import { assetUrl } from '../../data/assetUrl.js';
@@ -29,6 +30,7 @@ const emptyForm = {
   kind: 'test',
   isProctored: true,
   liveUntil: '',
+  targetQuestionCount: '',
 };
 
 const emptySection = (index) => ({ name: `Section ${index + 1}`, instructions: '', questionIds: [], questions: [] });
@@ -54,8 +56,41 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
     subject: '',
     conceptCode: '',
   });
-  const { data: bankQuestions, loading: bankLoading } = useQuestions(bankFilters);
+  const { data: rawBankQuestions, loading: bankLoading } = useQuestions(bankFilters);
+  // Subjective questions have no auto-gradable answer and aren't wired into
+  // live test-taking yet (authoring/storage only — see Question.js) — kept
+  // out of the picker so a mentor can't accidentally add one to a real test.
+  const bankQuestions = (rawBankQuestions || []).filter((q) => q.type !== 'subjective');
   const [showCreateQuestion, setShowCreateQuestion] = useState(false);
+  const [autoFillCount, setAutoFillCount] = useState(10);
+  const [autoFillStatus, setAutoFillStatus] = useState('idle');
+  const [autoFillMessage, setAutoFillMessage] = useState('');
+
+  const handleAutoFill = async () => {
+    setAutoFillStatus('loading');
+    setAutoFillMessage('');
+    try {
+      const picked = await questionService.generateSet({
+        examType,
+        chapter: bankFilters.chapter || undefined,
+        topic: bankFilters.topic || undefined,
+        difficulty: bankFilters.difficulty || undefined,
+        isPYQ: bankFilters.isPYQ === 'true' ? true : undefined,
+        author: bankFilters.author || undefined,
+        excludeIds: section.questionIds,
+        count: autoFillCount,
+      });
+      onUpdate({
+        questionIds: [...section.questionIds, ...picked.map((q) => q._id)],
+        questions: [...section.questions, ...picked],
+      });
+      setAutoFillStatus('idle');
+      setAutoFillMessage(`Added ${picked.length} question${picked.length === 1 ? '' : 's'} automatically.`);
+    } catch (err) {
+      setAutoFillStatus('error');
+      setAutoFillMessage(err.message);
+    }
+  };
 
   useEffect(() => {
     setBankFilters((f) => (f.examType === examType ? f : { ...f, examType }));
@@ -132,6 +167,34 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
           ))}
         </div>
       )}
+
+      <div className={styles.autoFillPanel}>
+        <strong>⚡ Auto-Fill Questions</strong>
+        <p style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)', margin: '0.25rem 0 0.5rem' }}>
+          Randomly picks questions matching the chapter/difficulty/PYQ/author filters below, skipping ones already added to this section.
+        </p>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <label style={{ margin: 0 }}>
+            How many
+            <input
+              type="number"
+              min="1"
+              max="100"
+              value={autoFillCount}
+              onChange={(e) => setAutoFillCount(e.target.value)}
+              style={{ width: '90px' }}
+            />
+          </label>
+          <Button type="button" size="sm" onClick={handleAutoFill} disabled={autoFillStatus === 'loading'}>
+            {autoFillStatus === 'loading' ? 'Picking…' : 'Auto-Fill'}
+          </Button>
+        </div>
+        {autoFillMessage && (
+          <p className={styles.autoFillResult} style={{ color: autoFillStatus === 'error' ? 'var(--ap-danger, #dc2626)' : 'var(--ap-success, #0d9488)' }}>
+            {autoFillMessage}
+          </p>
+        )}
+      </div>
 
       <div className={formStyles.card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -293,6 +356,7 @@ export default function TestEditor() {
         kind: test.kind || 'test',
         isProctored: test.isProctored ?? true,
         liveUntil: toDatetimeLocal(test.liveUntil),
+        targetQuestionCount: test.targetQuestionCount ?? '',
       });
       setInstructions(test.instructions || '');
       const questions = test.questions || [];
@@ -363,6 +427,7 @@ export default function TestEditor() {
       kind: form.kind,
       isProctored: form.isProctored,
       liveUntil: form.liveUntil ? new Date(form.liveUntil).toISOString() : null,
+      targetQuestionCount: form.targetQuestionCount === '' ? null : Number(form.targetQuestionCount),
       instructions,
       sections: sections.map((s) => ({ name: s.name, instructions: s.instructions, questionIds: s.questionIds })),
     };
@@ -449,6 +514,18 @@ export default function TestEditor() {
                 <input type="datetime-local" name="liveUntil" value={form.liveUntil} onChange={handleChange} />
               </label>
 
+              <label>
+                Target number of questions (optional — just drives the progress bar below)
+                <input
+                  type="number"
+                  name="targetQuestionCount"
+                  min="1"
+                  value={form.targetQuestionCount}
+                  onChange={handleChange}
+                  placeholder="e.g. 45"
+                />
+              </label>
+
               <label className={formStyles.checkboxLabel}>
                 <input type="checkbox" name="isProctored" checked={form.isProctored} onChange={handleChange} />
                 Enforce proctoring (fullscreen/tab-switch detection)
@@ -502,6 +579,28 @@ export default function TestEditor() {
               <h2 style={{ color: 'var(--ap-primary)', marginTop: 'var(--ap-space-md)' }}>
                 Sections ({sections.reduce((n, s) => n + s.questionIds.length, 0)} questions total)
               </h2>
+
+              {form.targetQuestionCount !== '' && Number(form.targetQuestionCount) > 0 && (() => {
+                const totalQuestions = sections.reduce((n, s) => n + s.questionIds.length, 0);
+                const target = Number(form.targetQuestionCount);
+                const pct = Math.min(100, Math.round((totalQuestions / target) * 100));
+                const remaining = Math.max(0, target - totalQuestions);
+                return (
+                  <div className={styles.progressWrap}>
+                    <div className={styles.progressTrack}>
+                      <div
+                        className={`${styles.progressFill} ${remaining === 0 ? styles.progressFillDone : ''}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className={styles.progressLabel}>
+                      {remaining === 0
+                        ? `✓ ${totalQuestions} of ${target} added`
+                        : `${totalQuestions} of ${target} added — ${remaining} more needed`}
+                    </span>
+                  </div>
+                );
+              })()}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ap-space-md)' }}>
                 {sections.map((section, index) => (

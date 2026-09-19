@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Question from '../models/Question.js';
 import Test from '../models/Test.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -11,6 +12,15 @@ function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// "Latest uploads" presets for the Question Bank filter — a plain
+// createdAt cutoff, translated here rather than making the frontend do
+// date math against the server's clock.
+const UPLOADED_WITHIN_MS = {
+  '24h': 24 * 60 * 60 * 1000,
+  '7d': 7 * 24 * 60 * 60 * 1000,
+  '30d': 30 * 24 * 60 * 60 * 1000,
+};
+
 export async function getAllQuestions({
   examType,
   chapter,
@@ -22,6 +32,8 @@ export async function getAllQuestions({
   tag,
   subject,
   conceptCode,
+  type,
+  uploadedWithin,
   includeUsage,
 } = {}) {
   const filter = {};
@@ -37,6 +49,10 @@ export async function getAllQuestions({
   if (tag) filter.tags = { $regex: `^${escapeRegex(tag)}$`, $options: 'i' };
   if (subject) filter.subject = { $regex: `^${escapeRegex(subject)}$`, $options: 'i' };
   if (conceptCode) filter.conceptCodes = conceptCode.toUpperCase();
+  if (type) filter.type = type;
+  if (uploadedWithin && UPLOADED_WITHIN_MS[uploadedWithin]) {
+    filter.createdAt = { $gte: new Date(Date.now() - UPLOADED_WITHIN_MS[uploadedWithin]) };
+  }
 
   const questions = await Question.find(filter).sort({ createdAt: -1 }).lean();
   // Usage lookup costs an extra query across every Test — only worth it for
@@ -219,7 +235,10 @@ async function mergeAndInsertQuestions(skeletons, rowsByNumber, conceptCodeMap, 
 
     let correctOptionIndexes = q.correctOptionIndexes;
     let correctNumericAnswer = q.correctNumericAnswer;
-    if (row.answer) {
+    // Subjective questions have no answer key to check — authoring/storage
+    // only, not auto-gradable, so the usual "must have a correct answer"
+    // requirement below doesn't apply to them at all.
+    if (finalType !== 'subjective' && row.answer) {
       if (finalType === 'numerical') {
         const num = Number(row.answer);
         if (Number.isNaN(num)) {
@@ -242,7 +261,8 @@ async function mergeAndInsertQuestions(skeletons, rowsByNumber, conceptCodeMap, 
       }
     }
 
-    const hasAnswer = finalType === 'numerical' ? correctNumericAnswer !== undefined : correctOptionIndexes.length > 0;
+    const hasAnswer =
+      finalType === 'subjective' ? true : finalType === 'numerical' ? correctNumericAnswer !== undefined : correctOptionIndexes.length > 0;
     if (!hasAnswer) {
       warnings.push(`Question ${q.questionNumber}: no answer found — provide one in the Excel sheet.`);
       return;
@@ -542,7 +562,7 @@ export async function commitExtractedQuestions(extractedQuestions, excelBuffer, 
  * questions (empty examTypes) — sampling into "JEE Main practice" a
  * question nobody tagged as JEE Main relevant would be surprising.
  */
-export async function generateQuestionSet({ examType, chapter, topic, difficulty, isPYQ, year, count = 10 }) {
+export async function generateQuestionSet({ examType, chapter, topic, difficulty, isPYQ, year, author, type, excludeIds, count = 10 }) {
   if (!examType) throw new ApiError(400, 'examType is required');
   const filter = { examTypes: examType };
   if (chapter) filter.chapter = chapter;
@@ -552,6 +572,16 @@ export async function generateQuestionSet({ examType, chapter, topic, difficulty
     filter.isPYQ = true;
     if (year) filter.pyqYear = Number(year);
   }
+  // Author doubles as "book/source" — lets a mentor auto-pick e.g. "every
+  // Irodov-tagged question" the same way a student's category presets do.
+  if (author) filter.author = { $regex: `^${escapeRegex(author)}$`, $options: 'i' };
+  if (type) filter.type = type;
+  // Never auto-pick a subjective question into a live test — it isn't
+  // wired into test-taking/scoring yet (see Question.js).
+  if (!type) filter.type = { $ne: 'subjective' };
+  // Skip anything the caller already has (e.g. already added to this test
+  // section) so a second auto-fill click can't duplicate a pick.
+  if (excludeIds?.length) filter._id = { $nin: excludeIds.map((id) => new mongoose.Types.ObjectId(id)) };
 
   const questions = await Question.aggregate([{ $match: filter }, { $sample: { size: Number(count) } }]);
   if (questions.length === 0) {

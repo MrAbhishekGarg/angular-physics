@@ -231,6 +231,13 @@ export function gradeQuestion(question, answer) {
   const marks = question.marks || 0;
   const negativeMarks = question.negativeMarks || 0;
 
+  // Subjective questions have no auto-gradable answer — authoring/storage
+  // only for now (see Question.js), never actually addable to a live test
+  // (the bank picker filters them out), but graded as a harmless
+  // always-unattempted no-op here as a defense-in-depth guard against one
+  // ever slipping through some other path.
+  if (question.type === 'subjective') return { outcome: 'unattempted', points: 0 };
+
   if (question.type === 'numerical') {
     if (answer?.numericAnswer === undefined || answer?.numericAnswer === null) {
       return { outcome: 'unattempted', points: 0 };
