@@ -9,6 +9,7 @@ import ErrorState from '../../components/common/ErrorState.jsx';
 import { useAvailableWorksheets } from '../../hooks/useWorksheets.js';
 import { worksheetService } from '../../services/worksheetService.js';
 import { WORKSHEET_TYPE_LABEL, WORKSHEET_TYPE_TONE } from '../../data/worksheetTypes.js';
+import PracticeRoomBanner from '../../components/dashboard/PracticeRoomBanner.jsx';
 import formStyles from './DashboardForm.module.css';
 
 const STATUS_TONE = { 'not downloaded': 'default', downloaded: 'accent', completed: 'success' };
@@ -52,6 +53,8 @@ export default function WorksheetsLibrary() {
           <p style={{ color: 'var(--ap-text-muted)' }}>
             Daily Practice Problems and Assignments are downloadable PDFs — not online tests.
           </p>
+
+          <PracticeRoomBanner />
 
           {loading && <Spinner label="Loading worksheets…" />}
           {error && <ErrorState message={error} onRetry={refetch} />}

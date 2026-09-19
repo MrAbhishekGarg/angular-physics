@@ -10,6 +10,7 @@ import { useAvailableTests } from '../../hooks/useTests.js';
 import { testService } from '../../services/testService.js';
 import { paymentService } from '../../services/paymentService.js';
 import { useAuth } from '../../hooks/useAuth.js';
+import PracticeRoomBanner from '../../components/dashboard/PracticeRoomBanner.jsx';
 import { formatPrice } from '../../data/courseFormat.js';
 import formStyles from './DashboardForm.module.css';
 
@@ -55,6 +56,8 @@ export default function TestsLibrary() {
               My Results
             </Button>
           </div>
+
+            <PracticeRoomBanner />
 
             {loading && <Spinner label="Loading tests…" />}
             {error && <ErrorState message={error} onRetry={refetch} />}

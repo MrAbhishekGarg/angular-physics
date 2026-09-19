@@ -11,6 +11,7 @@ import { paymentService } from '../../services/paymentService.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { formatPrice } from '../../data/courseFormat.js';
 import { getTrackMeta } from '../../data/examTracks.js';
+import PracticeRoomBanner from '../../components/dashboard/PracticeRoomBanner.jsx';
 import formStyles from './DashboardForm.module.css';
 
 export default function NotesLibrary() {
@@ -49,6 +50,8 @@ export default function NotesLibrary() {
       <DashboardLayout role="student">
         <div className={formStyles.wrap} style={{ maxWidth: 960 }}>
           <h1>Notes Library</h1>
+
+            <PracticeRoomBanner />
 
             {loading && <Spinner label="Loading notes…" />}
             {error && <ErrorState message={error} onRetry={refetch} />}

@@ -1,0 +1,26 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.9rem;
+  margin: 0 0 var(--ap-space-md);
+  border-radius: var(--ap-radius);
+  border: 1px dashed var(--ap-accent);
+  background: color-mix(in srgb, var(--ap-accent) 6%, transparent);
+  color: var(--ap-text);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+.banner:hover {
+  background: color-mix(in srgb, var(--ap-accent) 12%, transparent);
+}
+
+.icon {
+  font-size: 1.1rem;
+}
+
+.arrow {
+  margin-left: auto;
+  color: var(--ap-accent);
+  font-weight: 700;
+}
