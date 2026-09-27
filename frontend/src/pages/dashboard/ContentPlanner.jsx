@@ -454,19 +454,17 @@ export default function ContentPlanner() {
                           None
                         </button>
                       </div>
-                      {Number(form.longVideoCount) > 0 && (
-                        <select
-                          name="longVideoPlatforms"
-                          value={form.longVideoPlatforms}
-                          onChange={handleFormChange}
-                          className={styles.inlineSelect}
-                        >
-                          <option value="youtube">YouTube only</option>
-                          <option value="instagram">Instagram only</option>
+                    </div>
+                    {Number(form.longVideoCount) > 0 && (
+                      <div className={styles.bundleSubRow}>
+                        <span className={styles.bundleSubLabel}>on</span>
+                        <select name="longVideoPlatforms" value={form.longVideoPlatforms} onChange={handleFormChange} className={styles.platformSelect}>
+                          <option value="youtube">YouTube</option>
+                          <option value="instagram">Instagram</option>
                           <option value="both">Both platforms</option>
                         </select>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     <label className={styles.toggleRow}>
                       <input type="checkbox" name="includeShort" checked={form.includeShort} onChange={handleFormChange} />
@@ -474,20 +472,23 @@ export default function ContentPlanner() {
                         <span className={styles.toggleThumb} />
                       </span>
                       <span className={styles.toggleText}>⚡ Short</span>
-                      {form.includeShort && (
+                    </label>
+                    {form.includeShort && (
+                      <div className={styles.bundleSubRow}>
+                        <span className={styles.bundleSubLabel}>on</span>
                         <select
                           name="shortPlatforms"
                           value={form.shortPlatforms}
                           onChange={handleFormChange}
-                          className={styles.inlineSelect}
+                          className={styles.platformSelect}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <option value="both">Both platforms</option>
-                          <option value="youtube">YouTube only</option>
-                          <option value="instagram">Instagram only</option>
+                          <option value="youtube">YouTube</option>
+                          <option value="instagram">Instagram</option>
                         </select>
-                      )}
-                    </label>
+                      </div>
+                    )}
 
                     <label className={styles.toggleRow}>
                       <input type="checkbox" name="includeCarousel" checked={form.includeCarousel} onChange={handleFormChange} />
