@@ -14,7 +14,7 @@ import mongoose from 'mongoose';
  */
 const PLATFORMS = ['youtube', 'instagram'];
 const PIECE_TYPES = ['long-video', 'short', 'carousel', 'community-post'];
-const PIECE_STATUSES = ['planned', 'scripted', 'recorded', 'edited', 'uploaded', 'published', 'on-hold'];
+const PIECE_STATUSES = ['planned', 'scripted', 'recorded', 'edited', 'uploaded', 'scheduled', 'published', 'on-hold'];
 
 const contentPieceSchema = new mongoose.Schema(
   {
@@ -34,6 +34,9 @@ const contentPieceSchema = new mongoose.Schema(
     source: { type: String, default: '', trim: true },
     isPYQ: { type: Boolean, default: false },
     pyqYear: { type: Number, default: null },
+    // Only meaningful once status is "scheduled" — when the upload is set to
+    // go live on the platform.
+    scheduledFor: { type: Date, default: null },
     link: { type: String, default: '', trim: true },
     notes: { type: String, default: '' },
   },

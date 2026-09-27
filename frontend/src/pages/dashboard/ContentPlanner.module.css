@@ -119,14 +119,9 @@
 
 .statsRow {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 0.6rem;
-  margin-bottom: var(--ap-space-lg);
-}
-@media (max-width: 900px) {
-  .statsRow {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  margin-bottom: var(--ap-space-md);
 }
 
 .statCard {
@@ -140,14 +135,12 @@
   background: var(--ap-bg);
   cursor: pointer;
   font: inherit;
-  transition: transform 0.12s ease, border-color 0.12s ease;
+  text-decoration: none;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
 .statCard:hover {
-  transform: translateY(-2px);
-}
-.statCardActive {
-  border-color: var(--ap-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ap-accent) 25%, transparent);
+  transform: translateY(-3px);
+  box-shadow: var(--ap-shadow-sm);
 }
 
 .statIcon {
@@ -171,11 +164,12 @@
 .statCard_recorded { border-top: 3px solid #3b82f6; }
 .statCard_edited { border-top: 3px solid #f59e0b; }
 .statCard_uploaded { border-top: 3px solid #8b5cf6; }
+.statCard_scheduled { border-top: 3px solid #ec4899; }
 .statCard_published { border-top: 3px solid var(--ap-success); }
 .statCard_onhold { border-top: 3px solid var(--ap-danger); }
 
 .statTotal {
-  grid-column: span 6;
+  grid-column: 1 / -1;
   display: flex;
   align-items: baseline;
   justify-content: center;
@@ -183,11 +177,12 @@
   padding: 0.5rem;
   color: var(--ap-text-muted);
   font-size: 0.85rem;
+  text-decoration: none;
+  border-radius: var(--ap-radius);
+  transition: background 0.12s ease;
 }
-@media (max-width: 900px) {
-  .statTotal {
-    grid-column: span 3;
-  }
+.statTotal:hover {
+  background: var(--ap-bg-muted);
 }
 .statTotalValue {
   font-family: var(--ap-font-heading);
@@ -199,11 +194,38 @@
   margin-right: 0.75rem;
 }
 
+/* ---------- Charts ---------- */
+
+.chartsRow {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: var(--ap-space-lg);
+}
+@media (max-width: 980px) {
+  .chartsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chartCard {
+  background: var(--ap-bg);
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius);
+  padding: 0.85rem 1rem;
+}
+.chartCardTitle {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ap-text);
+}
+
 /* ---------- Layout ---------- */
 
 .layout {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: 430px 1fr;
   gap: var(--ap-space-lg);
   align-items: start;
 }
@@ -238,6 +260,7 @@
     100% calc(100% - var(--ap-chamfer-md)), calc(100% - var(--ap-chamfer-md)) 100%,
     0 100%, 0 var(--ap-chamfer-md)
   );
+  container-type: inline-size;
 }
 
 .formCardTitle {
@@ -284,11 +307,22 @@
   color: var(--ap-text-muted);
   opacity: 0.75;
 }
+/* Chrome/Edge draw a small dropdown affordance inside inputs with a `list`
+   attribute; without reserved space it overlaps long typed-in text. */
+.form input[list] {
+  padding-right: 2rem;
+  text-overflow: ellipsis;
+}
 
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
+  gap: 0.6rem 0.8rem;
+}
+@container (max-width: 360px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .checkboxLabel {
@@ -650,6 +684,20 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.pieceEditBtn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.pieceEditBtn:hover {
+  opacity: 1;
+}
+
 .pieceRemoveBtn {
   border: none;
   background: none;
@@ -695,6 +743,16 @@
   padding: 0.12rem 0.4rem;
 }
 
+.scheduledChip {
+  align-self: flex-start;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #be185d;
+  background: #fce7f3;
+  border-radius: 6px;
+  padding: 0.12rem 0.4rem;
+}
+
 .statusPill {
   align-self: flex-start;
   font-size: 0.68rem;
@@ -707,6 +765,7 @@
 .statusPill_recorded { background: #dbeafe; color: #1d4ed8; }
 .statusPill_edited { background: #fef3c7; color: #b45309; }
 .statusPill_uploaded { background: #ede9fe; color: #6d28d9; }
+.statusPill_scheduled { background: #fce7f3; color: #be185d; }
 .statusPill_published { background: #d1fae5; color: #047857; }
 .statusPill_onhold { background: #fee2e2; color: #b91c1c; }
 
@@ -806,4 +865,28 @@
 .addPieceActions {
   display: flex;
   gap: 0.5rem;
+}
+
+.editingLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ap-accent);
+}
+
+.scheduledLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ap-text);
+}
+.scheduledLabel input {
+  border: 1.5px solid var(--ap-border);
+  border-radius: 7px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.82rem;
+  background: var(--ap-bg);
+  color: var(--ap-text);
+  max-width: 180px;
 }

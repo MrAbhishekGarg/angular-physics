@@ -48,14 +48,19 @@ function validatePiece({ platform, type }) {
  * same underlying question/source.
  */
 async function bundleFromFlags(
-  { longVideoCount, includeShort, shortPlatforms, includeCarousel, includeCommunityPost },
+  { longVideoCount, longVideoPlatforms, includeShort, shortPlatforms, includeCarousel, includeCommunityPost },
   slugSource,
   shared = {}
 ) {
   const specs = [];
   const count = Math.min(2, Math.max(0, Number(longVideoCount) || 0));
-  for (let i = 1; i <= count; i += 1) {
-    specs.push({ platform: 'youtube', type: 'long-video', label: count > 1 ? `Long Video ${i}` : 'Long Video' });
+  if (count > 0) {
+    const lvPlatforms = longVideoPlatforms === 'both' ? ['youtube', 'instagram'] : [longVideoPlatforms || 'youtube'];
+    lvPlatforms.forEach((platform) => {
+      for (let i = 1; i <= count; i += 1) {
+        specs.push({ platform, type: 'long-video', label: count > 1 ? `Long Video ${i}` : 'Long Video' });
+      }
+    });
   }
   if (includeShort) {
     const platforms = shortPlatforms === 'both' ? ['youtube', 'instagram'] : [shortPlatforms || 'youtube'];
@@ -180,7 +185,7 @@ export async function updatePieceStatus(conceptId, pieceId, status) {
 }
 
 export async function updatePiece(conceptId, pieceId, payload) {
-  const { label, link, notes, source, isPYQ, pyqYear } = payload;
+  const { label, link, notes, source, isPYQ, pyqYear, scheduledFor } = payload;
   const set = {};
   if (label !== undefined) set['pieces.$.label'] = label;
   if (link !== undefined) set['pieces.$.link'] = link;
@@ -188,6 +193,7 @@ export async function updatePiece(conceptId, pieceId, payload) {
   if (source !== undefined) set['pieces.$.source'] = source;
   if (isPYQ !== undefined) set['pieces.$.isPYQ'] = Boolean(isPYQ);
   if (pyqYear !== undefined) set['pieces.$.pyqYear'] = isPYQ ? pyqYear || null : null;
+  if (scheduledFor !== undefined) set['pieces.$.scheduledFor'] = scheduledFor || null;
   const concept = await ContentConcept.findOneAndUpdate({ conceptId, 'pieces._id': pieceId }, { $set: set }, { new: true, runValidators: true }).lean();
   if (!concept) throw new ApiError(404, 'Concept or content piece not found');
   const piece = concept.pieces.find((p) => String(p._id) === String(pieceId));
@@ -222,14 +228,75 @@ export async function getUsedTopics() {
  * different stage.
  */
 export async function getStats() {
-  const rows = await ContentConcept.aggregate([{ $unwind: '$pieces' }, { $group: { _id: '$pieces.status', count: { $sum: 1 } } }]);
+  const [statusRows, platformRows, typeRows] = await Promise.all([
+    ContentConcept.aggregate([{ $unwind: '$pieces' }, { $group: { _id: '$pieces.status', count: { $sum: 1 } } }]),
+    ContentConcept.aggregate([{ $unwind: '$pieces' }, { $group: { _id: '$pieces.platform', count: { $sum: 1 } } }]),
+    ContentConcept.aggregate([{ $unwind: '$pieces' }, { $group: { _id: '$pieces.type', count: { $sum: 1 } } }]),
+  ]);
   const counts = PIECE_STATUSES.reduce((acc, s) => ({ ...acc, [s]: 0 }), {});
-  rows.forEach((r) => {
+  statusRows.forEach((r) => {
     counts[r._id] = r.count;
+  });
+  const byPlatform = PLATFORMS.reduce((acc, p) => ({ ...acc, [p]: 0 }), {});
+  platformRows.forEach((r) => {
+    byPlatform[r._id] = r.count;
+  });
+  const byType = PIECE_TYPES.reduce((acc, t) => ({ ...acc, [t]: 0 }), {});
+  typeRows.forEach((r) => {
+    byType[r._id] = r.count;
   });
   const totalPieces = Object.values(counts).reduce((a, b) => a + b, 0);
   const totalConcepts = await ContentConcept.countDocuments();
-  return { counts, totalPieces, totalConcepts };
+  return { counts, byPlatform, byType, totalPieces, totalConcepts };
+}
+
+/**
+ * Flat, one-row-per-piece view across every concept — the drill-down table
+ * behind stat cards/chart slices (e.g. "recorded but not edited", "carousels
+ * still planned"). listConcepts() intentionally keeps pieces nested under
+ * their concept for the card UI; this is the same data reshaped for a report.
+ */
+export async function listPiecesFlat({ status, platform, type, search } = {}) {
+  const match = {};
+  if (status) match['pieces.status'] = status;
+  if (platform) match['pieces.platform'] = platform;
+  if (type) match['pieces.type'] = type;
+  if (search) {
+    const re = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    match.$or = [{ conceptId: re }, { title: re }, { chapter: re }, { topic: re }, { 'pieces.pieceId': re }, { 'pieces.label': re }];
+  }
+
+  const concepts = await ContentConcept.find(match).sort({ createdAt: -1 }).lean();
+  const rows = [];
+  concepts.forEach((concept) => {
+    concept.pieces.forEach((piece) => {
+      if (status && piece.status !== status) return;
+      if (platform && piece.platform !== platform) return;
+      if (type && piece.type !== type) return;
+      rows.push({
+        _id: piece._id,
+        pieceId: piece.pieceId,
+        conceptId: concept.conceptId,
+        conceptTitle: concept.title,
+        chapter: concept.chapter || '',
+        topic: concept.topic || '',
+        platform: piece.platform,
+        type: piece.type,
+        label: piece.label || '',
+        status: piece.status,
+        source: piece.source || '',
+        isPYQ: piece.isPYQ,
+        pyqYear: piece.pyqYear || null,
+        scheduledFor: piece.scheduledFor || null,
+        link: piece.link || '',
+        notes: piece.notes || '',
+        createdAt: piece.createdAt,
+        updatedAt: piece.updatedAt,
+      });
+    });
+  });
+  rows.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  return rows;
 }
 
 /** Pushes every existing piece into the Google Sheet — for pieces created/edited while sync wasn't reachable. */
@@ -254,6 +321,7 @@ export async function exportToExcelBuffer() {
     { header: 'Type', key: 'type', width: 16 },
     { header: 'Label', key: 'label', width: 18 },
     { header: 'Status', key: 'status', width: 12 },
+    { header: 'Scheduled For', key: 'scheduledFor', width: 20 },
     { header: 'Source', key: 'source', width: 18 },
     { header: 'PYQ', key: 'pyq', width: 8 },
     { header: 'PYQ Year', key: 'pyqYear', width: 10 },
@@ -276,6 +344,7 @@ export async function exportToExcelBuffer() {
         type: piece.type,
         label: piece.label || '',
         status: piece.status,
+        scheduledFor: piece.scheduledFor ? new Date(piece.scheduledFor).toISOString() : '',
         source: piece.source || '',
         pyq: piece.isPYQ ? 'Yes' : 'No',
         pyqYear: piece.pyqYear || '',

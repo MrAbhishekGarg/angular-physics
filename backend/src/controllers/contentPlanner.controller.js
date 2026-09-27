@@ -20,6 +20,12 @@ export const getStats = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, stats);
 });
 
+export const listPieces = asyncHandler(async (req, res) => {
+  const { status, platform, type, search } = req.query;
+  const rows = await contentPlannerService.listPiecesFlat({ status, platform, type, search });
+  return ApiResponse(res, 200, rows, { count: rows.length });
+});
+
 export const getTopics = asyncHandler(async (req, res) => {
   const topics = await contentPlannerService.getUsedTopics();
   return ApiResponse(res, 200, topics);

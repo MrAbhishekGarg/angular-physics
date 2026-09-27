@@ -4,6 +4,7 @@ export const contentPlannerService = {
   list: (filters = {}) => api.get('/content-planner', { params: filters }),
   stats: () => api.get('/content-planner/stats'),
   topics: () => api.get('/content-planner/topics'),
+  listPieces: (filters = {}) => api.get('/content-planner/pieces', { params: filters }),
   create: (payload) => api.post('/content-planner', payload),
   update: (conceptId, payload) => api.put(`/content-planner/${conceptId}`, payload),
   remove: (conceptId) => api.delete(`/content-planner/${conceptId}`),

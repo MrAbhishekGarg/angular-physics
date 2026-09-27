@@ -4,6 +4,7 @@ import {
   listConcepts,
   getStats,
   getTopics,
+  listPieces,
   getSheetsStatus,
   resyncAll,
   exportExcel,
@@ -26,6 +27,7 @@ const router = Router();
 router.get('/', authenticate, authorize('admin'), listConcepts);
 router.get('/stats', authenticate, authorize('admin'), getStats);
 router.get('/topics', authenticate, authorize('admin'), getTopics);
+router.get('/pieces', authenticate, authorize('admin'), listPieces);
 router.get('/sheets-status', authenticate, authorize('admin'), getSheetsStatus);
 router.get('/export', authenticate, authorize('admin'), exportExcel);
 router.post('/resync-all', authenticate, authorize('admin'), resyncAll);

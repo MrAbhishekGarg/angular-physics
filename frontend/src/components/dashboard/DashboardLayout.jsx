@@ -111,7 +111,10 @@ const MY_JOB_NAV_GROUP = {
 // Instagram) it should spawn. Deliberately not merged into YouTube Studio.
 const CONTENT_PLANNER_NAV_GROUP = {
   section: 'Content Planner',
-  items: [{ to: '/dashboard/mentor/admin/content-planner', label: 'Concepts & Pieces', icon: '🗂️', end: true }],
+  items: [
+    { to: '/dashboard/mentor/admin/content-planner', label: 'Concepts & Pieces', icon: '🗂️', end: true },
+    { to: '/dashboard/mentor/admin/content-planner/report', label: 'Report', icon: '📊', end: true },
+  ],
 };
 
 const ROLE_META = {

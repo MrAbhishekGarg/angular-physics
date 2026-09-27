@@ -1,0 +1,283 @@
+.wrap {
+  padding: var(--ap-space-xl) 0;
+  max-width: 1500px;
+}
+
+.backLink {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ap-text-muted);
+  text-decoration: none;
+  margin-bottom: 0.75rem;
+}
+.backLink:hover {
+  color: var(--ap-accent);
+}
+
+.header {
+  margin-bottom: var(--ap-space-md);
+}
+.title {
+  color: var(--ap-primary);
+  margin: 0 0 0.35rem;
+}
+.subtitle {
+  color: var(--ap-text-muted);
+  max-width: 720px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ---------- Quick filters ---------- */
+
+.quickFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: var(--ap-space-md) 0;
+}
+.quickFilterChip {
+  border: 1.5px solid var(--ap-border);
+  background: var(--ap-bg);
+  color: var(--ap-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+  white-space: nowrap;
+}
+.quickFilterChip:hover {
+  border-color: var(--ap-accent);
+  background: color-mix(in srgb, var(--ap-accent) 8%, var(--ap-bg));
+}
+
+/* ---------- Filter bar ---------- */
+
+.filterBar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: var(--ap-space-md);
+}
+.searchInput {
+  flex: 1;
+  min-width: 220px;
+  border: 1.5px solid var(--ap-border);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.88rem;
+  background: var(--ap-bg);
+  color: var(--ap-text);
+}
+.searchInput:focus,
+.filterBar select:focus {
+  outline: none;
+  border-color: var(--ap-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ap-accent) 18%, transparent);
+}
+.filterBar select {
+  border: 1.5px solid var(--ap-border);
+  border-radius: 8px;
+  padding: 0.55rem 0.6rem;
+  font-size: 0.85rem;
+  background: var(--ap-bg);
+  color: var(--ap-text);
+}
+.searchBtn {
+  border: 1.5px solid var(--ap-primary);
+  background: var(--ap-primary);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.clearBtn {
+  border: none;
+  background: none;
+  color: var(--ap-text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ---------- Summary bar ---------- */
+
+.summaryBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: var(--ap-space-md);
+}
+.summaryCount {
+  font-family: var(--ap-font-heading);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--ap-primary);
+  margin-right: 0.3rem;
+}
+.summaryChip {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ap-text-muted);
+  background: var(--ap-bg-muted);
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+}
+
+.emptyState {
+  padding: 2rem;
+  text-align: center;
+  color: var(--ap-text-muted);
+  border: 1.5px dashed var(--ap-border);
+  border-radius: var(--ap-radius);
+  font-size: 0.9rem;
+}
+
+/* ---------- Table ---------- */
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius);
+  background: var(--ap-bg);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.table th {
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ap-text-muted);
+  background: var(--ap-bg-muted);
+  padding: 0.65rem 0.8rem;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+.table td {
+  padding: 0.6rem 0.8rem;
+  border-top: 1px solid var(--ap-border);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.table tbody tr:hover {
+  background: color-mix(in srgb, var(--ap-accent) 4%, transparent);
+}
+
+.idCell {
+  font-family: 'Courier New', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ap-primary);
+  background: var(--ap-bg-muted);
+  padding: 0.15rem 0.4rem;
+  border-radius: 5px;
+}
+
+.conceptCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  white-space: normal;
+  max-width: 220px;
+}
+.conceptSub {
+  font-size: 0.72rem;
+  color: var(--ap-text-muted);
+}
+
+.statusPill {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.statusPill_planned { background: #f1f5f9; color: #475569; }
+.statusPill_scripted { background: #cffafe; color: #0e7490; }
+.statusPill_recorded { background: #dbeafe; color: #1d4ed8; }
+.statusPill_edited { background: #fef3c7; color: #b45309; }
+.statusPill_uploaded { background: #ede9fe; color: #6d28d9; }
+.statusPill_scheduled { background: #fce7f3; color: #be185d; }
+.statusPill_published { background: #d1fae5; color: #047857; }
+.statusPill_onhold { background: #fee2e2; color: #b91c1c; }
+
+.pyqChip {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #92400e;
+  background: #fef3c7;
+  border-radius: 6px;
+  padding: 0.12rem 0.4rem;
+  white-space: normal;
+}
+
+.updatedCell {
+  color: var(--ap-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.advanceBtn {
+  border: 1px solid var(--ap-accent);
+  background: color-mix(in srgb, var(--ap-accent) 10%, var(--ap-bg));
+  color: var(--ap-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.25rem 0.45rem;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.advanceBtn:hover:not(:disabled) {
+  background: var(--ap-accent);
+  color: #fff;
+}
+.advanceBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.statusSelect {
+  border: 1px solid var(--ap-border);
+  border-radius: 6px;
+  padding: 0.2rem 0.3rem;
+  font-size: 0.72rem;
+  background: var(--ap-bg);
+  color: var(--ap-text);
+}
+.openLink {
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+.removeBtn {
+  border: none;
+  background: none;
+  color: var(--ap-text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 0.2rem;
+}
+.removeBtn:hover {
+  color: var(--ap-danger);
+}

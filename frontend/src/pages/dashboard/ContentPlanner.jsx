@@ -1,37 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import SEO from '../../components/seo/SEO.jsx';
 import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
 import Button from '../../components/common/Button.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
+import AnalyticsChart from '../../components/dashboard/AnalyticsChart.jsx';
 import { contentPlannerService } from '../../services/contentPlannerService.js';
 import { questionService } from '../../services/questionService.js';
 import { CURRICULUM_CHAPTERS, CURRICULUM_TOPICS } from '../../data/physicsCurriculum.js';
+import { STATUS_META, STATUS_ORDER, NEXT_STATUS, PLATFORM_META, TYPE_META } from '../../data/contentPlannerMeta.js';
 import { api } from '../../services/api.js';
 import styles from './ContentPlanner.module.css';
-
-const STATUS_META = {
-  planned: { label: 'Planned', icon: '💡', tone: 'planned' },
-  scripted: { label: 'Scripted', icon: '📝', tone: 'scripted' },
-  recorded: { label: 'Recorded', icon: '🎥', tone: 'recorded' },
-  edited: { label: 'Edited', icon: '✂️', tone: 'edited' },
-  uploaded: { label: 'Uploaded', icon: '☁️', tone: 'uploaded' },
-  published: { label: 'Published', icon: '✅', tone: 'published' },
-  'on-hold': { label: 'On Hold', icon: '⏸️', tone: 'onhold' },
-};
-const STATUS_ORDER = ['planned', 'scripted', 'recorded', 'edited', 'uploaded', 'published'];
-const NEXT_STATUS = { planned: 'scripted', scripted: 'recorded', recorded: 'edited', edited: 'uploaded', uploaded: 'published' };
-
-const PLATFORM_META = {
-  youtube: { label: 'YouTube', icon: '▶️' },
-  instagram: { label: 'Instagram', icon: '📸' },
-};
-const TYPE_META = {
-  'long-video': { label: 'Long Video', icon: '🎬' },
-  short: { label: 'Short', icon: '⚡' },
-  carousel: { label: 'Carousel', icon: '🖼️' },
-  'community-post': { label: 'Community Post', icon: '💬' },
-};
 
 const EMPTY_FORM = {
   title: '',
@@ -39,6 +20,7 @@ const EMPTY_FORM = {
   topic: '',
   notes: '',
   longVideoCount: 1,
+  longVideoPlatforms: 'youtube',
   includeShort: true,
   shortPlatforms: 'both',
   includeCarousel: false,
@@ -58,6 +40,11 @@ function copyText(text) {
   navigator.clipboard?.writeText(text).catch(() => {});
 }
 
+function reportLink(params) {
+  const qs = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v))).toString();
+  return `/dashboard/mentor/admin/content-planner/report${qs ? `?${qs}` : ''}`;
+}
+
 export default function ContentPlanner() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [questionTaxonomy, setQuestionTaxonomy] = useState(null);
@@ -72,6 +59,8 @@ export default function ContentPlanner() {
   const [filters, setFilters] = useState({ status: '', platform: '', type: '', search: '' });
   const [addPieceFor, setAddPieceFor] = useState('');
   const [addPieceForm, setAddPieceForm] = useState(EMPTY_ADD_PIECE);
+  const [editPieceFor, setEditPieceFor] = useState('');
+  const [editPieceForm, setEditPieceForm] = useState(null);
   const [sheetsStatus, setSheetsStatus] = useState(null);
   const [resyncing, setResyncing] = useState(false);
   const [resyncMessage, setResyncMessage] = useState('');
@@ -128,6 +117,7 @@ export default function ContentPlanner() {
         pyqYear: form.isPYQ && form.pyqYear ? Number(form.pyqYear) : undefined,
         bundle: {
           longVideoCount: Number(form.longVideoCount),
+          longVideoPlatforms: form.longVideoPlatforms,
           includeShort: form.includeShort,
           shortPlatforms: form.shortPlatforms,
           includeCarousel: form.includeCarousel,
@@ -199,6 +189,7 @@ export default function ContentPlanner() {
   };
 
   const openAddPiece = (conceptId) => {
+    setEditPieceFor('');
     setAddPieceFor(conceptId);
     setAddPieceForm(EMPTY_ADD_PIECE);
   };
@@ -211,6 +202,39 @@ export default function ContentPlanner() {
         pyqYear: addPieceForm.isPYQ && addPieceForm.pyqYear ? Number(addPieceForm.pyqYear) : undefined,
       });
       setAddPieceFor('');
+      await load();
+    } catch (err) {
+      window.alert(err.message);
+    } finally {
+      setBusyKey('');
+    }
+  };
+
+  const openEditPiece = (piece) => {
+    setAddPieceFor('');
+    setEditPieceFor(piece._id);
+    setEditPieceForm({
+      label: piece.label || '',
+      link: piece.link || '',
+      notes: piece.notes || '',
+      source: piece.source || '',
+      isPYQ: Boolean(piece.isPYQ),
+      pyqYear: piece.pyqYear || '',
+      scheduledFor: piece.scheduledFor ? String(piece.scheduledFor).slice(0, 10) : '',
+    });
+  };
+
+  const handleSaveEditPiece = async (concept, piece) => {
+    const key = pieceKey(concept.conceptId, piece._id);
+    setBusyKey(key);
+    try {
+      await contentPlannerService.updatePiece(concept.conceptId, piece._id, {
+        ...editPieceForm,
+        pyqYear: editPieceForm.isPYQ && editPieceForm.pyqYear ? Number(editPieceForm.pyqYear) : undefined,
+        scheduledFor: editPieceForm.scheduledFor || null,
+      });
+      setEditPieceFor('');
+      setEditPieceForm(null);
       await load();
     } catch (err) {
       window.alert(err.message);
@@ -239,6 +263,29 @@ export default function ContentPlanner() {
   const topicOptions = useMemo(
     () => [...new Set([...CURRICULUM_TOPICS, ...(questionTaxonomy?.topics || []), ...(usedTopics?.topics || [])])].sort(),
     [questionTaxonomy, usedTopics]
+  );
+
+  const statusChartData = useMemo(
+    () => (stats ? STATUS_ORDER.concat('on-hold').map((s) => ({ name: STATUS_META[s].label, count: stats.counts[s] ?? 0 })) : []),
+    [stats]
+  );
+  const platformChartData = useMemo(
+    () =>
+      stats
+        ? Object.entries(PLATFORM_META)
+            .map(([key, m]) => ({ name: m.label, value: stats.byPlatform?.[key] ?? 0, color: m.color }))
+            .filter((d) => d.value > 0)
+        : [],
+    [stats]
+  );
+  const typeChartData = useMemo(
+    () =>
+      stats
+        ? Object.entries(TYPE_META)
+            .map(([key, m]) => ({ name: m.label, value: stats.byType?.[key] ?? 0, color: m.color }))
+            .filter((d) => d.value > 0)
+        : [],
+    [stats]
   );
 
   const exportUrl = `${api.defaults.baseURL}/content-planner/export`;
@@ -285,26 +332,65 @@ export default function ContentPlanner() {
           </div>
 
           {stats && (
-            <div className={styles.statsRow}>
-              {STATUS_ORDER.concat('on-hold').map((s) => (
-                <button
-                  type="button"
-                  key={s}
-                  className={`${styles.statCard} ${styles[`statCard_${STATUS_META[s].tone}`]} ${filters.status === s ? styles.statCardActive : ''}`}
-                  onClick={() => setFilters((f) => ({ ...f, status: f.status === s ? '' : s }))}
-                >
-                  <span className={styles.statIcon}>{STATUS_META[s].icon}</span>
-                  <span className={styles.statValue}>{stats.counts[s] ?? 0}</span>
-                  <span className={styles.statLabel}>{STATUS_META[s].label}</span>
-                </button>
-              ))}
-              <div className={styles.statTotal}>
-                <span className={styles.statTotalValue}>{stats.totalConcepts}</span>
-                <span className={styles.statTotalLabel}>Concepts</span>
-                <span className={styles.statTotalValue}>{stats.totalPieces}</span>
-                <span className={styles.statTotalLabel}>Content Pieces</span>
+            <>
+              <div className={styles.statsRow}>
+                {STATUS_ORDER.concat('on-hold').map((s) => (
+                  <Link key={s} to={reportLink({ status: s })} className={`${styles.statCard} ${styles[`statCard_${STATUS_META[s].tone}`]}`}>
+                    <span className={styles.statIcon}>{STATUS_META[s].icon}</span>
+                    <span className={styles.statValue}>{stats.counts[s] ?? 0}</span>
+                    <span className={styles.statLabel}>{STATUS_META[s].label}</span>
+                  </Link>
+                ))}
+                <Link to={reportLink({})} className={styles.statTotal}>
+                  <span className={styles.statTotalValue}>{stats.totalConcepts}</span>
+                  <span className={styles.statTotalLabel}>Concepts</span>
+                  <span className={styles.statTotalValue}>{stats.totalPieces}</span>
+                  <span className={styles.statTotalLabel}>Content Pieces ↗</span>
+                </Link>
               </div>
-            </div>
+
+              <div className={styles.chartsRow}>
+                <div className={styles.chartCard}>
+                  <AnalyticsChart title="Pipeline by status" type="bar" data={statusChartData} xKey="name" yKey="count" color="#F59E0B" />
+                </div>
+                <div className={styles.chartCard}>
+                  <h3 className={styles.chartCardTitle}>By platform</h3>
+                  {platformChartData.length === 0 ? (
+                    <ErrorState message="No data yet." />
+                  ) : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie data={platformChartData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={72} paddingAngle={3}>
+                          {platformChartData.map((d) => (
+                            <Cell key={d.name} fill={d.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend verticalAlign="bottom" height={24} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+                <div className={styles.chartCard}>
+                  <h3 className={styles.chartCardTitle}>By content type</h3>
+                  {typeChartData.length === 0 ? (
+                    <ErrorState message="No data yet." />
+                  ) : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie data={typeChartData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={72} paddingAngle={3}>
+                          {typeChartData.map((d) => (
+                            <Cell key={d.name} fill={d.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend verticalAlign="bottom" height={24} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
+            </>
           )}
 
           <div className={styles.layout}>
@@ -368,6 +454,18 @@ export default function ContentPlanner() {
                           None
                         </button>
                       </div>
+                      {Number(form.longVideoCount) > 0 && (
+                        <select
+                          name="longVideoPlatforms"
+                          value={form.longVideoPlatforms}
+                          onChange={handleFormChange}
+                          className={styles.inlineSelect}
+                        >
+                          <option value="youtube">YouTube only</option>
+                          <option value="instagram">Instagram only</option>
+                          <option value="both">Both platforms</option>
+                        </select>
+                      )}
                     </div>
 
                     <label className={styles.toggleRow}>
@@ -464,6 +562,14 @@ export default function ContentPlanner() {
                   value={filters.search}
                   onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
                 />
+                <select value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}>
+                  <option value="">All statuses</option>
+                  {Object.entries(STATUS_META).map(([key, m]) => (
+                    <option key={key} value={key}>
+                      {m.icon} {m.label}
+                    </option>
+                  ))}
+                </select>
                 <select value={filters.platform} onChange={(e) => setFilters((f) => ({ ...f, platform: e.target.value }))}>
                   <option value="">All platforms</option>
                   <option value="youtube">YouTube</option>
@@ -499,6 +605,7 @@ export default function ContentPlanner() {
                   const total = concept.pieces.length;
                   const publishedCount = concept.pieces.filter((p) => p.status === 'published').length;
                   const progressPct = total > 0 ? Math.round((publishedCount / total) * 100) : 0;
+                  const editingPiece = editPieceFor ? concept.pieces.find((p) => p._id === editPieceFor) : null;
 
                   return (
                     <div key={concept._id} className={styles.conceptCard}>
@@ -548,6 +655,9 @@ export default function ContentPlanner() {
                                   {PLATFORM_META[piece.platform].icon} {TYPE_META[piece.type].icon}
                                 </span>
                                 <span className={styles.pieceLabel}>{piece.label || TYPE_META[piece.type].label}</span>
+                                <button type="button" className={styles.pieceEditBtn} title="Edit piece" onClick={() => openEditPiece(piece)}>
+                                  ✏️
+                                </button>
                                 <button
                                   type="button"
                                   className={styles.pieceRemoveBtn}
@@ -568,6 +678,9 @@ export default function ContentPlanner() {
                                 <span className={styles.pyqChip}>
                                   🏆 {piece.source || 'PYQ'} {piece.pyqYear || ''}
                                 </span>
+                              )}
+                              {piece.status === 'scheduled' && piece.scheduledFor && (
+                                <span className={styles.scheduledChip}>📅 {new Date(piece.scheduledFor).toLocaleDateString()}</span>
                               )}
                               <div className={styles.pieceActions}>
                                 {next && (
@@ -603,7 +716,90 @@ export default function ContentPlanner() {
                         })}
                       </div>
 
-                      {addPieceFor === concept.conceptId ? (
+                      {editingPiece && editPieceForm ? (
+                        <div className={styles.addPieceForm}>
+                          <div className={styles.addPieceRow}>
+                            <span className={styles.editingLabel}>
+                              Editing {PLATFORM_META[editingPiece.platform].icon} {TYPE_META[editingPiece.type].icon} {editingPiece.pieceId}
+                            </span>
+                          </div>
+                          <div className={styles.addPieceRow}>
+                            <input
+                              placeholder="Label"
+                              value={editPieceForm.label}
+                              onChange={(e) => setEditPieceForm((f) => ({ ...f, label: e.target.value }))}
+                            />
+                            <input
+                              placeholder="Link (optional)"
+                              value={editPieceForm.link}
+                              onChange={(e) => setEditPieceForm((f) => ({ ...f, link: e.target.value }))}
+                            />
+                          </div>
+                          <div className={styles.addPieceRow}>
+                            <input
+                              placeholder="Source (optional)"
+                              value={editPieceForm.source}
+                              onChange={(e) => setEditPieceForm((f) => ({ ...f, source: e.target.value }))}
+                            />
+                            <label className={styles.addPiecePyqLabel}>
+                              <input
+                                type="checkbox"
+                                checked={editPieceForm.isPYQ}
+                                onChange={(e) => setEditPieceForm((f) => ({ ...f, isPYQ: e.target.checked }))}
+                              />
+                              PYQ
+                            </label>
+                            {editPieceForm.isPYQ && (
+                              <input
+                                type="number"
+                                placeholder="Year"
+                                value={editPieceForm.pyqYear}
+                                onChange={(e) => setEditPieceForm((f) => ({ ...f, pyqYear: e.target.value }))}
+                                className={styles.addPieceYearInput}
+                              />
+                            )}
+                          </div>
+                          <div className={styles.addPieceRow}>
+                            <label className={styles.scheduledLabel}>
+                              Scheduled for
+                              <input
+                                type="date"
+                                value={editPieceForm.scheduledFor}
+                                onChange={(e) => setEditPieceForm((f) => ({ ...f, scheduledFor: e.target.value }))}
+                              />
+                            </label>
+                          </div>
+                          <div className={styles.addPieceRow}>
+                            <textarea
+                              placeholder="Notes (optional)"
+                              rows="2"
+                              value={editPieceForm.notes}
+                              onChange={(e) => setEditPieceForm((f) => ({ ...f, notes: e.target.value }))}
+                            />
+                          </div>
+                          <div className={styles.addPieceActions}>
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={busyKey === pieceKey(concept.conceptId, editingPiece._id)}
+                              onClick={() => handleSaveEditPiece(concept, editingPiece)}
+                            >
+                              Save changes
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditPieceFor('');
+                                setEditPieceForm(null);
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : addPieceFor === concept.conceptId ? (
                         <div className={styles.addPieceForm}>
                           <div className={styles.addPieceRow}>
                             <select
