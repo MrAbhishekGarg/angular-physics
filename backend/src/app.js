@@ -36,6 +36,7 @@ import jobScheduleRoutes from './routes/jobSchedule.routes.js';
 import courseFeesRoutes from './routes/courseFees.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import practiceRoutes from './routes/practice.routes.js';
+import contentPlannerRoutes from './routes/contentPlanner.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -81,6 +82,7 @@ app.use('/api/job-schedule', jobScheduleRoutes);
 app.use('/api/course-fees', courseFeesRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/practice', practiceRoutes);
+app.use('/api/content-planner', contentPlannerRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

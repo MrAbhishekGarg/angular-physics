@@ -44,6 +44,18 @@ export const env = {
   // session cookie to authenticate with.
   mentorFacultyCode: process.env.MENTOR_FACULTY_CODE || 'AGP',
   scheduleIngestSecret: process.env.SCHEDULE_INGEST_SECRET || '',
+
+  // Google Sheets live sync for the admin-only Content Planner (see
+  // services/contentPlannerSheetsSync.service.js). A service account's
+  // credentials, not OAuth, since this is a server-to-server integration
+  // with no human sign-in step. GOOGLE_SHEETS_PRIVATE_KEY is the service
+  // account JSON key's "private_key" field pasted as-is (its literal \n
+  // sequences are converted back to real newlines below, since most .env
+  // loaders can't store a multi-line value directly).
+  googleSheetsClientEmail: process.env.GOOGLE_SHEETS_CLIENT_EMAIL || '',
+  googleSheetsPrivateKey: (process.env.GOOGLE_SHEETS_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+  googleSheetsSpreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID || '',
+  contentPlannerSheetName: process.env.CONTENT_PLANNER_SHEET_NAME || 'Content Pieces',
 };
 
 if (!process.env.JWT_SECRET) {
@@ -64,4 +76,10 @@ if (!env.youtubeApiKey || !env.youtubeChannelId) {
 
 if (!env.scheduleIngestSecret) {
   console.warn('[env] No SCHEDULE_INGEST_SECRET set — the "My Job" schedule ingest webhook is disabled until it is set.');
+}
+
+if (!env.googleSheetsClientEmail || !env.googleSheetsPrivateKey || !env.googleSheetsSpreadsheetId) {
+  console.warn(
+    '[env] No GOOGLE_SHEETS_CLIENT_EMAIL/GOOGLE_SHEETS_PRIVATE_KEY/GOOGLE_SHEETS_SPREADSHEET_ID set — the Content Planner will not sync to Google Sheets until all three are set.'
+  );
 }

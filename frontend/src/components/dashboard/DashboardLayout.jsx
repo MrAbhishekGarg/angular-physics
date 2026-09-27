@@ -106,6 +106,14 @@ const MY_JOB_NAV_GROUP = {
   ],
 };
 
+// Content Planner — its own module, one level up from a single video: plans
+// a teaching concept and every piece of content (across YouTube AND
+// Instagram) it should spawn. Deliberately not merged into YouTube Studio.
+const CONTENT_PLANNER_NAV_GROUP = {
+  section: 'Content Planner',
+  items: [{ to: '/dashboard/mentor/admin/content-planner', label: 'Concepts & Pieces', icon: '🗂️', end: true }],
+};
+
 const ROLE_META = {
   admin: { label: 'Admin', tone: 'admin' },
   mentor: { label: 'Mentor', tone: 'mentor' },
@@ -235,7 +243,10 @@ export default function DashboardLayout({ role, children }) {
   // Admin sees everything a mentor does (same pages, same DashboardLayout
   // calls) plus this one extra group — real role, not the `role` prop,
   // since every mentor page still passes role="mentor" unchanged.
-  const withAdminGroup = user?.role === 'admin' ? [...baseNav, ADMIN_NAV_GROUP, MY_JOB_NAV_GROUP] : baseNav;
+  const withAdminGroup =
+    user?.role === 'admin'
+      ? [...baseNav, ADMIN_NAV_GROUP, CONTENT_PLANNER_NAV_GROUP, MY_JOB_NAV_GROUP]
+      : baseNav;
   // Drop any item the admin has restricted this account from, then drop any
   // group that's now empty. A mentor only ever carries restrictedSections
   // and a student only ever carries restrictedStudentAccess, so checking
