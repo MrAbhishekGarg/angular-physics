@@ -117,30 +117,42 @@
 
 /* ---------- Stats row ---------- */
 
+.sectionEyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ap-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
 .statsRow {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
   gap: 0.6rem;
   margin-bottom: var(--ap-space-md);
 }
 
 .statCard {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.15rem;
-  padding: 0.85rem 0.5rem;
+  padding: 0.85rem 0.5rem 0.7rem;
   border: 1.5px solid var(--ap-border);
   border-radius: var(--ap-radius);
   background: var(--ap-bg);
   cursor: pointer;
   font: inherit;
   text-decoration: none;
+  overflow: hidden;
   transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
 .statCard:hover {
   transform: translateY(-3px);
   box-shadow: var(--ap-shadow-sm);
+  border-color: color-mix(in srgb, var(--stat-color, var(--ap-border)) 55%, var(--ap-border));
 }
 
 .statIcon {
@@ -158,19 +170,58 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
+.statActionHint {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--stat-color);
+  margin-top: 0.1rem;
+}
 
-.statCard_planned { border-top: 3px solid #94a3b8; }
-.statCard_scripted { border-top: 3px solid #06b6d4; }
-.statCard_recorded { border-top: 3px solid #3b82f6; }
-.statCard_edited { border-top: 3px solid #f59e0b; }
-.statCard_uploaded { border-top: 3px solid #8b5cf6; }
-.statCard_scheduled { border-top: 3px solid #ec4899; }
-.statCard_published { border-top: 3px solid var(--ap-success); }
-.statCard_onhold { border-top: 3px solid var(--ap-danger); }
+/* A tiny "→" affordance that only appears on hover, so it's unmistakable
+   every stat card is a link to a real filtered list, not just a static count. */
+.statViewHint {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--stat-color, var(--ap-accent));
+  opacity: 0;
+  max-height: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, max-height 0.15s ease, margin-top 0.15s ease;
+}
+.statCard:hover .statViewHint,
+.statTotal:hover .statViewHint {
+  opacity: 1;
+  max-height: 1.2em;
+  margin-top: 0.15rem;
+  transform: translateY(0);
+}
+
+.statCard_planned { --stat-color: #94a3b8; border-top: 3px solid var(--stat-color); }
+.statCard_scripted { --stat-color: #8b5cf6; border-top: 3px solid var(--stat-color); }
+.statCard_recorded { --stat-color: var(--ap-warning); border-top: 3px solid var(--stat-color); }
+.statCard_edited { --stat-color: var(--ap-success); border-top: 3px solid var(--stat-color); }
+.statCard_uploaded { --stat-color: var(--ap-accent); border-top: 3px solid var(--stat-color); }
+.statCard_scheduled { --stat-color: #ec4899; border-top: 3px solid var(--stat-color); }
+.statCard_published { --stat-color: var(--ap-primary); border-top: 3px solid var(--stat-color); }
+.statCard_onhold { --stat-color: var(--ap-danger); border-top: 3px solid var(--stat-color); }
+
+/* Urgency wash — the statuses actually waiting on the mentor (backlog: needs
+   recording/editing; ready: a mechanical next step; attention: stuck) get a
+   tinted fill so they visually pop above the neutral/done stages. */
+.statCardUrgency_backlog,
+.statCardUrgency_ready,
+.statCardUrgency_attention {
+  background: color-mix(in srgb, var(--stat-color) 9%, var(--ap-bg));
+}
+.statCardUrgency_attention {
+  border-top-width: 3px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--stat-color) 25%, transparent);
+}
 
 .statTotal {
   grid-column: 1 / -1;
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: center;
   gap: 0.5rem;
@@ -789,14 +840,6 @@
   padding: 0.18rem 0.5rem;
   border-radius: 999px;
 }
-.statusPill_planned { background: #f1f5f9; color: #475569; }
-.statusPill_scripted { background: #cffafe; color: #0e7490; }
-.statusPill_recorded { background: #dbeafe; color: #1d4ed8; }
-.statusPill_edited { background: #fef3c7; color: #b45309; }
-.statusPill_uploaded { background: #ede9fe; color: #6d28d9; }
-.statusPill_scheduled { background: #fce7f3; color: #be185d; }
-.statusPill_published { background: #d1fae5; color: #047857; }
-.statusPill_onhold { background: #fee2e2; color: #b91c1c; }
 
 .pieceActions {
   display: flex;

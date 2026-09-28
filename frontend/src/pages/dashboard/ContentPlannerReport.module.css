@@ -175,8 +175,11 @@
   vertical-align: middle;
   white-space: nowrap;
 }
+.table tbody tr:nth-child(even) {
+  background: var(--ap-bg-muted);
+}
 .table tbody tr:hover {
-  background: color-mix(in srgb, var(--ap-accent) 4%, transparent);
+  background: color-mix(in srgb, var(--ap-accent) 8%, transparent);
 }
 
 .idCell {
@@ -209,14 +212,6 @@
   border-radius: 999px;
   white-space: nowrap;
 }
-.statusPill_planned { background: #f1f5f9; color: #475569; }
-.statusPill_scripted { background: #cffafe; color: #0e7490; }
-.statusPill_recorded { background: #dbeafe; color: #1d4ed8; }
-.statusPill_edited { background: #fef3c7; color: #b45309; }
-.statusPill_uploaded { background: #ede9fe; color: #6d28d9; }
-.statusPill_scheduled { background: #fce7f3; color: #be185d; }
-.statusPill_published { background: #d1fae5; color: #047857; }
-.statusPill_onhold { background: #fee2e2; color: #b91c1c; }
 
 .pyqChip {
   font-size: 0.7rem;

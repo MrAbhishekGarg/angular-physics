@@ -267,7 +267,7 @@ export default function ContentPlannerReport() {
                             </td>
                             <td>{row.label || '—'}</td>
                             <td>
-                              <span className={`${styles.statusPill} ${styles[`statusPill_${meta.tone}`]}`}>
+                              <span className={styles.statusPill} style={{ background: meta.pillBg, color: meta.pillText }}>
                                 {meta.icon} {meta.label}
                               </span>
                             </td>

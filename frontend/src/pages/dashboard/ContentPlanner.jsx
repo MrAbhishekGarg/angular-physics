@@ -269,6 +269,7 @@ export default function ContentPlanner() {
     () => (stats ? STATUS_ORDER.concat('on-hold').map((s) => ({ name: STATUS_META[s].label, count: stats.counts[s] ?? 0 })) : []),
     [stats]
   );
+  const statusChartColors = useMemo(() => STATUS_ORDER.concat('on-hold').map((s) => STATUS_META[s].color), []);
   const platformChartData = useMemo(
     () =>
       stats
@@ -333,25 +334,46 @@ export default function ContentPlanner() {
 
           {stats && (
             <>
+              <div className={styles.sectionEyebrow}>Pipeline — click any stage to see the exact list</div>
               <div className={styles.statsRow}>
-                {STATUS_ORDER.concat('on-hold').map((s) => (
-                  <Link key={s} to={reportLink({ status: s })} className={`${styles.statCard} ${styles[`statCard_${STATUS_META[s].tone}`]}`}>
-                    <span className={styles.statIcon}>{STATUS_META[s].icon}</span>
-                    <span className={styles.statValue}>{stats.counts[s] ?? 0}</span>
-                    <span className={styles.statLabel}>{STATUS_META[s].label}</span>
-                  </Link>
-                ))}
+                {STATUS_ORDER.concat('on-hold').map((s) => {
+                  const meta = STATUS_META[s];
+                  return (
+                    <Link
+                      key={s}
+                      to={reportLink({ status: s })}
+                      className={[styles.statCard, styles[`statCard_${meta.tone}`], styles[`statCardUrgency_${meta.urgency}`]]
+                        .filter(Boolean)
+                        .join(' ')}
+                    >
+                      <span className={styles.statIcon}>{meta.icon}</span>
+                      <span className={styles.statValue}>{stats.counts[s] ?? 0}</span>
+                      <span className={styles.statLabel}>{meta.label}</span>
+                      {meta.actionHint && <span className={styles.statActionHint}>{meta.actionHint}</span>}
+                      <span className={styles.statViewHint}>View list →</span>
+                    </Link>
+                  );
+                })}
                 <Link to={reportLink({})} className={styles.statTotal}>
                   <span className={styles.statTotalValue}>{stats.totalConcepts}</span>
                   <span className={styles.statTotalLabel}>Concepts</span>
                   <span className={styles.statTotalValue}>{stats.totalPieces}</span>
-                  <span className={styles.statTotalLabel}>Content Pieces ↗</span>
+                  <span className={styles.statTotalLabel}>Content Pieces</span>
+                  <span className={styles.statViewHint}>View all →</span>
                 </Link>
               </div>
 
               <div className={styles.chartsRow}>
                 <div className={styles.chartCard}>
-                  <AnalyticsChart title="Pipeline by status" type="bar" data={statusChartData} xKey="name" yKey="count" color="#F59E0B" />
+                  <AnalyticsChart
+                    title="Pipeline by status"
+                    type="bar"
+                    data={statusChartData}
+                    xKey="name"
+                    yKey="count"
+                    color="#94a3b8"
+                    colors={statusChartColors}
+                  />
                 </div>
                 <div className={styles.chartCard}>
                   <h3 className={styles.chartCardTitle}>By platform</h3>
@@ -672,7 +694,7 @@ export default function ContentPlanner() {
                               <button type="button" className={styles.pieceIdBadge} onClick={() => copyText(piece.pieceId)} title="Copy piece id">
                                 {piece.pieceId}
                               </button>
-                              <span className={`${styles.statusPill} ${styles[`statusPill_${meta.tone}`]}`}>
+                              <span className={styles.statusPill} style={{ background: meta.pillBg, color: meta.pillText }}>
                                 {meta.icon} {meta.label}
                               </span>
                               {piece.isPYQ && (

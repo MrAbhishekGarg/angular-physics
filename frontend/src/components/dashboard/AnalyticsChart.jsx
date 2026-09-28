@@ -2,6 +2,7 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  Cell,
   AreaChart,
   Area,
   XAxis,
@@ -26,7 +27,7 @@ const TOOLTIP_STYLE = {
 };
 const AXIS_TICK = { fill: TEXT_MUTED, fontSize: 12 };
 
-export default function AnalyticsChart({ title, type, data, xKey, yKey, color, emptyMessage }) {
+export default function AnalyticsChart({ title, type, data, xKey, yKey, color, colors, emptyMessage }) {
   const isEmpty = !data || data.length === 0;
 
   return (
@@ -42,7 +43,9 @@ export default function AnalyticsChart({ title, type, data, xKey, yKey, color, e
               <XAxis dataKey={xKey} tick={AXIS_TICK} axisLine={{ stroke: BORDER }} tickLine={false} />
               <YAxis allowDecimals={false} tick={AXIS_TICK} axisLine={false} tickLine={false} width={32} />
               <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(30,27,75,0.04)' }} />
-              <Bar dataKey={yKey} fill={color} radius={[4, 4, 0, 0]} maxBarSize={24} />
+              <Bar dataKey={yKey} fill={color} radius={[4, 4, 0, 0]} maxBarSize={24}>
+                {colors && data.map((d, i) => <Cell key={d[xKey] ?? i} fill={colors[i] ?? color} />)}
+              </Bar>
             </BarChart>
           ) : (
             <AreaChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
