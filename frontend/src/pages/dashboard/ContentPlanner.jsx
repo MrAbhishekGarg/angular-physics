@@ -271,17 +271,22 @@ export default function ContentPlanner() {
           )}
 
           <div className={styles.toolbar}>
-            <div className={styles.viewToggle}>
-              <button type="button" className={view === 'board' ? styles.viewBtnActive : styles.viewBtn} onClick={() => setView('board')}>
-                📋 Board
-              </button>
-              <button type="button" className={view === 'concepts' ? styles.viewBtnActive : styles.viewBtn} onClick={() => setView('concepts')}>
-                🗂️ By Concept
-              </button>
+            <div className={styles.toolbarTop}>
+              <div className={styles.viewToggle}>
+                <button type="button" className={view === 'board' ? styles.viewBtnActive : styles.viewBtn} onClick={() => setView('board')}>
+                  📋 Board
+                </button>
+                <button type="button" className={view === 'concepts' ? styles.viewBtnActive : styles.viewBtn} onClick={() => setView('concepts')}>
+                  🗂️ By Concept
+                </button>
+              </div>
+              <Link to={reportLink({})} className={styles.reportLink}>
+                📊 Full report ↗
+              </Link>
+              <Button type="button" onClick={() => setShowNewConcept(true)} className={styles.newConceptBtn}>
+                + New Concept
+              </Button>
             </div>
-            <Link to={reportLink({})} className={styles.reportLink}>
-              📊 Full report ↗
-            </Link>
 
             <form className={styles.filterBar} onSubmit={handleSearchSubmit}>
               <input
@@ -330,10 +335,6 @@ export default function ContentPlanner() {
                 </Button>
               )}
             </form>
-
-            <Button type="button" onClick={() => setShowNewConcept(true)} className={styles.newConceptBtn}>
-              + New Concept
-            </Button>
           </div>
 
           {stats && (

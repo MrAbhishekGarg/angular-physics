@@ -13,11 +13,12 @@ export default function Button({
   variant = 'primary', // primary | secondary | ghost | ghostInverse | danger | highlight
   size = 'md', // sm | md | lg
   as: Component = 'button',
+  className = '',
   ...props
 }) {
   const chamfer = CHAMFERED_VARIANTS.has(variant) ? styles.chamfer : '';
   return (
-    <Component className={`${styles.btn} ${styles[variant]} ${chamfer} ${styles[size]}`} {...props}>
+    <Component className={`${styles.btn} ${styles[variant]} ${chamfer} ${styles[size]} ${className}`.trim()} {...props}>
       {children}
     </Component>
   );
