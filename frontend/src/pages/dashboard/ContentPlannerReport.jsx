@@ -28,6 +28,7 @@ export default function ContentPlannerReport() {
   const search = searchParams.get('search') || '';
 
   const [searchInput, setSearchInput] = useState(search);
+  const [mode, setMode] = useState('full'); // 'full' | 'simple'
   const [rows, setRows] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -139,6 +140,16 @@ export default function ContentPlannerReport() {
             <p className={styles.subtitle}>Every content piece, in one sortable table — filter it down to exactly what needs your attention next.</p>
           </div>
 
+          <div className={styles.modeToggle}>
+            <button type="button" className={mode === 'full' ? styles.modeBtnActive : styles.modeBtn} onClick={() => setMode('full')}>
+              📋 Full table
+            </button>
+            <button type="button" className={mode === 'simple' ? styles.modeBtnActive : styles.modeBtn} onClick={() => setMode('simple')}>
+              🧾 Simple table
+            </button>
+            {mode === 'simple' && <span className={styles.modeHint}>Just topic + status — pick a type below to see one content type at a time.</span>}
+          </div>
+
           <div className={styles.quickFilters}>
             {QUICK_FILTERS.map((qf) => (
               <button key={qf.label} type="button" className={styles.quickFilterChip} onClick={() => applyQuickFilter(qf.params)}>
@@ -220,6 +231,32 @@ export default function ContentPlannerReport() {
 
               {rows.length === 0 ? (
                 <div className={styles.emptyState}>No pieces match these filters.</div>
+              ) : mode === 'simple' ? (
+                <div className={styles.tableWrap}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Topic</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row) => {
+                        const meta = STATUS_META[row.status];
+                        return (
+                          <tr key={row._id} style={{ '--row-color': meta.color }} className={styles.statusRow}>
+                            <td>{row.topic || row.chapter || row.conceptTitle}</td>
+                            <td>
+                              <span className={styles.statusPill} style={{ background: meta.pillBg, color: meta.pillText }}>
+                                {meta.icon} {meta.label}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
                 <div className={styles.tableWrap}>
                   <table className={styles.table}>
@@ -243,7 +280,7 @@ export default function ContentPlannerReport() {
                         const next = NEXT_STATUS[row.status];
                         const key = pieceKey(row.conceptId, row._id);
                         return (
-                          <tr key={row._id}>
+                          <tr key={row._id} style={{ '--row-color': meta.color }} className={styles.statusRow}>
                             <td>
                               <code className={styles.idCell}>{row.pieceId}</code>
                             </td>
@@ -260,7 +297,12 @@ export default function ContentPlannerReport() {
                               </div>
                             </td>
                             <td>
-                              {PLATFORM_META[row.platform]?.icon} {PLATFORM_META[row.platform]?.label}
+                              <span
+                                className={styles.platformBadge}
+                                style={{ '--platform-color': PLATFORM_META[row.platform]?.color }}
+                              >
+                                {PLATFORM_META[row.platform]?.icon} {PLATFORM_META[row.platform]?.label}
+                              </span>
                             </td>
                             <td>
                               {TYPE_META[row.type]?.icon} {TYPE_META[row.type]?.label}

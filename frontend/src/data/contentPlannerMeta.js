@@ -99,9 +99,11 @@ export const NEXT_STATUS = {
   scheduled: 'published',
 };
 
+// Brand-recognizable colors, kept distinct from STATUS_META's hues so a
+// platform badge is never mistaken for a status color at a glance.
 export const PLATFORM_META = {
-  youtube: { label: 'YouTube', icon: '▶️', color: '#d98c0f' },
-  instagram: { label: 'Instagram', icon: '📸', color: '#8b5cf6' },
+  youtube: { label: 'YouTube', icon: '▶️', color: '#ff0000' },
+  instagram: { label: 'Instagram', icon: '📸', color: '#c026d3' },
 };
 
 export const TYPE_META = {

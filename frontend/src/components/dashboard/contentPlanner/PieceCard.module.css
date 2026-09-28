@@ -4,13 +4,15 @@
   gap: 0.4rem;
   padding: 0.75rem 0.8rem;
   border: 1px solid var(--ap-border);
+  border-left: 4px solid var(--piece-color, var(--ap-border));
   border-radius: 10px;
-  background: var(--ap-bg);
+  background: color-mix(in srgb, var(--piece-color, transparent) 7%, var(--ap-bg));
   cursor: grab;
-  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.12s ease;
 }
 .card:hover {
-  border-color: color-mix(in srgb, var(--ap-accent) 45%, var(--ap-border));
+  border-color: var(--ap-border);
+  border-left-color: var(--piece-color, var(--ap-border));
   box-shadow: var(--ap-shadow-sm);
 }
 .card:active {
@@ -22,8 +24,25 @@
   align-items: center;
   justify-content: space-between;
 }
-.platformType {
-  font-size: 0.95rem;
+
+.badgeGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.platformBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  background: color-mix(in srgb, var(--platform-color) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--platform-color) 45%, transparent);
+}
+.typeIcon {
+  font-size: 0.9rem;
 }
 
 .menuWrap {

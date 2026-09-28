@@ -39,18 +39,25 @@ export default function PieceCard({
 
   const meta = STATUS_META[piece.status];
   const next = NEXT_STATUS[piece.status];
+  const platformMeta = PLATFORM_META[piece.platform];
 
   return (
     <div
       className={styles.card}
+      style={{ '--piece-color': meta.color }}
       draggable={draggable}
       onDragStart={(e) => onDragStart?.(e, concept, piece)}
       onDragEnd={onDragEnd}
     >
       <div className={styles.topRow}>
-        <span className={styles.platformType}>
-          {PLATFORM_META[piece.platform].icon} {TYPE_META[piece.type].icon}
-        </span>
+        <div className={styles.badgeGroup}>
+          <span className={styles.platformBadge} style={{ '--platform-color': platformMeta.color }} title={platformMeta.label}>
+            {platformMeta.icon}
+          </span>
+          <span className={styles.typeIcon} title={TYPE_META[piece.type].label}>
+            {TYPE_META[piece.type].icon}
+          </span>
+        </div>
         <div className={styles.menuWrap} ref={menuRef}>
           <button type="button" className={styles.menuBtn} title="More actions" onClick={() => setMenuOpen((o) => !o)}>
             ⋮
