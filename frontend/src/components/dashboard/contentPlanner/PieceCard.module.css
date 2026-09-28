@@ -1,4 +1,5 @@
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -19,34 +20,39 @@
   cursor: grabbing;
 }
 
-.topRow {
+.badgeRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.35rem;
+  padding-right: 1.6rem;
 }
-
-.badgeGroup {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-.platformBadge {
+.platformBadge,
+.typeBadge {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 21px;
-  height: 21px;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  gap: 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.platformBadge {
+  color: var(--platform-color);
   background: color-mix(in srgb, var(--platform-color) 16%, transparent);
   border: 1px solid color-mix(in srgb, var(--platform-color) 45%, transparent);
 }
-.typeIcon {
-  font-size: 0.9rem;
+.typeBadge {
+  color: var(--type-color);
+  background: color-mix(in srgb, var(--type-color) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--type-color) 45%, transparent);
 }
 
 .menuWrap {
-  position: relative;
+  position: absolute;
+  top: 0.55rem;
+  right: 0.5rem;
 }
 .menuBtn {
   border: none;

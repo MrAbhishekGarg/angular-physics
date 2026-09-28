@@ -49,43 +49,42 @@ export default function PieceCard({
       onDragStart={(e) => onDragStart?.(e, concept, piece)}
       onDragEnd={onDragEnd}
     >
-      <div className={styles.topRow}>
-        <div className={styles.badgeGroup}>
-          <span className={styles.platformBadge} style={{ '--platform-color': platformMeta.color }} title={platformMeta.label}>
-            {platformMeta.icon}
-          </span>
-          <span className={styles.typeIcon} title={TYPE_META[piece.type].label}>
-            {TYPE_META[piece.type].icon}
-          </span>
-        </div>
-        <div className={styles.menuWrap} ref={menuRef}>
-          <button type="button" className={styles.menuBtn} title="More actions" onClick={() => setMenuOpen((o) => !o)}>
-            ⋮
-          </button>
-          {menuOpen && (
-            <div className={styles.menu}>
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onEdit(concept, piece);
-                }}
-              >
-                ✏️ Edit
-              </button>
-              <button
-                type="button"
-                className={styles.menuDanger}
-                onClick={() => {
-                  setMenuOpen(false);
-                  onRemove(concept, piece);
-                }}
-              >
-                🗑️ Remove
-              </button>
-            </div>
-          )}
-        </div>
+      <div className={styles.menuWrap} ref={menuRef}>
+        <button type="button" className={styles.menuBtn} title="More actions" onClick={() => setMenuOpen((o) => !o)}>
+          ⋮
+        </button>
+        {menuOpen && (
+          <div className={styles.menu}>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                onEdit(concept, piece);
+              }}
+            >
+              ✏️ Edit
+            </button>
+            <button
+              type="button"
+              className={styles.menuDanger}
+              onClick={() => {
+                setMenuOpen(false);
+                onRemove(concept, piece);
+              }}
+            >
+              🗑️ Remove
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className={styles.badgeRow}>
+        <span className={styles.platformBadge} style={{ '--platform-color': platformMeta.color }}>
+          {platformMeta.icon} {platformMeta.label}
+        </span>
+        <span className={styles.typeBadge} style={{ '--type-color': TYPE_META[piece.type].color }}>
+          {TYPE_META[piece.type].icon} {TYPE_META[piece.type].label}
+        </span>
       </div>
 
       {showConceptContext && (

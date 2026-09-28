@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import SEO from '../../components/seo/SEO.jsx';
 import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
+import AnalyticsChart from '../../components/dashboard/AnalyticsChart.jsx';
 import { contentPlannerService } from '../../services/contentPlannerService.js';
-import { STATUS_META, NEXT_STATUS, PLATFORM_META, TYPE_META } from '../../data/contentPlannerMeta.js';
+import { STATUS_META, STATUS_ORDER, NEXT_STATUS, PLATFORM_META, TYPE_META } from '../../data/contentPlannerMeta.js';
 import styles from './ContentPlannerReport.module.css';
+
+const OVERVIEW_STATUSES = ['scripted', 'recorded', 'edited', 'uploaded'];
 
 function pieceKey(conceptId, pieceId) {
   return `${conceptId}:${pieceId}`;
@@ -30,6 +34,7 @@ export default function ContentPlannerReport() {
   const [searchInput, setSearchInput] = useState(search);
   const [mode, setMode] = useState('full'); // 'full' | 'simple'
   const [rows, setRows] = useState(null);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyKey, setBusyKey] = useState('');
@@ -38,8 +43,12 @@ export default function ContentPlannerReport() {
     setLoading(true);
     setError('');
     try {
-      const data = await contentPlannerService.listPieces({ status, platform, type, search });
+      const [data, statsData] = await Promise.all([
+        contentPlannerService.listPieces({ status, platform, type, search }),
+        contentPlannerService.stats(),
+      ]);
       setRows(data);
+      setStats(statsData);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -126,6 +135,30 @@ export default function ContentPlannerReport() {
 
   const activeFilterCount = [status, platform, type, search].filter(Boolean).length;
 
+  const statusChartData = useMemo(
+    () => (stats ? STATUS_ORDER.concat('on-hold').map((s) => ({ name: STATUS_META[s].label, count: stats.counts[s] ?? 0 })) : []),
+    [stats]
+  );
+  const statusChartColors = useMemo(() => STATUS_ORDER.concat('on-hold').map((s) => STATUS_META[s].color), []);
+  const platformChartData = useMemo(
+    () =>
+      stats
+        ? Object.entries(PLATFORM_META)
+            .map(([key, m]) => ({ name: m.label, value: stats.byPlatform?.[key] ?? 0, color: m.color }))
+            .filter((d) => d.value > 0)
+        : [],
+    [stats]
+  );
+  const typeChartData = useMemo(
+    () =>
+      stats
+        ? Object.entries(TYPE_META)
+            .map(([key, m]) => ({ name: m.label, value: stats.byType?.[key] ?? 0, color: m.color }))
+            .filter((d) => d.value > 0)
+        : [],
+    [stats]
+  );
+
   return (
     <>
       <SEO title="Content Planner Report" description="Tabular drill-down into every content piece, by status, platform, and type." path="/dashboard/mentor/admin/content-planner/report" />
@@ -139,6 +172,79 @@ export default function ContentPlannerReport() {
             <h1 className={styles.title}>📊 Content Report</h1>
             <p className={styles.subtitle}>Every content piece, in one sortable table — filter it down to exactly what needs your attention next.</p>
           </div>
+
+          {stats && (
+            <>
+              <div className={styles.overview}>
+                <div className={styles.overviewTile}>
+                  <span className={styles.overviewValue}>{stats.totalConcepts}</span>
+                  <span className={styles.overviewLabel}>Concepts</span>
+                </div>
+                <div className={styles.overviewTile}>
+                  <span className={styles.overviewValue}>{stats.totalPieces}</span>
+                  <span className={styles.overviewLabel}>Content pieces</span>
+                </div>
+                {OVERVIEW_STATUSES.map((s) => (
+                  <div key={s} className={styles.overviewTile} style={{ '--tile-color': STATUS_META[s].color }}>
+                    <span className={styles.overviewValue} style={{ color: STATUS_META[s].color }}>
+                      {stats.counts[s] ?? 0}
+                    </span>
+                    <span className={styles.overviewLabel}>{STATUS_META[s].actionHint || STATUS_META[s].label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className={styles.chartsRow}>
+                <div className={styles.chartCard}>
+                  <AnalyticsChart
+                    title="Pipeline by status"
+                    type="bar"
+                    data={statusChartData}
+                    xKey="name"
+                    yKey="count"
+                    color="#94a3b8"
+                    colors={statusChartColors}
+                  />
+                </div>
+                <div className={styles.chartCard}>
+                  <h3 className={styles.chartCardTitle}>By platform</h3>
+                  {platformChartData.length === 0 ? (
+                    <ErrorState message="No data yet." />
+                  ) : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie data={platformChartData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={72} paddingAngle={3}>
+                          {platformChartData.map((d) => (
+                            <Cell key={d.name} fill={d.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend verticalAlign="bottom" height={24} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+                <div className={styles.chartCard}>
+                  <h3 className={styles.chartCardTitle}>By content type</h3>
+                  {typeChartData.length === 0 ? (
+                    <ErrorState message="No data yet." />
+                  ) : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie data={typeChartData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={72} paddingAngle={3}>
+                          {typeChartData.map((d) => (
+                            <Cell key={d.name} fill={d.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend verticalAlign="bottom" height={24} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
           <div className={styles.modeToggle}>
             <button type="button" className={mode === 'full' ? styles.modeBtnActive : styles.modeBtn} onClick={() => setMode('full')}>

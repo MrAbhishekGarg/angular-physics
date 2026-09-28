@@ -30,6 +30,68 @@
   margin: 0;
 }
 
+/* ---------- Overview ---------- */
+
+.overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: var(--ap-space-md);
+}
+.overviewTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 1.1rem 0.6rem;
+  border: 1.5px solid var(--ap-border);
+  border-top: 4px solid var(--tile-color, var(--ap-primary));
+  border-radius: var(--ap-radius);
+  background: var(--ap-bg);
+  text-align: center;
+}
+.overviewValue {
+  font-family: var(--ap-font-heading);
+  font-weight: 900;
+  font-size: 2.1rem;
+  line-height: 1;
+  color: var(--ap-primary);
+}
+.overviewLabel {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ap-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ---------- Charts ---------- */
+
+.chartsRow {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: var(--ap-space-lg);
+}
+@media (max-width: 980px) {
+  .chartsRow {
+    grid-template-columns: 1fr;
+  }
+}
+.chartCard {
+  background: var(--ap-bg);
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius);
+  padding: 0.85rem 1rem;
+}
+.chartCardTitle {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ap-text);
+}
+
 /* ---------- Table mode toggle ---------- */
 
 .modeToggle {
