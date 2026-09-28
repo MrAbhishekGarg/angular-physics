@@ -147,7 +147,9 @@ export default function ContentPlannerReport() {
             <button type="button" className={mode === 'simple' ? styles.modeBtnActive : styles.modeBtn} onClick={() => setMode('simple')}>
               🧾 Simple table
             </button>
-            {mode === 'simple' && <span className={styles.modeHint}>Just topic + status — pick a type below to see one content type at a time.</span>}
+            {mode === 'simple' && (
+              <span className={styles.modeHint}>Just chapter, topic, piece name &amp; status — pick a type below to see one content type at a time.</span>
+            )}
           </div>
 
           <div className={styles.quickFilters}>
@@ -236,7 +238,9 @@ export default function ContentPlannerReport() {
                   <table className={styles.table}>
                     <thead>
                       <tr>
+                        <th>Chapter</th>
                         <th>Topic</th>
+                        <th>Piece name</th>
                         <th>Status</th>
                       </tr>
                     </thead>
@@ -245,7 +249,9 @@ export default function ContentPlannerReport() {
                         const meta = STATUS_META[row.status];
                         return (
                           <tr key={row._id} style={{ '--row-color': meta.color }} className={styles.statusRow}>
-                            <td>{row.topic || row.chapter || row.conceptTitle}</td>
+                            <td>{row.chapter || '—'}</td>
+                            <td>{row.topic || '—'}</td>
+                            <td>{row.label || TYPE_META[row.type]?.label}</td>
                             <td>
                               <span className={styles.statusPill} style={{ background: meta.pillBg, color: meta.pillText }}>
                                 {meta.icon} {meta.label}
