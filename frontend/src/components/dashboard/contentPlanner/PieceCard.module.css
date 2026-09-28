@@ -1,0 +1,183 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem 0.8rem;
+  border: 1px solid var(--ap-border);
+  border-radius: 10px;
+  background: var(--ap-bg);
+  cursor: grab;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.card:hover {
+  border-color: color-mix(in srgb, var(--ap-accent) 45%, var(--ap-border));
+  box-shadow: var(--ap-shadow-sm);
+}
+.card:active {
+  cursor: grabbing;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.platformType {
+  font-size: 0.95rem;
+}
+
+.menuWrap {
+  position: relative;
+}
+.menuBtn {
+  border: none;
+  background: none;
+  color: var(--ap-text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+}
+.menuBtn:hover {
+  background: var(--ap-bg-muted);
+  color: var(--ap-text);
+}
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 130px;
+  background: var(--ap-bg);
+  border: 1px solid var(--ap-border);
+  border-radius: 8px;
+  box-shadow: var(--ap-shadow);
+  overflow: hidden;
+}
+.menu button {
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ap-text);
+  cursor: pointer;
+}
+.menu button:hover {
+  background: var(--ap-bg-muted);
+}
+.menuDanger {
+  color: var(--ap-danger) !important;
+}
+
+.conceptTitleLine {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--ap-text);
+  line-height: 1.3;
+}
+.conceptSubLine {
+  font-size: 0.72rem;
+  color: var(--ap-text-muted);
+  margin-top: -0.2rem;
+}
+.pieceTypeLine {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ap-text);
+}
+.pieceTypeLineSecondary {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--ap-text-muted);
+}
+
+.chipsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.pyqChip {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #92400e;
+  background: #fef3c7;
+  border-radius: 6px;
+  padding: 0.12rem 0.4rem;
+}
+.scheduledChip {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #be185d;
+  background: #fce7f3;
+  border-radius: 6px;
+  padding: 0.12rem 0.4rem;
+}
+
+.idBadge {
+  align-self: flex-start;
+  font-family: 'Courier New', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--ap-text-muted);
+  background: var(--ap-bg-muted);
+  border: none;
+  border-radius: 5px;
+  padding: 0.15rem 0.4rem;
+  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.idBadge:hover {
+  color: var(--ap-accent);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+.statusSelect {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 6px;
+  padding: 0.32rem 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  appearance: none;
+  cursor: pointer;
+}
+.advanceBtn {
+  flex-shrink: 0;
+  border: 1px solid var(--ap-accent);
+  background: color-mix(in srgb, var(--ap-accent) 10%, var(--ap-bg));
+  color: var(--ap-accent);
+  font-size: 0.85rem;
+  font-weight: 800;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  cursor: pointer;
+  line-height: 1;
+}
+.advanceBtn:hover:not(:disabled) {
+  background: var(--ap-accent);
+  color: #fff;
+}
+.advanceBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.linkBtn {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  text-decoration: none;
+}

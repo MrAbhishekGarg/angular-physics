@@ -1,10 +1,10 @@
 .wrap {
   padding: var(--ap-space-xl) 0;
-  max-width: 1500px;
+  max-width: 1700px;
 }
 
 .header {
-  margin-bottom: var(--ap-space-lg);
+  margin-bottom: var(--ap-space-md);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -115,482 +115,82 @@
   margin: 0;
 }
 
-/* ---------- Stats row ---------- */
+/* ---------- Success banner ---------- */
 
-.sectionEyebrow {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--ap-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.5rem;
-}
-
-.statsRow {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
-  gap: 0.6rem;
+.successBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: color-mix(in srgb, var(--ap-success) 12%, var(--ap-bg));
+  border: 1px solid color-mix(in srgb, var(--ap-success) 35%, var(--ap-border));
+  border-radius: var(--ap-radius);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ap-text);
   margin-bottom: var(--ap-space-md);
+  animation: bannerIn 0.2s ease;
 }
-
-.statCard {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
-  padding: 0.85rem 0.5rem 0.7rem;
-  border: 1.5px solid var(--ap-border);
-  border-radius: var(--ap-radius);
-  background: var(--ap-bg);
-  cursor: pointer;
-  font: inherit;
-  text-decoration: none;
-  overflow: hidden;
-  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
-}
-.statCard:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--ap-shadow-sm);
-  border-color: color-mix(in srgb, var(--stat-color, var(--ap-border)) 55%, var(--ap-border));
-}
-
-.statIcon {
-  font-size: 1.3rem;
-}
-.statValue {
-  font-family: var(--ap-font-heading);
-  font-weight: 800;
-  font-size: 1.4rem;
-  color: var(--ap-primary);
-}
-.statLabel {
-  font-size: 0.72rem;
-  color: var(--ap-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-.statActionHint {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--stat-color);
-  margin-top: 0.1rem;
-}
-
-/* A tiny "→" affordance that only appears on hover, so it's unmistakable
-   every stat card is a link to a real filtered list, not just a static count. */
-.statViewHint {
-  font-size: 0.62rem;
-  font-weight: 700;
-  color: var(--stat-color, var(--ap-accent));
-  opacity: 0;
-  max-height: 0;
-  transform: translateY(4px);
-  transition: opacity 0.15s ease, transform 0.15s ease, max-height 0.15s ease, margin-top 0.15s ease;
-}
-.statCard:hover .statViewHint,
-.statTotal:hover .statViewHint {
-  opacity: 1;
-  max-height: 1.2em;
-  margin-top: 0.15rem;
-  transform: translateY(0);
-}
-
-.statCard_planned { --stat-color: #94a3b8; border-top: 3px solid var(--stat-color); }
-.statCard_scripted { --stat-color: #8b5cf6; border-top: 3px solid var(--stat-color); }
-.statCard_recorded { --stat-color: var(--ap-warning); border-top: 3px solid var(--stat-color); }
-.statCard_edited { --stat-color: var(--ap-success); border-top: 3px solid var(--stat-color); }
-.statCard_uploaded { --stat-color: var(--ap-accent); border-top: 3px solid var(--stat-color); }
-.statCard_scheduled { --stat-color: #ec4899; border-top: 3px solid var(--stat-color); }
-.statCard_published { --stat-color: var(--ap-primary); border-top: 3px solid var(--stat-color); }
-.statCard_onhold { --stat-color: var(--ap-danger); border-top: 3px solid var(--stat-color); }
-
-/* Urgency wash — the statuses actually waiting on the mentor (backlog: needs
-   recording/editing; ready: a mechanical next step; attention: stuck) get a
-   tinted fill so they visually pop above the neutral/done stages. */
-.statCardUrgency_backlog,
-.statCardUrgency_ready,
-.statCardUrgency_attention {
-  background: color-mix(in srgb, var(--stat-color) 9%, var(--ap-bg));
-}
-.statCardUrgency_attention {
-  border-top-width: 3px;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--stat-color) 25%, transparent);
-}
-
-.statTotal {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  color: var(--ap-text-muted);
-  font-size: 0.85rem;
-  text-decoration: none;
-  border-radius: var(--ap-radius);
-  transition: background 0.12s ease;
-}
-.statTotal:hover {
-  background: var(--ap-bg-muted);
-}
-.statTotalValue {
-  font-family: var(--ap-font-heading);
-  font-weight: 800;
-  font-size: 1.1rem;
-  color: var(--ap-text);
-}
-.statTotalLabel {
-  margin-right: 0.75rem;
-}
-
-/* ---------- Charts ---------- */
-
-.chartsRow {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
-  gap: 0.75rem;
-  margin-bottom: var(--ap-space-lg);
-}
-@media (max-width: 980px) {
-  .chartsRow {
-    grid-template-columns: 1fr;
-  }
-}
-
-.chartCard {
-  background: var(--ap-bg);
-  border: 1px solid var(--ap-border);
-  border-radius: var(--ap-radius);
-  padding: 0.85rem 1rem;
-}
-.chartCardTitle {
-  margin: 0 0 0.4rem;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--ap-text);
-}
-
-/* ---------- Layout ---------- */
-
-.layout {
-  display: grid;
-  grid-template-columns: 430px 1fr;
-  gap: var(--ap-space-lg);
-  align-items: start;
-}
-@media (max-width: 980px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.formCol {
-  position: sticky;
-  top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--ap-space-md);
-}
-@media (max-width: 980px) {
-  .formCol {
-    position: static;
-  }
-}
-
-/* ---------- Create form ---------- */
-
-.formCard {
-  background: var(--ap-bg);
-  border: 1px solid var(--ap-border);
-  box-shadow: var(--ap-shadow-sm);
-  padding: var(--ap-space-lg);
-  clip-path: polygon(
-    var(--ap-chamfer-md) 0, 100% 0,
-    100% calc(100% - var(--ap-chamfer-md)), calc(100% - var(--ap-chamfer-md)) 100%,
-    0 100%, 0 var(--ap-chamfer-md)
-  );
-  container-type: inline-size;
-}
-
-.formCardTitle {
-  color: var(--ap-primary);
-  margin: 0 0 var(--ap-space-md);
-  font-size: 1.05rem;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-.form label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--ap-text);
-}
-.form input,
-.form select,
-.form textarea {
-  border: 1.5px solid var(--ap-border);
-  border-radius: 8px;
-  padding: 0.6rem 0.75rem;
-  font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 400;
-  background: var(--ap-bg);
-  color: var(--ap-text);
-  transition: border-color 0.12s ease, box-shadow 0.12s ease;
-}
-.form input:focus,
-.form select:focus,
-.form textarea:focus {
-  outline: none;
-  border-color: var(--ap-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ap-accent) 18%, transparent);
-}
-.form input::placeholder,
-.form textarea::placeholder {
-  color: var(--ap-text-muted);
-  opacity: 0.75;
-}
-/* Chrome/Edge draw a small dropdown affordance inside inputs with a `list`
-   attribute; without reserved space it overlaps long typed-in text. */
-.form input[list] {
-  padding-right: 2rem;
-  text-overflow: ellipsis;
-}
-
-.row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.6rem 0.8rem;
-}
-@container (max-width: 360px) {
-  .row {
-    grid-template-columns: 1fr;
-  }
-}
-
-.checkboxLabel {
-  flex-direction: row !important;
-  align-items: center;
-  gap: 0.4rem !important;
-}
-.checkboxLabel input {
-  width: auto;
-}
-
-.inlineSelect {
-  width: auto;
-  margin-left: 0.4rem;
-  font-size: 0.8rem;
-  padding: 0.3rem 0.5rem;
-}
-
-/* A platform choice tucked under its bundle item on its own row, instead of
-   competing for horizontal space next to segment buttons/toggle text —
-   that's what was wrapping "YouTube only" onto an orphan second line. */
-.bundleSubRow {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: -0.3rem 0 0 1.7rem;
-}
-.bundleSubLabel {
-  font-size: 0.78rem;
-  color: var(--ap-text-muted);
-}
-.platformSelect {
-  flex: 1;
-  min-width: 0;
-  max-width: 200px;
-  font-size: 0.8rem;
-  padding: 0.3rem 0.5rem;
-  border: 1.5px solid var(--ap-border);
-  border-radius: 7px;
-  background: var(--ap-bg);
-  color: var(--ap-text);
-}
-.platformSelect:focus {
-  outline: none;
-  border-color: var(--ap-accent);
-}
-
-.segmentGroup {
-  display: flex;
-  gap: 0.4rem;
-}
-.segmentBtn {
-  padding: 0.4rem 0.7rem;
-  border: 1.5px solid var(--ap-border);
-  border-radius: 8px;
-  background: var(--ap-bg-muted);
-  color: var(--ap-text-muted);
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
-}
-.segmentBtn:hover {
-  border-color: var(--ap-accent);
-}
-.segmentBtnActive {
-  background: var(--ap-primary);
-  border-color: var(--ap-primary);
-  color: #fff;
-}
-
-.bundleBox {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.85rem;
-  border: 1px dashed var(--ap-border);
-  border-radius: var(--ap-radius);
-  background: var(--ap-bg-muted);
-}
-.bundleLabel {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--ap-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-.bundleRow {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-.bundleItemLabel {
-  font-size: 0.85rem;
-  font-weight: 600;
-  min-width: 130px;
-}
-
-/* ---------- Toggle switches (bundle + PYQ checkboxes) ---------- */
-
-.toggleRow {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center;
-  gap: 0.55rem !important;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-.toggleRow input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-}
-.toggleTrack {
-  position: relative;
-  width: 34px;
-  height: 20px;
-  border-radius: 999px;
-  background: var(--ap-border);
-  flex-shrink: 0;
-  transition: background 0.15s ease;
-}
-.toggleThumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  transition: transform 0.15s ease;
-}
-.toggleRow input:checked + .toggleTrack {
-  background: var(--ap-accent);
-}
-.toggleRow input:checked + .toggleTrack .toggleThumb {
-  transform: translateX(14px);
-}
-.toggleRow input:focus-visible + .toggleTrack {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ap-accent) 25%, transparent);
-}
-.toggleText {
-  font-weight: 600;
-  color: var(--ap-text);
-}
-
-.pyqBox {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.85rem;
-  border: 1px dashed var(--ap-border);
-  border-radius: var(--ap-radius);
-  background: var(--ap-bg-muted);
-}
-
-.submitBtn {
-  margin-top: 0.4rem;
-  width: 100%;
-}
-
-/* ---------- Just-created callout ---------- */
-
-.createdCard {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--ap-accent) 12%, var(--ap-bg)), var(--ap-bg));
-  border: 1.5px solid var(--ap-accent);
-  border-radius: var(--ap-radius);
-  padding: var(--ap-space-md);
-  animation: pop 0.25s ease;
-}
-@keyframes pop {
+@keyframes bannerIn {
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
-.createdLabel {
-  display: block;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ap-accent);
-  margin-bottom: 0.4rem;
+.successBanner button {
+  border: none;
+  background: none;
+  color: var(--ap-text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
-.createdIdRow {
+/* ---------- Toolbar ---------- */
+
+.toolbar {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: var(--ap-space-sm);
 }
 
-.createdId {
-  font-family: 'Courier New', monospace;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--ap-primary);
-  background: var(--ap-bg);
-  border: 1px solid var(--ap-border);
-  border-radius: 6px;
-  padding: 0.4rem 0.6rem;
-}
-
-.createdHint {
-  font-size: 0.78rem;
-  color: var(--ap-text-muted);
-  margin: 0.5rem 0 0;
-}
-
-/* ---------- List column ---------- */
-
-.listCol {
+.viewToggle {
   display: flex;
-  flex-direction: column;
-  gap: var(--ap-space-md);
+  border: 1.5px solid var(--ap-border);
+  border-radius: 999px;
+  padding: 3px;
+  background: var(--ap-bg-muted);
+  flex-shrink: 0;
+}
+.viewBtn,
+.viewBtnActive {
+  border: none;
+  background: none;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--ap-text-muted);
+  white-space: nowrap;
+}
+.viewBtnActive {
+  background: var(--ap-bg);
+  color: var(--ap-primary);
+  box-shadow: var(--ap-shadow-sm);
+}
+
+.reportLink {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ap-accent);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.reportLink:hover {
+  text-decoration: underline;
 }
 
 .filterBar {
@@ -598,20 +198,58 @@
   gap: 0.5rem;
   flex-wrap: wrap;
   align-items: center;
+  flex: 1;
 }
 .searchInput {
   flex: 1;
-  min-width: 200px;
+  min-width: 180px;
   border: 1.5px solid var(--ap-border);
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
   font-size: 0.88rem;
+  background: var(--ap-bg);
+  color: var(--ap-text);
 }
 .filterBar select {
   border: 1.5px solid var(--ap-border);
   border-radius: 8px;
   padding: 0.5rem 0.6rem;
   font-size: 0.85rem;
+  background: var(--ap-bg);
+  color: var(--ap-text);
+}
+
+.newConceptBtn {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ---------- Summary strip ---------- */
+
+.summaryStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  padding: 0.6rem 0.9rem;
+  margin-bottom: var(--ap-space-md);
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius);
+  background: var(--ap-bg);
+}
+.summaryStripItem {
+  font-size: 0.82rem;
+  color: var(--ap-text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.summaryStripItem:hover {
+  text-decoration: underline;
+}
+.summaryStripItem strong {
+  font-family: var(--ap-font-heading);
+  font-weight: 800;
+  color: var(--ap-text);
+  margin-right: 0.3rem;
 }
 
 .emptyState {
@@ -623,11 +261,85 @@
   font-size: 0.9rem;
 }
 
-/* ---------- Concept cards ---------- */
+/* ---------- Board ---------- */
+
+.board {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.75rem;
+}
+
+.column {
+  flex: 0 0 268px;
+  display: flex;
+  flex-direction: column;
+  background: var(--ap-bg-muted);
+  border: 1.5px solid var(--ap-border);
+  border-radius: var(--ap-radius);
+  max-height: calc(100vh - 260px);
+  min-height: 220px;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.columnDragOver {
+  border-color: var(--ap-accent);
+  background: color-mix(in srgb, var(--ap-accent) 8%, var(--ap-bg-muted));
+}
+
+.columnHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.8rem 0.2rem;
+  border-top: 3px solid var(--col-color);
+  border-radius: var(--ap-radius) var(--ap-radius) 0 0;
+}
+.columnTitle {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--ap-text);
+}
+.columnCount {
+  font-family: var(--ap-font-heading);
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--col-color);
+  background: color-mix(in srgb, var(--col-color) 14%, var(--ap-bg));
+  border-radius: 999px;
+  padding: 0.05rem 0.55rem;
+}
+.columnHint {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ap-text-muted);
+  padding: 0 0.8rem 0.6rem;
+}
+
+.columnBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0.6rem 0.6rem;
+  overflow-y: auto;
+}
+.columnEmpty {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--ap-text-muted);
+  border: 1.5px dashed var(--ap-border);
+  border-radius: 8px;
+  padding: 1.2rem 0.5rem;
+}
+.cardDragging {
+  opacity: 0.4;
+}
+
+/* ---------- Concepts view ---------- */
 
 .conceptGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
   gap: 0.85rem;
 }
 
@@ -662,6 +374,8 @@
   padding: 0.15rem 0.45rem;
   border-radius: 5px;
   margin-bottom: 0.3rem;
+  border: none;
+  cursor: pointer;
 }
 
 .conceptTitle {
@@ -729,236 +443,8 @@
   font-weight: 600;
 }
 
-/* ---------- Piece cards ---------- */
-
 .piecesGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
-  gap: 0.5rem;
-}
-
-.pieceCard {
-  border: 1px solid var(--ap-border);
-  border-radius: 10px;
-  padding: 0.55rem 0.6rem;
-  background: var(--ap-bg-muted);
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.pieceHead {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-.pieceIcon {
-  font-size: 0.85rem;
-}
-.pieceLabel {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--ap-text);
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.pieceEditBtn {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 0.72rem;
-  line-height: 1;
-  padding: 0 0.15rem;
-  flex-shrink: 0;
-  opacity: 0.7;
-}
-.pieceEditBtn:hover {
-  opacity: 1;
-}
-
-.pieceRemoveBtn {
-  border: none;
-  background: none;
-  color: var(--ap-text-muted);
-  cursor: pointer;
-  font-size: 0.85rem;
-  line-height: 1;
-  padding: 0 0.2rem;
-  flex-shrink: 0;
-}
-.pieceRemoveBtn:hover {
-  color: var(--ap-danger);
-}
-
-.pieceIdBadge {
-  align-self: flex-start;
-  font-family: 'Courier New', monospace;
-  font-size: 0.62rem;
-  font-weight: 700;
-  color: var(--ap-text-muted);
-  background: var(--ap-bg);
-  border: 1px solid var(--ap-border);
-  border-radius: 5px;
-  padding: 0.1rem 0.35rem;
-  cursor: pointer;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.pieceIdBadge:hover {
-  border-color: var(--ap-accent);
-  color: var(--ap-accent);
-}
-
-.pyqChip {
-  align-self: flex-start;
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: #92400e;
-  background: #fef3c7;
-  border-radius: 6px;
-  padding: 0.12rem 0.4rem;
-}
-
-.scheduledChip {
-  align-self: flex-start;
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: #be185d;
-  background: #fce7f3;
-  border-radius: 6px;
-  padding: 0.12rem 0.4rem;
-}
-
-.statusPill {
-  align-self: flex-start;
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 0.18rem 0.5rem;
-  border-radius: 999px;
-}
-
-.pieceActions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.advanceBtn {
-  border: 1px solid var(--ap-accent);
-  background: color-mix(in srgb, var(--ap-accent) 10%, var(--ap-bg));
-  color: var(--ap-accent);
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 0.25rem 0.4rem;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.advanceBtn:hover:not(:disabled) {
-  background: var(--ap-accent);
-  color: #fff;
-}
-.advanceBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.pieceStatusSelect {
-  border: 1px solid var(--ap-border);
-  border-radius: 6px;
-  padding: 0.2rem 0.3rem;
-  font-size: 0.7rem;
-  background: var(--ap-bg);
-}
-
-.pieceLink {
-  font-size: 0.7rem;
-  color: var(--ap-primary);
-}
-
-/* ---------- Add-piece inline form ---------- */
-
-.addPieceForm {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  margin-top: 0.3rem;
-  border: 1px solid var(--ap-border);
-  border-radius: var(--ap-radius);
-  background: var(--ap-bg-muted);
-}
-.addPieceRow {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  align-items: center;
-}
-.addPieceForm select,
-.addPieceForm input {
-  border: 1.5px solid var(--ap-border);
-  border-radius: 7px;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.82rem;
-  background: var(--ap-bg);
-  color: var(--ap-text);
-  transition: border-color 0.12s ease, box-shadow 0.12s ease;
-}
-.addPieceForm select:focus,
-.addPieceForm input:focus {
-  outline: none;
-  border-color: var(--ap-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ap-accent) 18%, transparent);
-}
-.addPieceForm input {
-  flex: 1;
-  min-width: 110px;
-}
-.addPiecePyqLabel {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--ap-text);
-  white-space: nowrap;
-}
-.addPiecePyqLabel input {
-  width: auto;
-  flex: none;
-}
-.addPieceYearInput {
-  max-width: 90px;
-  flex: none !important;
-}
-.addPieceActions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.editingLabel {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--ap-accent);
-}
-
-.scheduledLabel {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--ap-text);
-}
-.scheduledLabel input {
-  border: 1.5px solid var(--ap-border);
-  border-radius: 7px;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.82rem;
-  background: var(--ap-bg);
-  color: var(--ap-text);
-  max-width: 180px;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.6rem;
 }

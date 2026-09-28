@@ -1,0 +1,270 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 4vh 1rem;
+  background: rgba(11, 18, 32, 0.5);
+  backdrop-filter: blur(2px);
+  overflow-y: auto;
+}
+
+.modal {
+  width: 100%;
+  max-width: 560px;
+  background: var(--ap-bg);
+  border-radius: var(--ap-radius);
+  box-shadow: var(--ap-shadow);
+  padding: var(--ap-space-lg);
+  animation: modalIn 0.16s ease;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modalHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.2rem;
+}
+.modalHead h2 {
+  color: var(--ap-primary);
+  margin: 0;
+  font-size: 1.15rem;
+}
+.closeBtn {
+  border: none;
+  background: var(--ap-bg-muted);
+  color: var(--ap-text-muted);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.closeBtn:hover {
+  color: var(--ap-text);
+}
+
+.modalSub {
+  font-size: 0.85rem;
+  color: var(--ap-text-muted);
+  margin: 0 0 var(--ap-space-md);
+}
+.pieceIdInline {
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+}
+
+.error {
+  color: var(--ap-danger);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.modalActions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.3rem;
+}
+
+/* ---------- Form (shared look with the rest of the module) ---------- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ap-text);
+}
+.form input,
+.form select,
+.form textarea {
+  border: 1.5px solid var(--ap-border);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 400;
+  background: var(--ap-bg);
+  color: var(--ap-text);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.form input:focus,
+.form select:focus,
+.form textarea:focus {
+  outline: none;
+  border-color: var(--ap-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ap-accent) 18%, transparent);
+}
+.form input:disabled,
+.form select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.form input::placeholder,
+.form textarea::placeholder {
+  color: var(--ap-text-muted);
+  opacity: 0.75;
+}
+.form input[list] {
+  padding-right: 2rem;
+  text-overflow: ellipsis;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem 0.8rem;
+}
+@media (max-width: 480px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.segmentGroup {
+  display: flex;
+  gap: 0.4rem;
+}
+.segmentBtn {
+  padding: 0.4rem 0.7rem;
+  border: 1.5px solid var(--ap-border);
+  border-radius: 8px;
+  background: var(--ap-bg-muted);
+  color: var(--ap-text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+.segmentBtn:hover {
+  border-color: var(--ap-accent);
+}
+.segmentBtnActive {
+  background: var(--ap-primary);
+  border-color: var(--ap-primary);
+  color: #fff;
+}
+
+.bundleBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border: 1px dashed var(--ap-border);
+  border-radius: var(--ap-radius);
+  background: var(--ap-bg-muted);
+}
+.bundleLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ap-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.bundleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.bundleItemLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 130px;
+}
+.bundleSubRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: -0.3rem 0 0 1.7rem;
+}
+.bundleSubLabel {
+  font-size: 0.78rem;
+  color: var(--ap-text-muted);
+}
+.platformSelect {
+  flex: 1;
+  min-width: 0;
+  max-width: 200px;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.5rem;
+  border: 1.5px solid var(--ap-border);
+  border-radius: 7px;
+  background: var(--ap-bg);
+  color: var(--ap-text);
+}
+.platformSelect:focus {
+  outline: none;
+  border-color: var(--ap-accent);
+}
+
+.toggleRow {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.55rem !important;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.toggleRow input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.toggleTrack {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--ap-border);
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+.toggleThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+}
+.toggleRow input:checked + .toggleTrack {
+  background: var(--ap-accent);
+}
+.toggleRow input:checked + .toggleTrack .toggleThumb {
+  transform: translateX(14px);
+}
+.toggleRow input:focus-visible + .toggleTrack {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ap-accent) 25%, transparent);
+}
+.toggleText {
+  font-weight: 600;
+  color: var(--ap-text);
+}
+
+.pyqBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border: 1px dashed var(--ap-border);
+  border-radius: var(--ap-radius);
+  background: var(--ap-bg-muted);
+}
