@@ -254,7 +254,7 @@ export default function ContentPlannerReport() {
               🧾 Simple table
             </button>
             {mode === 'simple' && (
-              <span className={styles.modeHint}>Just chapter, topic, piece name &amp; status — pick a type below to see one content type at a time.</span>
+              <span className={styles.modeHint}>Just chapter, topic, concept name &amp; status — pick a type below to see one content type at a time.</span>
             )}
           </div>
 
@@ -346,7 +346,7 @@ export default function ContentPlannerReport() {
                       <tr>
                         <th>Chapter</th>
                         <th>Topic</th>
-                        <th>Piece name</th>
+                        <th>Concept name</th>
                         <th>Status</th>
                       </tr>
                     </thead>
@@ -357,7 +357,7 @@ export default function ContentPlannerReport() {
                           <tr key={row._id} style={{ '--row-color': meta.color }} className={styles.statusRow}>
                             <td>{row.chapter || '—'}</td>
                             <td>{row.topic || '—'}</td>
-                            <td>{row.label || TYPE_META[row.type]?.label}</td>
+                            <td>{row.conceptTitle}</td>
                             <td>
                               <span className={styles.statusPill} style={{ background: meta.pillBg, color: meta.pillText }}>
                                 {meta.icon} {meta.label}
