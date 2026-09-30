@@ -404,6 +404,27 @@
   padding: 0.15rem 0.5rem;
 }
 
+.conceptHeadActions {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.conceptEditBtn {
+  border: none;
+  background: none;
+  color: var(--ap-accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  flex-shrink: 0;
+}
+.conceptEditBtn:hover {
+  text-decoration: underline;
+}
+
 .conceptDeleteBtn {
   border: none;
   background: none;

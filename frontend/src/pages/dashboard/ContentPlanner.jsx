@@ -7,6 +7,7 @@ import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import PieceCard from '../../components/dashboard/contentPlanner/PieceCard.jsx';
 import NewConceptModal from '../../components/dashboard/contentPlanner/NewConceptModal.jsx';
+import EditConceptModal from '../../components/dashboard/contentPlanner/EditConceptModal.jsx';
 import PieceFormModal from '../../components/dashboard/contentPlanner/PieceFormModal.jsx';
 import { contentPlannerService } from '../../services/contentPlannerService.js';
 import { questionService } from '../../services/questionService.js';
@@ -45,6 +46,7 @@ export default function ContentPlanner() {
   const [resyncMessage, setResyncMessage] = useState('');
 
   const [showNewConcept, setShowNewConcept] = useState(false);
+  const [editingConcept, setEditingConcept] = useState(null);
   const [pieceModal, setPieceModal] = useState(null); // { concept, piece? }
   const [successBanner, setSuccessBanner] = useState(null);
   const [dragOverStatus, setDragOverStatus] = useState('');
@@ -104,6 +106,12 @@ export default function ContentPlanner() {
     } finally {
       setBusyKey('');
     }
+  };
+
+  const handleEditConcept = async (payload) => {
+    await contentPlannerService.update(editingConcept.conceptId, payload);
+    setEditingConcept(null);
+    await Promise.all([load(), loadUsedTopics()]);
   };
 
   const handleAdvancePiece = async (concept, piece) => {
@@ -399,6 +407,7 @@ export default function ContentPlanner() {
                               onRemove={handleRemovePiece}
                               onAdvance={handleAdvancePiece}
                               onSetStatus={handleSetPieceStatus}
+                              onEditConcept={setEditingConcept}
                             />
                           </div>
                         ))
@@ -434,14 +443,19 @@ export default function ContentPlanner() {
                             {concept.topic && <span className={styles.metaChip}>🎯 {concept.topic}</span>}
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          className={styles.conceptDeleteBtn}
-                          disabled={busyKey === concept.conceptId}
-                          onClick={() => handleDeleteConcept(concept)}
-                        >
-                          Delete
-                        </button>
+                        <div className={styles.conceptHeadActions}>
+                          <button type="button" className={styles.conceptEditBtn} onClick={() => setEditingConcept(concept)}>
+                            ✏️ Edit
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.conceptDeleteBtn}
+                            disabled={busyKey === concept.conceptId}
+                            onClick={() => handleDeleteConcept(concept)}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
 
                       {total > 0 && (
@@ -499,6 +513,15 @@ export default function ContentPlanner() {
           piece={pieceModal.piece}
           onClose={() => setPieceModal(null)}
           onSubmit={handlePieceFormSubmit}
+        />
+      )}
+      {editingConcept && (
+        <EditConceptModal
+          concept={editingConcept}
+          onClose={() => setEditingConcept(null)}
+          onSubmit={handleEditConcept}
+          questionTaxonomy={questionTaxonomy}
+          usedTopics={usedTopics}
         />
       )}
     </>

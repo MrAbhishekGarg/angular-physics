@@ -24,6 +24,7 @@ export default function PieceCard({
   onRemove,
   onAdvance,
   onSetStatus,
+  onEditConcept,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -62,8 +63,19 @@ export default function PieceCard({
                 onEdit(concept, piece);
               }}
             >
-              ✏️ Edit
+              ✏️ Edit piece
             </button>
+            {showConceptContext && onEditConcept && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onEditConcept(concept);
+                }}
+              >
+                📝 Edit concept
+              </button>
+            )}
             <button
               type="button"
               className={styles.menuDanger}
