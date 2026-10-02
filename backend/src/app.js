@@ -42,6 +42,14 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
+// Sits behind exactly one reverse proxy (nginx) in production. Without this,
+// every request's req.ip resolves to the proxy's own address rather than the
+// real visitor's, which collapses express-rate-limit's per-IP buckets below
+// into one shared bucket for the entire site — e.g. the login limiter then
+// counts every visitor's login attempts together, so unrelated traffic can
+// trip it and start rejecting everyone's logins, not just one abusive IP.
+app.set('trust proxy', 1);
+
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({ origin: env.clientUrl, credentials: true }));
 app.use(compression());
