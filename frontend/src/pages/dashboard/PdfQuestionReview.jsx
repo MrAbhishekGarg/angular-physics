@@ -87,16 +87,21 @@ function PasteZone({ label, onImage }) {
   );
 }
 
-function ViewCard({ q, index, total, onPrev, onNext, onEdit }) {
+function ViewCard({ q, index, total, onPrev, onNext, onEdit, onDelete }) {
   return (
     <>
       <div className={styles.qmeta}>
         <strong>Question {q.questionNumber}</strong>
         {q.chapter && <span className={styles.badge}>{q.chapter}</span>}
         {q.topic && <span className={styles.badge}>{q.topic}</span>}
-        <Button type="button" size="sm" variant="ghost" onClick={onEdit} style={{ marginLeft: 'auto' }}>
-          Edit
-        </Button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.4rem' }}>
+          <Button type="button" size="sm" variant="ghost" onClick={onEdit}>
+            Edit
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={onDelete} style={{ color: 'var(--ap-danger)' }}>
+            Delete
+          </Button>
+        </div>
       </div>
 
       <div className={`${styles.qtext} ${formStyles.wrap}`}>
@@ -265,6 +270,9 @@ export default function PdfQuestionReview() {
 
   const handleJsonFile = async (file) => {
     setParseError('');
+    setMessage('');
+    setWarnings([]);
+    setFailed(false);
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
@@ -288,6 +296,22 @@ export default function PdfQuestionReview() {
         return { ...q, options: q.options.map((o, j) => (j === optIndex ? { ...o, ...patch } : o)) };
       })
     );
+  };
+
+  // Deleting here is all that's needed to keep the Excel answer key in sync:
+  // the backend matches rows against the questions it's actually sent, by
+  // questionNumber — it never iterates the Excel sheet itself, so a row for
+  // a question we never send is simply never looked up. Nothing to edit in
+  // the uploaded .xlsx file.
+  const deleteQuestion = (index) => {
+    const q = questions[index];
+    if (!window.confirm(`Remove Question ${q.questionNumber} from this batch? It won't be published, and its row in the Excel sheet will just be ignored.`)) return;
+    setQuestions((qs) => qs.filter((_, i) => i !== index));
+    setCurrent((c) => {
+      const nextLength = questions.length - 1;
+      if (nextLength <= 0) return 0;
+      return Math.min(index < c ? c - 1 : c, nextLength - 1);
+    });
   };
 
   const handlePublish = async () => {
@@ -339,6 +363,11 @@ export default function PdfQuestionReview() {
             genuinely needs one. Upload that JSON here with the same Excel answer-key sheet used elsewhere, paste in
             any flagged diagrams, then publish. Back to <Link to="/dashboard/mentor/questions/upload">other upload methods</Link>.
           </p>
+
+          {/* Publishing clears `questions` on success, which switches the view
+              below back to the empty upload card — this banner has to live
+              outside that branch or the success message never gets seen. */}
+          <UploadFeedback message={message} warnings={warnings} failed={failed} />
 
           {questions.length === 0 ? (
             <div className={styles.uploadCard}>
@@ -415,6 +444,7 @@ export default function PdfQuestionReview() {
                       onPrev={() => setCurrent((c) => Math.max(0, c - 1))}
                       onNext={() => setCurrent((c) => Math.min(questions.length - 1, c + 1))}
                       onEdit={() => setEditing(true)}
+                      onDelete={() => deleteQuestion(current)}
                     />
                   )}
                 </div>
@@ -483,12 +513,14 @@ export default function PdfQuestionReview() {
                       onClick={() => {
                         setQuestions([]);
                         setExcelFile(null);
+                        setMessage('');
+                        setWarnings([]);
+                        setFailed(false);
                       }}
                     >
                       Start over
                     </Button>
                   </div>
-                  <UploadFeedback message={message} warnings={warnings} failed={failed} />
                 </div>
               </div>
             </>
