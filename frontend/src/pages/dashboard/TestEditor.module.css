@@ -142,3 +142,69 @@
   font-size: 0.8rem;
   margin-top: 0.4rem;
 }
+
+/* Docks just below the dashboard topbar (62px tall, see DashboardLayout
+   .topbar) so the running question count/target stay visible while
+   scrolling through long sections — the whole reason this exists is that
+   the plain heading it replaced scrolled out of view the moment a mentor
+   started picking questions from the bank below. */
+.floatingSummary {
+  position: sticky;
+  top: 62px;
+  z-index: 15;
+  background: var(--ap-bg);
+  padding: 0.5rem 0;
+}
+
+.floatingSummaryInner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--ap-radius);
+  background: var(--ap-bg-muted);
+  border: 1px solid var(--ap-border);
+  box-shadow: var(--ap-shadow-sm);
+}
+
+.floatingSummaryHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+}
+
+.floatingSummaryTitle {
+  color: var(--ap-primary);
+  font-size: 1rem;
+}
+
+.actionError {
+  color: var(--ap-danger);
+  font-size: 0.82rem;
+  margin: 0.3rem 0;
+}
+
+/* Editing/deleting a bank question from inside the test builder reuses the
+   full QuestionEditor form, which is too tall to inline where it was
+   triggered (often deep in a scrolled bank list) without losing context —
+   an overlay keeps it reachable regardless of scroll position. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 4vh 1rem;
+  background: rgba(11, 18, 32, 0.5);
+  backdrop-filter: blur(2px);
+  overflow-y: auto;
+}
+
+.overlayModal {
+  width: 100%;
+  max-width: 720px;
+  margin-bottom: 4vh;
+}

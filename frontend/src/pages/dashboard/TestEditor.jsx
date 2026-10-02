@@ -43,7 +43,7 @@ function toDatetimeLocal(isoString) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove }) {
+function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove, remainingSlots }) {
   const [bankFilters, setBankFilters] = useState({
     examType,
     chapter: '',
@@ -56,17 +56,65 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
     subject: '',
     conceptCode: '',
   });
-  const { data: rawBankQuestions, loading: bankLoading } = useQuestions(bankFilters);
+  const { data: rawBankQuestions, loading: bankLoading, refetch: refetchBank } = useQuestions(bankFilters);
   // Subjective questions have no auto-gradable answer and aren't wired into
   // live test-taking yet (authoring/storage only — see Question.js) — kept
   // out of the picker so a mentor can't accidentally add one to a real test.
   const bankQuestions = (rawBankQuestions || []).filter((q) => q.type !== 'subjective');
   const [showCreateQuestion, setShowCreateQuestion] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState(null);
+  const [actionError, setActionError] = useState('');
   const [autoFillCount, setAutoFillCount] = useState(10);
   const [autoFillStatus, setAutoFillStatus] = useState('idle');
   const [autoFillMessage, setAutoFillMessage] = useState('');
 
+  // `remainingSlots` is null when no target is set on the test (uncapped).
+  const atCap = remainingSlots != null && remainingSlots <= 0;
+
+  const removeFromSectionState = (questionId) => {
+    onUpdate({
+      questionIds: section.questionIds.filter((qid) => qid !== questionId),
+      questions: section.questions.filter((q) => q._id !== questionId),
+    });
+  };
+
+  const handleQuestionEdited = (updated) => {
+    onUpdate({ questions: section.questions.map((q) => (q._id === updated._id ? updated : q)) });
+    setEditingQuestion(null);
+    refetchBank();
+  };
+
+  const handleQuestionDeletedViaEditor = (id) => {
+    removeFromSectionState(id);
+    setEditingQuestion(null);
+    refetchBank();
+  };
+
+  // Deletes the question from the bank entirely (not just from this test) —
+  // same DB-level delete QuestionEditor's own Delete button does, exposed
+  // here too so a mentor doesn't have to open the full edit form just to
+  // remove a bad question they spotted while browsing.
+  const deleteQuestionPermanently = async (question) => {
+    if (!window.confirm("Delete this question from the bank entirely? This can't be undone — any test using it will just skip it.")) return;
+    setActionError('');
+    try {
+      await questionService.remove(question._id);
+      removeFromSectionState(question._id);
+      if (editingQuestion?._id === question._id) setEditingQuestion(null);
+      refetchBank();
+    } catch (err) {
+      setActionError(err.message);
+    }
+  };
+
   const handleAutoFill = async () => {
+    if (atCap) {
+      setAutoFillStatus('error');
+      setAutoFillMessage('Target reached — remove a question before auto-filling more.');
+      return;
+    }
+    const requested = Number(autoFillCount) || 0;
+    const effectiveCount = remainingSlots != null ? Math.min(requested, remainingSlots) : requested;
     setAutoFillStatus('loading');
     setAutoFillMessage('');
     try {
@@ -78,14 +126,17 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
         isPYQ: bankFilters.isPYQ === 'true' ? true : undefined,
         author: bankFilters.author || undefined,
         excludeIds: section.questionIds,
-        count: autoFillCount,
+        count: effectiveCount,
       });
       onUpdate({
         questionIds: [...section.questionIds, ...picked.map((q) => q._id)],
         questions: [...section.questions, ...picked],
       });
       setAutoFillStatus('idle');
-      setAutoFillMessage(`Added ${picked.length} question${picked.length === 1 ? '' : 's'} automatically.`);
+      setAutoFillMessage(
+        `Added ${picked.length} question${picked.length === 1 ? '' : 's'} automatically.` +
+          (effectiveCount < requested ? ' (capped to stay within your target.)' : '')
+      );
     } catch (err) {
       setAutoFillStatus('error');
       setAutoFillMessage(err.message);
@@ -100,6 +151,7 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
 
   const toggleQuestion = (question) => {
     const has = section.questionIds.includes(question._id);
+    if (!has && atCap) return;
     onUpdate({
       questionIds: has ? section.questionIds.filter((qid) => qid !== question._id) : [...section.questionIds, question._id],
       questions: has ? section.questions.filter((q) => q._id !== question._id) : [...section.questions, question],
@@ -116,9 +168,11 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
   const handleQuestionCreated = (question) => {
     onUpdate({ questionIds: [...section.questionIds, question._id], questions: [...section.questions, question] });
     setShowCreateQuestion(false);
+    refetchBank();
   };
 
   return (
+    <>
     <div className={formStyles.card} style={{ border: '1px solid var(--ap-border)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <strong>Section {index + 1}</strong>
@@ -152,17 +206,27 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
         Questions ({section.questionIds.length} selected)
       </span>
 
+      {actionError && <p className={styles.actionError}>{actionError}</p>}
+
       {section.questions.length > 0 && (
         <div className={formStyles.card}>
           <strong>Selected</strong>
           {section.questions.map((q) => (
-            <div key={q._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.3rem 0' }}>
-              <span style={{ fontSize: '0.85rem' }}>
+            <div key={q._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.3rem 0', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.85rem', flex: 1, minWidth: 0 }}>
                 <MathText as="span" text={q.text.slice(0, 90)} />
               </span>
-              <Button type="button" size="sm" variant="ghost" onClick={() => removeSelected(q._id)}>
-                Remove
-              </Button>
+              <div style={{ display: 'flex', gap: '0.3rem', flexShrink: 0 }}>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setEditingQuestion(q)}>
+                  Edit
+                </Button>
+                <Button type="button" size="sm" variant="ghost" style={{ color: 'var(--ap-danger)' }} onClick={() => deleteQuestionPermanently(q)}>
+                  Delete
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => removeSelected(q._id)}>
+                  Remove
+                </Button>
+              </div>
             </div>
           ))}
         </div>
@@ -179,14 +243,20 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
             <input
               type="number"
               min="1"
-              max="100"
+              max={remainingSlots != null ? Math.max(1, remainingSlots) : 100}
               value={autoFillCount}
               onChange={(e) => setAutoFillCount(e.target.value)}
               style={{ width: '90px' }}
             />
           </label>
-          <Button type="button" size="sm" onClick={handleAutoFill} disabled={autoFillStatus === 'loading'}>
-            {autoFillStatus === 'loading' ? 'Picking…' : 'Auto-Fill'}
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleAutoFill}
+            disabled={autoFillStatus === 'loading' || atCap}
+            title={atCap ? 'Target reached — remove a question first' : undefined}
+          >
+            {autoFillStatus === 'loading' ? 'Picking…' : atCap ? 'Target reached' : 'Auto-Fill'}
           </Button>
         </div>
         {autoFillMessage && (
@@ -199,7 +269,14 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
       <div className={formStyles.card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <strong>Pick from Question Bank</strong>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setShowCreateQuestion((v) => !v)}>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => setShowCreateQuestion((v) => !v)}
+            disabled={atCap && !showCreateQuestion}
+            title={atCap && !showCreateQuestion ? 'Target reached — remove a question first' : undefined}
+          >
             {showCreateQuestion ? 'Close' : '+ New Question'}
           </Button>
         </div>
@@ -271,9 +348,24 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
                         <Badge tone="default">{q.type}</Badge>
                         <Badge tone="default">{q.difficulty}</Badge>
                       </div>
-                      <Button type="button" size="sm" variant={isPicked ? 'secondary' : 'primary'} onClick={() => toggleQuestion(q)}>
-                        {isPicked ? '✓ Added' : '+ Add'}
-                      </Button>
+                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => setEditingQuestion(q)}>
+                          Edit
+                        </Button>
+                        <Button type="button" size="sm" variant="ghost" style={{ color: 'var(--ap-danger)' }} onClick={() => deleteQuestionPermanently(q)}>
+                          Delete
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isPicked ? 'secondary' : 'primary'}
+                          onClick={() => toggleQuestion(q)}
+                          disabled={!isPicked && atCap}
+                          title={!isPicked && atCap ? 'Target reached — remove a question above to add another' : undefined}
+                        >
+                          {isPicked ? '✓ Added' : '+ Add'}
+                        </Button>
+                      </div>
                     </div>
 
                     {q.text?.trim() && <MathText as="p" className={styles.bankStem} text={q.text} />}
@@ -317,6 +409,21 @@ function SectionEditor({ section, index, examType, onUpdate, onRemove, canRemove
         <QuestionEditor examType={examType} onSaved={handleQuestionCreated} onCancel={() => setShowCreateQuestion(false)} />
       )}
     </div>
+
+    {editingQuestion && (
+      <div className={styles.overlay} role="dialog" aria-modal="true" onClick={() => setEditingQuestion(null)}>
+        <div className={styles.overlayModal} onClick={(e) => e.stopPropagation()}>
+          <QuestionEditor
+            initialQuestion={editingQuestion}
+            examType={examType}
+            onSaved={handleQuestionEdited}
+            onDeleted={handleQuestionDeletedViaEditor}
+            onCancel={() => setEditingQuestion(null)}
+          />
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -335,6 +442,10 @@ export default function TestEditor() {
   const [blockedPaid, setBlockedPaid] = useState(false);
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
+
+  const totalQuestions = sections.reduce((n, s) => n + s.questionIds.length, 0);
+  const target = form.targetQuestionCount === '' ? null : Number(form.targetQuestionCount);
+  const remainingSlots = target != null ? Math.max(0, target - totalQuestions) : null;
 
   useEffect(() => {
     if (!isEdit) return;
@@ -405,9 +516,13 @@ export default function TestEditor() {
       setStatus('error');
       return;
     }
-    const totalQuestions = sections.reduce((n, s) => n + s.questionIds.length, 0);
     if (totalQuestions === 0) {
       setError('Select at least one question from the bank.');
+      setStatus('error');
+      return;
+    }
+    if (target != null && totalQuestions > target) {
+      setError(`You have ${totalQuestions} questions but the target is ${target} — remove ${totalQuestions - target} before saving.`);
       setStatus('error');
       return;
     }
@@ -515,7 +630,7 @@ export default function TestEditor() {
               </label>
 
               <label>
-                Target number of questions (optional — just drives the progress bar below)
+                Target number of questions (optional — once set, this is a hard cap: you won't be able to add more questions than this)
                 <input
                   type="number"
                   name="targetQuestionCount"
@@ -576,31 +691,34 @@ export default function TestEditor() {
                 />
               </label>
 
-              <h2 style={{ color: 'var(--ap-primary)', marginTop: 'var(--ap-space-md)' }}>
-                Sections ({sections.reduce((n, s) => n + s.questionIds.length, 0)} questions total)
-              </h2>
-
-              {form.targetQuestionCount !== '' && Number(form.targetQuestionCount) > 0 && (() => {
-                const totalQuestions = sections.reduce((n, s) => n + s.questionIds.length, 0);
-                const target = Number(form.targetQuestionCount);
-                const pct = Math.min(100, Math.round((totalQuestions / target) * 100));
-                const remaining = Math.max(0, target - totalQuestions);
-                return (
-                  <div className={styles.progressWrap}>
+              {/* Sticky so the running count/target stay visible while scrolling
+                  through sections picking questions — this was the whole
+                  complaint: the heading it replaced scrolled out of view the
+                  moment you started browsing the bank below. */}
+              <div className={styles.floatingSummary}>
+                <div className={styles.floatingSummaryInner}>
+                  <div className={styles.floatingSummaryHead}>
+                    <strong className={styles.floatingSummaryTitle}>
+                      Sections ({totalQuestions} question{totalQuestions === 1 ? '' : 's'} total)
+                    </strong>
+                    {target != null && (
+                      <span className={styles.progressLabel}>
+                        {remainingSlots === 0
+                          ? `✓ Target reached (${totalQuestions} of ${target})`
+                          : `${totalQuestions} of ${target} added — ${remainingSlots} more needed`}
+                      </span>
+                    )}
+                  </div>
+                  {target != null && (
                     <div className={styles.progressTrack}>
                       <div
-                        className={`${styles.progressFill} ${remaining === 0 ? styles.progressFillDone : ''}`}
-                        style={{ width: `${pct}%` }}
+                        className={`${styles.progressFill} ${remainingSlots === 0 ? styles.progressFillDone : ''}`}
+                        style={{ width: `${Math.min(100, Math.round((totalQuestions / target) * 100))}%` }}
                       />
                     </div>
-                    <span className={styles.progressLabel}>
-                      {remaining === 0
-                        ? `✓ ${totalQuestions} of ${target} added`
-                        : `${totalQuestions} of ${target} added — ${remaining} more needed`}
-                    </span>
-                  </div>
-                );
-              })()}
+                  )}
+                </div>
+              </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ap-space-md)' }}>
                 {sections.map((section, index) => (
@@ -612,6 +730,7 @@ export default function TestEditor() {
                     onUpdate={(patch) => updateSection(index, patch)}
                     onRemove={() => removeSection(index)}
                     canRemove={sections.length > 1}
+                    remainingSlots={remainingSlots}
                   />
                 ))}
               </div>

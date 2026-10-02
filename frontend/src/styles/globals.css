@@ -14,9 +14,17 @@ html {
   overflow-x: hidden;
 }
 
+/* No overflow-x here (html's rule above already clips horizontal scroll at
+   the root) — setting it here too forces the UA to also compute
+   overflow-y: auto on body (CSS spec: if one axis is non-visible, the other
+   is promoted from visible to auto), which makes body a scroll container.
+   Every `position: sticky` element in the dashboard (topbar, sidebar, any
+   floating summary bar) treats its NEAREST non-static-overflow ancestor as
+   its scrolling context — with body silently claiming that role instead of
+   the real viewport, sticky elements stopped sticking site-wide even though
+   body itself never actually needed to scroll. */
 body {
   margin: 0;
-  overflow-x: hidden;
   font-family: var(--ap-font-body);
   color: var(--ap-text);
   background: var(--ap-bg);
