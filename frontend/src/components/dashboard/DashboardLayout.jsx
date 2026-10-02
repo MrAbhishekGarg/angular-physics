@@ -1,5 +1,33 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
+import {
+  Home,
+  Users,
+  FolderKanban,
+  Gamepad2,
+  Mail,
+  Upload,
+  Database,
+  Tag,
+  Newspaper,
+  Clapperboard,
+  ClipboardList,
+  FileText,
+  StickyNote,
+  Trophy,
+  MessageCircle,
+  HelpCircle,
+  Settings,
+  UserCog,
+  GraduationCap,
+  LayoutGrid,
+  BarChart3,
+  Briefcase,
+  Calendar,
+  TrendingUp,
+  Target,
+  ChevronDown,
+} from 'lucide-react';
 import Logo from '../common/Logo.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useTheme } from '../../hooks/useTheme.js';
@@ -11,27 +39,29 @@ import styles from './DashboardLayout.module.css';
 // sectionKey here matches backend/src/constants/studentAccess.js — an admin
 // restricting a student from a module (see StudentDetail.jsx's "Manage
 // Access") hides its nav item the same way a mentor's restrictedSections
-// already hides theirs, below. icon is a plain emoji — cheap, on-brand with
-// the playful icons already used elsewhere (course cards, exam tracks), and
-// gives the sidebar list actual visual texture instead of a wall of text.
+// already hides theirs, below. icon is a lucide component reference (not an
+// element) so it can be sized/colored consistently wherever it's rendered.
 const STUDENT_NAV = [
   {
     section: null,
     items: [
-      { to: '/dashboard/student', label: 'Dashboard', icon: '🏠', end: true },
-      { to: '/dashboard/student/notes', label: 'Notes', icon: '📝', sectionKey: 'notes' },
-      { to: '/dashboard/student/tests', label: 'Tests', icon: '📋', sectionKey: 'tests' },
-      { to: '/dashboard/student/worksheets', label: 'DPPs & Assignments', icon: '🧾', sectionKey: 'worksheets' },
-      { to: '/dashboard/student/practice', label: 'Practice by Topic', icon: '🎯', sectionKey: 'tests' },
-      { to: '/dashboard/student/doubts', label: 'Doubts', icon: '❓', sectionKey: 'doubts' },
-      { to: '/dashboard/student/profile', label: 'My Profile', icon: '⚙️' },
+      { to: '/dashboard/student', label: 'Dashboard', icon: Home, end: true },
+      { to: '/dashboard/student/notes', label: 'Notes', icon: StickyNote, sectionKey: 'notes' },
+      { to: '/dashboard/student/tests', label: 'Tests', icon: ClipboardList, sectionKey: 'tests' },
+      { to: '/dashboard/student/worksheets', label: 'DPPs & Assignments', icon: FileText, sectionKey: 'worksheets' },
+      { to: '/dashboard/student/practice', label: 'Practice by Topic', icon: Target, sectionKey: 'tests' },
+      { to: '/dashboard/student/doubts', label: 'Doubts', icon: HelpCircle, sectionKey: 'doubts' },
+      { to: '/dashboard/student/profile', label: 'My Profile', icon: Settings },
     ],
   },
 ];
 
 // Grouped so an 11-item list scans instead of reading as a wall of links —
 // each group is a distinct part of running the business (who you teach,
-// what you teach them, how you test them, how you're perceived).
+// what you teach them, how you test them, how you're perceived). Groups are
+// individually collapsible (see openGroups below) since admin ends up with
+// 20+ items across 7 groups — a flat scrolling list made distant sections a
+// chore to reach.
 // Every item except the Dashboard overview itself carries a sectionKey
 // (matching frontend/src/data/mentorSections.js and the backend's
 // requireSection() gate) — a mentor with that key in restrictedSections
@@ -40,37 +70,37 @@ const MENTOR_NAV = [
   {
     section: 'Overview',
     items: [
-      { to: '/dashboard/mentor', label: 'Dashboard', icon: '🏠', end: true },
-      { to: '/dashboard/mentor/students', label: 'All Students', icon: '👥', sectionKey: 'students' },
-      { to: '/dashboard/mentor/batches', label: 'Batches', icon: '🗂️', sectionKey: 'students' },
-      { to: '/dashboard/mentor/practice-stats', label: 'Practice Stats', icon: '🎮', sectionKey: 'students' },
-      { to: '/dashboard/mentor/enquiries', label: 'Enquiries', icon: '📨', sectionKey: 'enquiries' },
+      { to: '/dashboard/mentor', label: 'Dashboard', icon: Home, end: true },
+      { to: '/dashboard/mentor/students', label: 'All Students', icon: Users, sectionKey: 'students' },
+      { to: '/dashboard/mentor/batches', label: 'Batches', icon: FolderKanban, sectionKey: 'students' },
+      { to: '/dashboard/mentor/practice-stats', label: 'Practice Stats', icon: Gamepad2, sectionKey: 'students' },
+      { to: '/dashboard/mentor/enquiries', label: 'Enquiries', icon: Mail, sectionKey: 'enquiries' },
     ],
   },
   {
     section: 'Content',
     items: [
-      { to: '/dashboard/mentor/questions/upload', label: 'Question Uploading', icon: '📤', sectionKey: 'questions' },
-      { to: '/dashboard/mentor/questions', label: 'Question Bank', icon: '🗂️', sectionKey: 'questions', end: true },
-      { to: '/dashboard/mentor/concept-codes', label: 'Concept Codes', icon: '🏷️', sectionKey: 'concept-codes' },
-      { to: '/dashboard/mentor/articles', label: 'Articles', icon: '📰', sectionKey: 'articles' },
-      { to: '/dashboard/mentor/videos', label: 'Videos & Playlists', icon: '🎬', sectionKey: 'videos' },
+      { to: '/dashboard/mentor/questions/upload', label: 'Question Uploading', icon: Upload, sectionKey: 'questions' },
+      { to: '/dashboard/mentor/questions', label: 'Question Bank', icon: Database, sectionKey: 'questions', end: true },
+      { to: '/dashboard/mentor/concept-codes', label: 'Concept Codes', icon: Tag, sectionKey: 'concept-codes' },
+      { to: '/dashboard/mentor/articles', label: 'Articles', icon: Newspaper, sectionKey: 'articles' },
+      { to: '/dashboard/mentor/videos', label: 'Videos & Playlists', icon: Clapperboard, sectionKey: 'videos' },
     ],
   },
   {
     section: 'Tests & Practice',
     items: [
-      { to: '/dashboard/mentor/tests', label: 'Tests', icon: '📋', sectionKey: 'tests' },
-      { to: '/dashboard/mentor/worksheets', label: 'Worksheets', icon: '🧾', sectionKey: 'worksheets' },
-      { to: '/dashboard/mentor/notes', label: 'Notes', icon: '📝', sectionKey: 'notes' },
+      { to: '/dashboard/mentor/tests', label: 'Tests', icon: ClipboardList, sectionKey: 'tests' },
+      { to: '/dashboard/mentor/worksheets', label: 'Worksheets', icon: FileText, sectionKey: 'worksheets' },
+      { to: '/dashboard/mentor/notes', label: 'Notes', icon: StickyNote, sectionKey: 'notes' },
     ],
   },
   {
     section: 'Community',
     items: [
-      { to: '/dashboard/mentor/toppers', label: 'Toppers', icon: '🏆', sectionKey: 'toppers' },
-      { to: '/dashboard/mentor/testimonials', label: 'Testimonials', icon: '💬', sectionKey: 'testimonials' },
-      { to: '/dashboard/mentor/doubts', label: 'Doubts', icon: '❓', sectionKey: 'doubts' },
+      { to: '/dashboard/mentor/toppers', label: 'Toppers', icon: Trophy, sectionKey: 'toppers' },
+      { to: '/dashboard/mentor/testimonials', label: 'Testimonials', icon: MessageCircle, sectionKey: 'testimonials' },
+      { to: '/dashboard/mentor/doubts', label: 'Doubts', icon: HelpCircle, sectionKey: 'doubts' },
     ],
   },
 ];
@@ -89,8 +119,8 @@ const MENTOR_NAV = [
 const ADMIN_NAV_GROUP = {
   section: 'Admin',
   items: [
-    { to: '/dashboard/mentor/admin/mentors', label: 'Mentors', icon: '🧑‍🏫' },
-    { to: '/dashboard/mentor/admin/students', label: 'Students', icon: '🎓' },
+    { to: '/dashboard/mentor/admin/mentors', label: 'Mentors', icon: UserCog },
+    { to: '/dashboard/mentor/admin/students', label: 'Students', icon: GraduationCap },
   ],
 };
 
@@ -100,9 +130,9 @@ const ADMIN_NAV_GROUP = {
 const MY_JOB_NAV_GROUP = {
   section: 'My Job',
   items: [
-    { to: '/dashboard/mentor/admin/job', label: 'Overview', icon: '💼', end: true },
-    { to: '/dashboard/mentor/admin/job-schedule', label: 'Schedule', icon: '🗓️', end: true },
-    { to: '/dashboard/mentor/admin/job-schedule/batches', label: 'Batch Progress', icon: '📈' },
+    { to: '/dashboard/mentor/admin/job', label: 'Overview', icon: Briefcase, end: true },
+    { to: '/dashboard/mentor/admin/job-schedule', label: 'Schedule', icon: Calendar, end: true },
+    { to: '/dashboard/mentor/admin/job-schedule/batches', label: 'Batch Progress', icon: TrendingUp },
   ],
 };
 
@@ -112,8 +142,8 @@ const MY_JOB_NAV_GROUP = {
 const CONTENT_PLANNER_NAV_GROUP = {
   section: 'Content Planner',
   items: [
-    { to: '/dashboard/mentor/admin/content-planner', label: 'Concepts & Pieces', icon: '🗂️', end: true },
-    { to: '/dashboard/mentor/admin/content-planner/report', label: 'Report', icon: '📊', end: true },
+    { to: '/dashboard/mentor/admin/content-planner', label: 'Concepts & Pieces', icon: LayoutGrid, end: true },
+    { to: '/dashboard/mentor/admin/content-planner/report', label: 'Report', icon: BarChart3, end: true },
   ],
 };
 
@@ -122,6 +152,14 @@ const ROLE_META = {
   mentor: { label: 'Mentor', tone: 'mentor' },
   student: { label: 'Student', tone: 'student' },
 };
+
+function isItemActive(item, pathname) {
+  return item.end ? pathname === item.to : pathname.startsWith(item.to);
+}
+
+function findActiveSection(nav, pathname) {
+  return nav.find((group) => group.items.some((item) => isItemActive(item, pathname)))?.section || null;
+}
 
 function initialsOf(name) {
   if (!name) return '?';
@@ -267,6 +305,51 @@ export default function DashboardLayout({ role, children }) {
 
   const roleMeta = ROLE_META[user?.role] || ROLE_META.student;
 
+  // Admin alone racks up 7 groups / 20+ items — a flat always-expanded list
+  // made far-down sections (Content Planner, My Job) a scroll-hunt. Groups
+  // collapse individually instead, remembered per role in localStorage so a
+  // mentor who always keeps "Content" open doesn't re-expand it every visit.
+  const storageKey = `ap-sidebar-open-${user?.role || 'guest'}`;
+  const [openGroups, setOpenGroups] = useState(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) return new Set(JSON.parse(saved));
+    } catch {
+      // Corrupt or inaccessible storage — fall through to the empty-set
+      // default below, which the next effect fills from the active route.
+    }
+    return new Set();
+  });
+
+  // Whichever group holds the current route is always force-opened (without
+  // closing anything else) so navigating somewhere new never hides the item
+  // you just landed on — but a group the user manually collapsed elsewhere
+  // stays collapsed until its own route is visited again.
+  useEffect(() => {
+    const activeSection = findActiveSection(nav, location.pathname);
+    if (!activeSection) return;
+    setOpenGroups((prev) => (prev.has(activeSection) ? prev : new Set(prev).add(activeSection)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify([...openGroups]));
+    } catch {
+      // Best-effort persistence only — a private window or full storage
+      // just means group state resets next visit, nothing breaks.
+    }
+  }, [openGroups, storageKey]);
+
+  const toggleGroup = (section) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(section)) next.delete(section);
+      else next.add(section);
+      return next;
+    });
+  };
+
   return (
     <div className={styles.page} data-admin={user?.role === 'admin' ? 'true' : undefined}>
       {user?.role === 'student' && !user.track && <TrackPromptModal />}
@@ -282,24 +365,47 @@ export default function DashboardLayout({ role, children }) {
               </div>
             </div>
             <div className={styles.navScroll}>
-              {nav.map((group) => (
-                <div key={group.section || 'main'} className={styles.navGroup}>
-                  {group.section && <div className={styles.navGroupLabel}>{group.section}</div>}
-                  {group.items.map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      end={item.end}
-                      className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
-                    >
-                      <span className={styles.navIcon} aria-hidden="true">
-                        {item.icon}
-                      </span>
-                      {item.label}
-                    </NavLink>
-                  ))}
-                </div>
-              ))}
+              {nav.map((group) => {
+                const isOpen = !group.section || openGroups.has(group.section);
+                return (
+                  <div key={group.section || 'main'} className={styles.navGroup}>
+                    {group.section && (
+                      <button
+                        type="button"
+                        className={styles.navGroupHeader}
+                        onClick={() => toggleGroup(group.section)}
+                        aria-expanded={isOpen}
+                      >
+                        <span className={styles.navGroupLabel}>{group.section}</span>
+                        <ChevronDown
+                          size={15}
+                          strokeWidth={2.5}
+                          className={`${styles.navGroupChevron} ${isOpen ? styles.navGroupChevronOpen : ''}`}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    )}
+                    {isOpen && (
+                      <div className={styles.navGroupItems}>
+                        {group.items.map((item) => {
+                          const Icon = item.icon;
+                          return (
+                            <NavLink
+                              key={item.to}
+                              to={item.to}
+                              end={item.end}
+                              className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
+                            >
+                              <Icon size={18} strokeWidth={2} className={styles.navIcon} aria-hidden="true" />
+                              {item.label}
+                            </NavLink>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </nav>
           <main className={styles.content}>{children}</main>

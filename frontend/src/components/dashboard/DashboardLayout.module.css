@@ -304,11 +304,31 @@
 .navGroup {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.15rem;
+}
+
+/* A plain label became a button: clicking anywhere on the row toggles that
+   group's items (see DashboardLayout.jsx) — admin's 7-group, 20+ item list
+   is the reason this exists, so distant sections (Content Planner, My Job)
+   are one click away instead of a scroll-hunt past everything else. */
+.navGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.35rem 0.6rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.navGroupHeader:hover {
+  background: color-mix(in srgb, var(--ap-accent) 8%, transparent);
 }
 
 .navGroupLabel {
-  padding: 0.3rem 0.6rem 0.15rem;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -317,24 +337,47 @@
   opacity: 0.75;
 }
 
+.navGroupChevron {
+  flex-shrink: 0;
+  color: var(--ap-text-muted);
+  opacity: 0.6;
+  transition: transform 0.18s ease;
+}
+
+.navGroupChevronOpen {
+  transform: rotate(180deg);
+}
+
+.navGroupItems {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  /* Lines the item icons up under the group label's text, not its left
+     edge, so the collapsed/expanded list reads as nested under its header. */
+  padding-left: 0.15rem;
+  animation: navGroupReveal 0.15s ease;
+}
+
+@keyframes navGroupReveal {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .navItem {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.6rem 0.7rem;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
   font-size: 0.87rem;
   font-weight: 600;
   color: var(--ap-text-muted);
-  border-left: 3px solid transparent;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  border-radius: 9px;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .navIcon {
-  font-size: 1rem;
-  line-height: 1;
   flex-shrink: 0;
-  width: 1.2rem;
-  text-align: center;
+  opacity: 0.85;
 }
 
 .navItem:hover {
@@ -342,11 +385,18 @@
   color: var(--ap-text);
 }
 
+.navItem:hover .navIcon {
+  opacity: 1;
+}
+
 .navItemActive,
 .navItemActive:hover {
-  background: color-mix(in srgb, var(--ap-accent) 18%, var(--ap-bg-muted));
-  color: var(--ap-primary);
-  border-left-color: var(--ap-accent);
+  background: var(--ap-accent);
+  color: #fff;
+}
+
+.navItemActive .navIcon {
+  opacity: 1;
 }
 
 /* Admin's shell reuses the site's own "always-dark-regardless-of-theme"
@@ -373,6 +423,14 @@
   color: rgba(255, 255, 255, 0.55);
 }
 
+.page[data-admin='true'] .navGroupHeader:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.page[data-admin='true'] .navGroupChevron {
+  color: rgba(255, 255, 255, 0.55);
+}
+
 .page[data-admin='true'] .navItem {
   color: rgba(255, 255, 255, 0.78);
 }
@@ -382,15 +440,14 @@
   color: #fff;
 }
 
-/* The sidebar itself is now the same navy .navItemActive used to sit on
-   top of, so the active indicator needs a genuinely different color here
-   or it disappears into its own background — cyan reads clearly against
-   navy in both themes. */
+/* The sidebar itself is the same navy the regular .navItemActive fill
+   would disappear into, so active here is a translucent pill with the
+   label itself picked out in accent cyan — still unmistakably "selected"
+   against navy in both themes, just via color contrast instead of fill. */
 .page[data-admin='true'] .navItemActive,
 .page[data-admin='true'] .navItemActive:hover {
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
-  border-left-color: var(--ap-accent);
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--ap-accent);
 }
 
 .content {
