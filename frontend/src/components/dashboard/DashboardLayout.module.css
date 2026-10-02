@@ -97,6 +97,88 @@
   filter: brightness(1.08);
 }
 
+/* ---- quick-nav (topbar jump menu — a second way to the sidebar's sections,
+   always visible on desktop so a distant page is never more than this one
+   click away without needing the sidebar at all) ---- */
+
+.quickNavWrap {
+  position: relative;
+}
+
+.quickNavBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--ap-border);
+  background: var(--ap-bg-muted);
+  color: var(--ap-text);
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem 0.45rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.quickNavBtn:hover {
+  border-color: var(--ap-accent);
+  color: var(--ap-accent);
+}
+
+.quickNavDropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  width: min(260px, 85vw);
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  background: var(--ap-bg);
+  border: 1px solid var(--ap-border);
+  border-radius: 10px;
+  box-shadow: var(--ap-shadow-md, var(--ap-shadow-sm));
+  z-index: 20;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.quickNavGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.quickNavGroupLabel {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ap-text-muted);
+  opacity: 0.75;
+}
+
+.quickNavItem {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ap-text-muted);
+  border-radius: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.quickNavItem:hover {
+  background: color-mix(in srgb, var(--ap-accent) 12%, var(--ap-bg-muted));
+  color: var(--ap-text);
+}
+.quickNavItemActive,
+.quickNavItemActive:hover {
+  background: var(--ap-accent);
+  color: #fff;
+}
+
 /* ---- notifications (unchanged behavior, restyled to sit in the topbar) ---- */
 
 .notifWrap {
@@ -465,6 +547,13 @@
   }
 
   .siteLink {
+    display: none;
+  }
+
+  /* The hamburger already opens the full sidebar (same nav, collapsible
+     groups and all) as a dropdown at this width — this button would just
+     be a second, redundant way to the same thing taking up scarce space. */
+  .quickNavWrap {
     display: none;
   }
 
