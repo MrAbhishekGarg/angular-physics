@@ -1,6 +1,14 @@
+/* flex column + min-height (not height) so the board can grow to fill
+   whatever's actually left below the header/toolbar/summary strip — those
+   vary (the sync badge, success banner, etc. aren't always present), so a
+   fixed pixel guess for the board's own height either wasted space or cut
+   columns short depending on which of those happened to be showing. */
 .wrap {
   padding: var(--ap-space-xl) 0;
   max-width: 1700px;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 62px);
 }
 
 .header {
@@ -10,6 +18,7 @@
   align-items: flex-start;
   gap: 1rem;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .headerControls {
@@ -131,6 +140,7 @@
   color: var(--ap-text);
   margin-bottom: var(--ap-space-md);
   animation: bannerIn 0.2s ease;
+  flex-shrink: 0;
 }
 @keyframes bannerIn {
   from { opacity: 0; transform: translateY(-6px); }
@@ -153,6 +163,7 @@
   flex-direction: column;
   gap: 0.6rem;
   margin-bottom: var(--ap-space-sm);
+  flex-shrink: 0;
 }
 
 .toolbarTop {
@@ -241,6 +252,7 @@
   border: 1px solid var(--ap-border);
   border-radius: var(--ap-radius);
   background: var(--ap-bg);
+  flex-shrink: 0;
 }
 .summaryStripItem {
   font-size: 0.82rem;
@@ -274,6 +286,8 @@
   gap: 0.75rem;
   overflow-x: auto;
   padding-bottom: 0.75rem;
+  flex: 1;
+  min-height: 420px;
 }
 
 .column {
@@ -283,8 +297,7 @@
   background: var(--ap-bg-muted);
   border: 1.5px solid var(--ap-border);
   border-radius: var(--ap-radius);
-  max-height: calc(100vh - 260px);
-  min-height: 220px;
+  height: 100%;
   transition: border-color 0.12s ease, background 0.12s ease;
 }
 .columnDragOver {
