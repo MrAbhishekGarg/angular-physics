@@ -21,7 +21,7 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 
-function TopicPlan({ batchCode, plan, onChanged }) {
+function TopicPlan({ batchCode, plan }) {
   const [items, setItems] = useState(plan);
   const [newTitle, setNewTitle] = useState('');
   const [busy, setBusy] = useState(false);
@@ -31,6 +31,11 @@ function TopicPlan({ batchCode, plan, onChanged }) {
   const covered = items.filter((i) => i.done).length;
   const pct = items.length ? (covered / items.length) * 100 : 0;
 
+  // Local state above is already the source of truth for this list — no
+  // other part of the page reads `plan`, so there was never anything to
+  // resync. Calling the parent's refetch after each edit just flipped the
+  // whole batch list to a loading spinner for a moment on every tick,
+  // which read as the page reloading itself for a change this small.
   const add = async (e) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
@@ -39,7 +44,6 @@ function TopicPlan({ batchCode, plan, onChanged }) {
       const created = await jobScheduleService.createTopicPlan(batchCode, newTitle.trim());
       setItems((prev) => [...prev, created]);
       setNewTitle('');
-      onChanged?.();
     } finally {
       setBusy(false);
     }
@@ -49,13 +53,11 @@ function TopicPlan({ batchCode, plan, onChanged }) {
     const next = !item.done;
     setItems((prev) => prev.map((i) => (i._id === item._id ? { ...i, done: next } : i)));
     await jobScheduleService.updateTopicPlan(item._id, { done: next });
-    onChanged?.();
   };
 
   const remove = async (item) => {
     setItems((prev) => prev.filter((i) => i._id !== item._id));
     await jobScheduleService.removeTopicPlan(item._id);
-    onChanged?.();
   };
 
   return (
@@ -305,7 +307,7 @@ export default function JobScheduleBatches() {
                   </>
                 )}
 
-                <TopicPlan batchCode={batch.batchCode} plan={batch.plan || []} onChanged={refetch} />
+                <TopicPlan batchCode={batch.batchCode} plan={batch.plan || []} />
               </section>
             ))}
         </div>
