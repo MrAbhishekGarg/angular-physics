@@ -174,10 +174,13 @@ function findActiveGroup(nav, pathname) {
  * leaving the content area at all. Deliberately scoped to the current
  * group, not the whole site — a wall of 20 links would defeat the point.
  */
-function CrossLinks({ nav, pathname }) {
+function CrossLinks({ nav, pathname, exclude = [] }) {
   const group = findActiveGroup(nav, pathname);
   if (!group) return null;
-  const siblings = group.items.filter((item) => !isItemActive(item, pathname));
+  // `exclude` lets a page drop a sibling it already links to inline
+  // elsewhere on the page (e.g. Content Planner's own "Full report" link) —
+  // otherwise it'd show up twice for no reason.
+  const siblings = group.items.filter((item) => !isItemActive(item, pathname) && !exclude.includes(item.to));
   if (siblings.length === 0) return null;
 
   return (
@@ -308,7 +311,7 @@ function DashboardTopbar({ menuOpen, onToggleMenu }) {
   );
 }
 
-export default function DashboardLayout({ role, children }) {
+export default function DashboardLayout({ role, children, crossLinksExclude }) {
   const { user } = useAuth();
   const location = useLocation();
   // On the mobile horizontal-scroll-turned-dropdown nav (see .module.css),
@@ -447,7 +450,7 @@ export default function DashboardLayout({ role, children }) {
           </nav>
           <main className={styles.content}>
             {children}
-            <CrossLinks nav={nav} pathname={location.pathname} />
+            <CrossLinks nav={nav} pathname={location.pathname} exclude={crossLinksExclude} />
           </main>
         </div>
       </div>

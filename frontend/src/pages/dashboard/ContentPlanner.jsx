@@ -264,7 +264,7 @@ export default function ContentPlanner() {
   return (
     <>
       <SEO title="Content Planner" description="Plan and track YouTube and Instagram content by concept." path="/dashboard/mentor/admin/content-planner" />
-      <DashboardLayout role="mentor">
+      <DashboardLayout role="mentor" crossLinksExclude={['/dashboard/mentor/admin/content-planner/report']}>
         <div className={styles.wrap}>
           <div className={styles.header}>
             <div>
