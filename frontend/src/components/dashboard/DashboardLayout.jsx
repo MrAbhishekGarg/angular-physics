@@ -161,6 +161,43 @@ function findActiveSection(nav, pathname) {
   return nav.find((group) => group.items.some((item) => isItemActive(item, pathname)))?.section || null;
 }
 
+function findActiveGroup(nav, pathname) {
+  return nav.find((group) => group.items.some((item) => isItemActive(item, pathname))) || null;
+}
+
+/**
+ * Every page's real "way around" shouldn't depend on going back through the
+ * sidebar or topbar menu — this sits at the bottom of every page's content
+ * and links to the other pages in its own group (e.g. a Question Bank page
+ * links to Question Uploading/Concept Codes/Articles/Videos, not to Tests or
+ * Community), so moving between closely-related sections never requires
+ * leaving the content area at all. Deliberately scoped to the current
+ * group, not the whole site — a wall of 20 links would defeat the point.
+ */
+function CrossLinks({ nav, pathname }) {
+  const group = findActiveGroup(nav, pathname);
+  if (!group) return null;
+  const siblings = group.items.filter((item) => !isItemActive(item, pathname));
+  if (siblings.length === 0) return null;
+
+  return (
+    <nav className={styles.crossLinks} aria-label={group.section ? `More in ${group.section}` : 'More pages'}>
+      <span className={styles.crossLinksLabel}>{group.section ? `More in ${group.section}` : 'More pages'}</span>
+      <div className={styles.crossLinksRow}>
+        {siblings.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link key={item.to} to={item.to} className={styles.crossLinkChip}>
+              <Icon size={15} strokeWidth={2} aria-hidden="true" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
 function initialsOf(name) {
   if (!name) return '?';
   const parts = name.trim().split(/\s+/);
@@ -224,57 +261,7 @@ function NotificationsBell() {
   );
 }
 
-// A second, always-visible way to jump between sections — the sidebar
-// covers this on desktop already, but it's one more click away on any page
-// where someone would rather not hunt through it, and on narrower desktop
-// widths it means not having to rely on the sidebar's own scroll at all.
-// Hidden at mobile widths (see .module.css) since the hamburger's dropdown
-// already opens the full, same nav there.
-function QuickNavMenu({ nav }) {
-  const [open, setOpen] = useState(false);
-  const location = useLocation();
-  useEffect(() => setOpen(false), [location.pathname]);
-
-  return (
-    <div className={styles.quickNavWrap}>
-      <button
-        type="button"
-        className={styles.quickNavBtn}
-        aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <LayoutGrid size={16} strokeWidth={2.2} aria-hidden="true" />
-        <span>Menu</span>
-      </button>
-      {open && (
-        <div className={styles.quickNavDropdown}>
-          {nav.map((group) => (
-            <div key={group.section || 'main'} className={styles.quickNavGroup}>
-              {group.section && <div className={styles.quickNavGroupLabel}>{group.section}</div>}
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    className={({ isActive }) => `${styles.quickNavItem} ${isActive ? styles.quickNavItemActive : ''}`}
-                  >
-                    <Icon size={16} strokeWidth={2} aria-hidden="true" />
-                    {item.label}
-                  </NavLink>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DashboardTopbar({ menuOpen, onToggleMenu, nav }) {
+function DashboardTopbar({ menuOpen, onToggleMenu }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const trackMeta = user?.role === 'student' ? getTrackMeta(user.track) : null;
@@ -295,7 +282,6 @@ function DashboardTopbar({ menuOpen, onToggleMenu, nav }) {
           <Logo variant={theme === 'dark' ? 'light' : 'dark'} />
         </div>
         <div className={styles.topbarActions}>
-          <QuickNavMenu nav={nav} />
           {trackMeta && (
             <Link to="/dashboard/student/profile" className={styles.trackBadge} title="Change in My Profile">
               {trackMeta.icon} {trackMeta.shortLabel}
@@ -404,7 +390,7 @@ export default function DashboardLayout({ role, children }) {
   return (
     <div className={styles.page} data-admin={user?.role === 'admin' ? 'true' : undefined}>
       {user?.role === 'student' && !user.track && <TrackPromptModal />}
-      <DashboardTopbar menuOpen={menuOpen} onToggleMenu={() => setMenuOpen((v) => !v)} nav={nav} />
+      <DashboardTopbar menuOpen={menuOpen} onToggleMenu={() => setMenuOpen((v) => !v)} />
       <div className={styles.shell}>
         <div className={styles.layout}>
           <nav className={`${styles.sidebar} ${menuOpen ? styles.sidebarOpen : ''}`} aria-label="Dashboard sections">
@@ -459,7 +445,10 @@ export default function DashboardLayout({ role, children }) {
               })}
             </div>
           </nav>
-          <main className={styles.content}>{children}</main>
+          <main className={styles.content}>
+            {children}
+            <CrossLinks nav={nav} pathname={location.pathname} />
+          </main>
         </div>
       </div>
     </div>
