@@ -4,8 +4,8 @@ import { getNextSequence } from '../utils/sequence.js';
 import { ApiError } from '../utils/ApiError.js';
 import { syncConceptPieces, syncPiece, deletePieceRow, deleteConceptRows, resyncAllPieces } from './contentPlannerSheetsSync.service.js';
 
-const PLATFORM_CODE = { youtube: 'YT', instagram: 'IG' };
-const TYPE_CODE = { 'long-video': 'LV', short: 'SH', carousel: 'CA', 'community-post': 'CP' };
+const PLATFORM_CODE = { youtube: 'YT', instagram: 'IG', whatsapp: 'WA', telegram: 'TG' };
+const TYPE_CODE = { 'long-video': 'LV', short: 'SH', carousel: 'CA', 'community-post': 'CP', 'poll-question': 'PQ' };
 
 /** Collapses a string into an uppercase, punctuation-free slug for an id. */
 function slugify(text) {
@@ -107,7 +107,10 @@ export async function createConcept(payload, createdByName) {
 
 export async function listConcepts({ status, platform, type, search } = {}) {
   const filter = {};
-  if (status) filter['pieces.status'] = status;
+  // "on-hold" is a basket (see ContentConcept.js's onHold field), not a
+  // PIECE_STATUSES value — filtering by it means the flag, not the stage.
+  if (status === 'on-hold') filter['pieces.onHold'] = true;
+  else if (status) filter['pieces.status'] = status;
   if (platform) filter['pieces.platform'] = platform;
   if (type) filter['pieces.type'] = type;
   if (search) {
@@ -171,11 +174,11 @@ export async function addPiece(conceptId, pieceData) {
   return concept;
 }
 
-export async function updatePieceStatus(conceptId, pieceId, status) {
+export async function updatePieceStatus(conceptId, pieceId, status, onHold = false) {
   if (!PIECE_STATUSES.includes(status)) throw new ApiError(400, `status must be one of: ${PIECE_STATUSES.join(', ')}`);
   const concept = await ContentConcept.findOneAndUpdate(
     { conceptId, 'pieces._id': pieceId },
-    { $set: { 'pieces.$.status': status } },
+    { $set: { 'pieces.$.status': status, 'pieces.$.onHold': Boolean(onHold) } },
     { new: true }
   ).lean();
   if (!concept) throw new ApiError(404, 'Concept or content piece not found');
@@ -228,15 +231,20 @@ export async function getUsedTopics() {
  * different stage.
  */
 export async function getStats() {
-  const [statusRows, platformRows, typeRows] = await Promise.all([
+  const [statusRows, platformRows, typeRows, onHoldRows] = await Promise.all([
     ContentConcept.aggregate([{ $unwind: '$pieces' }, { $group: { _id: '$pieces.status', count: { $sum: 1 } } }]),
     ContentConcept.aggregate([{ $unwind: '$pieces' }, { $group: { _id: '$pieces.platform', count: { $sum: 1 } } }]),
     ContentConcept.aggregate([{ $unwind: '$pieces' }, { $group: { _id: '$pieces.type', count: { $sum: 1 } } }]),
+    ContentConcept.aggregate([{ $unwind: '$pieces' }, { $match: { 'pieces.onHold': true } }, { $count: 'count' }]),
   ]);
   const counts = PIECE_STATUSES.reduce((acc, s) => ({ ...acc, [s]: 0 }), {});
   statusRows.forEach((r) => {
     counts[r._id] = r.count;
   });
+  // "on-hold" isn't a real status (see onHold field on the piece schema) but
+  // the board/report still key off STATUS_META['on-hold'] for display, so
+  // it's reported here as its own count alongside the real pipeline stages.
+  counts['on-hold'] = onHoldRows[0]?.count || 0;
   const byPlatform = PLATFORMS.reduce((acc, p) => ({ ...acc, [p]: 0 }), {});
   platformRows.forEach((r) => {
     byPlatform[r._id] = r.count;
@@ -245,7 +253,7 @@ export async function getStats() {
   typeRows.forEach((r) => {
     byType[r._id] = r.count;
   });
-  const totalPieces = Object.values(counts).reduce((a, b) => a + b, 0);
+  const totalPieces = PIECE_STATUSES.reduce((sum, s) => sum + counts[s], 0);
   const totalConcepts = await ContentConcept.countDocuments();
   return { counts, byPlatform, byType, totalPieces, totalConcepts };
 }
@@ -258,7 +266,9 @@ export async function getStats() {
  */
 export async function listPiecesFlat({ status, platform, type, search } = {}) {
   const match = {};
-  if (status) match['pieces.status'] = status;
+  const isOnHoldFilter = status === 'on-hold';
+  if (isOnHoldFilter) match['pieces.onHold'] = true;
+  else if (status) match['pieces.status'] = status;
   if (platform) match['pieces.platform'] = platform;
   if (type) match['pieces.type'] = type;
   if (search) {
@@ -270,7 +280,8 @@ export async function listPiecesFlat({ status, platform, type, search } = {}) {
   const rows = [];
   concepts.forEach((concept) => {
     concept.pieces.forEach((piece) => {
-      if (status && piece.status !== status) return;
+      if (isOnHoldFilter && !piece.onHold) return;
+      if (!isOnHoldFilter && status && piece.status !== status) return;
       if (platform && piece.platform !== platform) return;
       if (type && piece.type !== type) return;
       rows.push({
@@ -284,6 +295,7 @@ export async function listPiecesFlat({ status, platform, type, search } = {}) {
         type: piece.type,
         label: piece.label || '',
         status: piece.status,
+        onHold: Boolean(piece.onHold),
         source: piece.source || '',
         isPYQ: piece.isPYQ,
         pyqYear: piece.pyqYear || null,
@@ -321,6 +333,7 @@ export async function exportToExcelBuffer() {
     { header: 'Type', key: 'type', width: 16 },
     { header: 'Label', key: 'label', width: 18 },
     { header: 'Status', key: 'status', width: 12 },
+    { header: 'On Hold', key: 'onHold', width: 10 },
     { header: 'Scheduled For', key: 'scheduledFor', width: 20 },
     { header: 'Source', key: 'source', width: 18 },
     { header: 'PYQ', key: 'pyq', width: 8 },
@@ -344,6 +357,7 @@ export async function exportToExcelBuffer() {
         type: piece.type,
         label: piece.label || '',
         status: piece.status,
+        onHold: piece.onHold ? 'Yes' : 'No',
         scheduledFor: piece.scheduledFor ? new Date(piece.scheduledFor).toISOString() : '',
         source: piece.source || '',
         pyq: piece.isPYQ ? 'Yes' : 'No',

@@ -12,9 +12,9 @@ import mongoose from 'mongoose';
  * scripts/migrateVideoTrackerToContentPlanner.js for the one-time move of
  * its existing data).
  */
-const PLATFORMS = ['youtube', 'instagram'];
-const PIECE_TYPES = ['long-video', 'short', 'carousel', 'community-post'];
-const PIECE_STATUSES = ['planned', 'scripted', 'recorded', 'edited', 'uploaded', 'scheduled', 'published', 'on-hold'];
+const PLATFORMS = ['youtube', 'instagram', 'whatsapp', 'telegram'];
+const PIECE_TYPES = ['long-video', 'short', 'carousel', 'community-post', 'poll-question'];
+const PIECE_STATUSES = ['planned', 'scripted', 'recorded', 'edited', 'uploaded', 'scheduled', 'published'];
 
 const contentPieceSchema = new mongoose.Schema(
   {
@@ -29,6 +29,13 @@ const contentPieceSchema = new mongoose.Schema(
     // unique, purely descriptive.
     label: { type: String, default: '' },
     status: { type: String, enum: PIECE_STATUSES, default: 'planned' },
+    // A separate flag rather than a PIECE_STATUSES value on purpose: "on
+    // hold" isn't a pipeline stage, it's a basket for reserving a piece for
+    // later regardless of how far it got — status still tracks the real
+    // stage underneath (recorded/edited/whatever it actually reached) so
+    // taking it off hold resumes exactly where it left off instead of
+    // losing that progress.
+    onHold: { type: Boolean, default: false },
     // Carried over from the old video tracker — a piece can be "about" a
     // specific PYQ problem rather than pure concept teaching.
     source: { type: String, default: '', trim: true },

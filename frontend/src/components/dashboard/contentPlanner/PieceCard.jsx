@@ -38,8 +38,12 @@ export default function PieceCard({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [menuOpen]);
 
-  const meta = STATUS_META[piece.status];
-  const next = NEXT_STATUS[piece.status];
+  // onHold is a basket, not a pipeline stage (see ContentConcept.js) — the
+  // card still reads piece.status for its real stage everywhere except the
+  // accent color/select, which show "On Hold" while it's sitting in the
+  // basket so it's visually obvious without losing track of that real stage.
+  const meta = piece.onHold ? STATUS_META['on-hold'] : STATUS_META[piece.status];
+  const next = piece.onHold ? null : NEXT_STATUS[piece.status];
   const platformMeta = PLATFORM_META[piece.platform];
 
   return (
@@ -132,11 +136,15 @@ export default function PieceCard({
         {piece.pieceId}
       </button>
 
+      {piece.onHold && (
+        <p className={styles.holdHint}>⏸️ On hold — was at {STATUS_META[piece.status].label}</p>
+      )}
+
       <div className={styles.footer}>
         <select
           className={styles.statusSelect}
           style={{ background: meta.pillBg, color: meta.pillText }}
-          value={piece.status}
+          value={piece.onHold ? 'on-hold' : piece.status}
           disabled={busy}
           onChange={(e) => onSetStatus(concept, piece, e.target.value)}
         >

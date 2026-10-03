@@ -10,8 +10,8 @@ export const contentPlannerService = {
   remove: (conceptId) => api.delete(`/content-planner/${conceptId}`),
 
   addPiece: (conceptId, payload) => api.post(`/content-planner/${conceptId}/pieces`, payload),
-  updatePieceStatus: (conceptId, pieceId, status) =>
-    api.patch(`/content-planner/${conceptId}/pieces/${pieceId}/status`, { status }),
+  updatePieceStatus: (conceptId, pieceId, status, onHold = false) =>
+    api.patch(`/content-planner/${conceptId}/pieces/${pieceId}/status`, { status, onHold }),
   updatePiece: (conceptId, pieceId, payload) => api.put(`/content-planner/${conceptId}/pieces/${pieceId}`, payload),
   removePiece: (conceptId, pieceId) => api.delete(`/content-planner/${conceptId}/pieces/${pieceId}`),
 

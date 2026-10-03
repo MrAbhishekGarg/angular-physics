@@ -9,6 +9,7 @@ import PieceCard from '../../components/dashboard/contentPlanner/PieceCard.jsx';
 import NewConceptModal from '../../components/dashboard/contentPlanner/NewConceptModal.jsx';
 import EditConceptModal from '../../components/dashboard/contentPlanner/EditConceptModal.jsx';
 import PieceFormModal from '../../components/dashboard/contentPlanner/PieceFormModal.jsx';
+import HoldPieceModal from '../../components/dashboard/contentPlanner/HoldPieceModal.jsx';
 import { contentPlannerService } from '../../services/contentPlannerService.js';
 import { questionService } from '../../services/questionService.js';
 import { STATUS_META, STATUS_ORDER, NEXT_STATUS, PLATFORM_META, TYPE_META } from '../../data/contentPlannerMeta.js';
@@ -48,6 +49,7 @@ export default function ContentPlanner() {
   const [showNewConcept, setShowNewConcept] = useState(false);
   const [editingConcept, setEditingConcept] = useState(null);
   const [pieceModal, setPieceModal] = useState(null); // { concept, piece? }
+  const [holdModal, setHoldModal] = useState(null); // { concept, piece }
   const [successBanner, setSuccessBanner] = useState(null);
   const [dragOverStatus, setDragOverStatus] = useState('');
   const [draggingKey, setDraggingKey] = useState('');
@@ -130,14 +132,35 @@ export default function ContentPlanner() {
   };
 
   const handleSetPieceStatus = async (concept, piece, status) => {
-    if (status === piece.status) return;
+    if (status === 'on-hold') {
+      if (piece.onHold) return; // already in the basket
+      setHoldModal({ concept, piece });
+      return;
+    }
+    if (status === piece.status && !piece.onHold) return;
     const key = pieceKey(concept.conceptId, piece._id);
     setBusyKey(key);
     try {
-      await contentPlannerService.updatePieceStatus(concept.conceptId, piece._id, status);
+      // Picking a real status directly (including on an on-hold piece) both
+      // sets the stage and takes it off hold — no confirmation needed for
+      // that direction, only for entering the basket (see handleConfirmHold).
+      await contentPlannerService.updatePieceStatus(concept.conceptId, piece._id, status, false);
       await load();
     } catch (err) {
       window.alert(err.message);
+    } finally {
+      setBusyKey('');
+    }
+  };
+
+  const handleConfirmHold = async (realStatus) => {
+    const { concept, piece } = holdModal;
+    const key = pieceKey(concept.conceptId, piece._id);
+    setBusyKey(key);
+    try {
+      await contentPlannerService.updatePieceStatus(concept.conceptId, piece._id, realStatus, true);
+      setHoldModal(null);
+      await load();
     } finally {
       setBusyKey('');
     }
@@ -200,9 +223,14 @@ export default function ContentPlanner() {
       return;
     }
     if (!payload) return;
+    const dropped = flatPieces.find(({ concept, piece }) => concept.conceptId === payload.conceptId && piece._id === payload.pieceId);
+    if (status === 'on-hold') {
+      if (dropped && !dropped.piece.onHold) setHoldModal({ concept: dropped.concept, piece: dropped.piece });
+      return;
+    }
     setBusyKey(pieceKey(payload.conceptId, payload.pieceId));
     try {
-      await contentPlannerService.updatePieceStatus(payload.conceptId, payload.pieceId, status);
+      await contentPlannerService.updatePieceStatus(payload.conceptId, payload.pieceId, status, false);
       await load();
     } catch (err) {
       window.alert(err.message);
@@ -215,13 +243,18 @@ export default function ContentPlanner() {
     () => (concepts || []).flatMap((concept) => concept.pieces.map((piece) => ({ concept, piece }))),
     [concepts]
   );
+  // "On Hold" is a basket keyed off piece.onHold, not a real pipeline stage
+  // (see ContentConcept.js) — a held piece's own `status` still reflects
+  // whatever stage it's actually at, so it has to be pulled out of its real
+  // status column and grouped under "on-hold" here instead.
   const piecesByStatus = useMemo(() => {
     const grouped = {};
     BOARD_COLUMNS.forEach((s) => {
       grouped[s] = [];
     });
     flatPieces.forEach(({ concept, piece }) => {
-      (grouped[piece.status] || (grouped[piece.status] = [])).push({ concept, piece });
+      const column = piece.onHold ? 'on-hold' : piece.status;
+      (grouped[column] || (grouped[column] = [])).push({ concept, piece });
     });
     return grouped;
   }, [flatPieces]);
@@ -315,8 +348,11 @@ export default function ContentPlanner() {
               )}
               <select value={filters.platform} onChange={(e) => setFilters((f) => ({ ...f, platform: e.target.value }))}>
                 <option value="">All platforms</option>
-                <option value="youtube">YouTube</option>
-                <option value="instagram">Instagram</option>
+                {Object.entries(PLATFORM_META).map(([key, m]) => (
+                  <option key={key} value={key}>
+                    {m.icon} {m.label}
+                  </option>
+                ))}
               </select>
               <select value={filters.type} onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value }))}>
                 <option value="">All types</option>
@@ -515,6 +551,7 @@ export default function ContentPlanner() {
           onSubmit={handlePieceFormSubmit}
         />
       )}
+      {holdModal && <HoldPieceModal piece={holdModal.piece} onClose={() => setHoldModal(null)} onConfirm={handleConfirmHold} />}
       {editingConcept && (
         <EditConceptModal
           concept={editingConcept}

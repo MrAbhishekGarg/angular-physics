@@ -104,6 +104,8 @@ export const NEXT_STATUS = {
 export const PLATFORM_META = {
   youtube: { label: 'YouTube', icon: '▶️', color: '#ff0000' },
   instagram: { label: 'Instagram', icon: '📸', color: '#c026d3' },
+  whatsapp: { label: 'WhatsApp', icon: '💚', color: '#25d366' },
+  telegram: { label: 'Telegram', icon: '✈️', color: '#26a5e4' },
 };
 
 export const TYPE_META = {
@@ -111,4 +113,5 @@ export const TYPE_META = {
   short: { label: 'Short', icon: '⚡', color: '#d98c0f' },
   carousel: { label: 'Carousel', icon: '🖼️', color: '#8b5cf6' },
   'community-post': { label: 'Community Post', icon: '💬', color: '#1fa971' },
+  'poll-question': { label: 'Poll Question', icon: '📊', color: '#ec4899' },
 };

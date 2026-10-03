@@ -47,7 +47,12 @@ export const addPiece = asyncHandler(async (req, res) => {
 });
 
 export const updatePieceStatus = asyncHandler(async (req, res) => {
-  const concept = await contentPlannerService.updatePieceStatus(req.params.conceptId, req.params.pieceId, req.body.status);
+  const concept = await contentPlannerService.updatePieceStatus(
+    req.params.conceptId,
+    req.params.pieceId,
+    req.body.status,
+    req.body.onHold
+  );
   return ApiResponse(res, 200, concept);
 });
 
