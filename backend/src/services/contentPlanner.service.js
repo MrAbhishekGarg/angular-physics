@@ -48,7 +48,16 @@ function validatePiece({ platform, type }) {
  * same underlying question/source.
  */
 async function bundleFromFlags(
-  { longVideoCount, longVideoPlatforms, includeShort, shortPlatforms, includeCarousel, includeCommunityPost },
+  {
+    longVideoCount,
+    longVideoPlatforms,
+    includeShort,
+    shortPlatforms,
+    includeCarousel,
+    includeCommunityPost,
+    includePollQuestion,
+    pollQuestionPlatform,
+  },
   slugSource,
   shared = {}
 ) {
@@ -68,6 +77,7 @@ async function bundleFromFlags(
   }
   if (includeCarousel) specs.push({ platform: 'instagram', type: 'carousel', label: 'Carousel' });
   if (includeCommunityPost) specs.push({ platform: 'youtube', type: 'community-post', label: 'Community Post' });
+  if (includePollQuestion) specs.push({ platform: pollQuestionPlatform || 'telegram', type: 'poll-question', label: 'Poll Question' });
 
   const pieces = [];
   for (const spec of specs) {

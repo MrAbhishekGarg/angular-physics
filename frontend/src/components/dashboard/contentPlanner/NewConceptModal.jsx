@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import Button from '../../common/Button.jsx';
 import { CURRICULUM_CHAPTERS, CURRICULUM_TOPICS } from '../../../data/physicsCurriculum.js';
+import { PLATFORM_META } from '../../../data/contentPlannerMeta.js';
 import styles from './ConceptModal.module.css';
 
 const EMPTY_FORM = {
@@ -14,6 +15,12 @@ const EMPTY_FORM = {
   shortPlatforms: 'both',
   includeCarousel: false,
   includeCommunityPost: false,
+  // Unlike Carousel (Instagram-only) and Community Post (YouTube-only), a
+  // poll isn't tied to one platform — Instagram, YouTube, Telegram and
+  // WhatsApp all support some form of it — so this is the one bundle item
+  // with its own platform picker rather than a fixed home.
+  includePollQuestion: false,
+  pollQuestionPlatform: 'telegram',
   isPYQ: false,
   source: '',
   pyqYear: '',
@@ -58,6 +65,8 @@ export default function NewConceptModal({ onClose, onCreate, questionTaxonomy, u
           shortPlatforms: form.shortPlatforms,
           includeCarousel: form.includeCarousel,
           includeCommunityPost: form.includeCommunityPost,
+          includePollQuestion: form.includePollQuestion,
+          pollQuestionPlatform: form.pollQuestionPlatform,
         },
       });
     } catch (err) {
@@ -139,9 +148,12 @@ export default function NewConceptModal({ onClose, onCreate, questionTaxonomy, u
               <div className={styles.bundleSubRow}>
                 <span className={styles.bundleSubLabel}>on</span>
                 <select name="longVideoPlatforms" value={form.longVideoPlatforms} onChange={handleChange} className={styles.platformSelect}>
-                  <option value="youtube">YouTube</option>
-                  <option value="instagram">Instagram</option>
-                  <option value="both">Both platforms</option>
+                  {Object.entries(PLATFORM_META).map(([key, m]) => (
+                    <option key={key} value={key}>
+                      {m.icon} {m.label}
+                    </option>
+                  ))}
+                  <option value="both">Both YouTube & Instagram</option>
                 </select>
               </div>
             )}
@@ -157,9 +169,12 @@ export default function NewConceptModal({ onClose, onCreate, questionTaxonomy, u
               <div className={styles.bundleSubRow}>
                 <span className={styles.bundleSubLabel}>on</span>
                 <select name="shortPlatforms" value={form.shortPlatforms} onChange={handleChange} className={styles.platformSelect}>
-                  <option value="both">Both platforms</option>
-                  <option value="youtube">YouTube</option>
-                  <option value="instagram">Instagram</option>
+                  <option value="both">Both YouTube & Instagram</option>
+                  {Object.entries(PLATFORM_META).map(([key, m]) => (
+                    <option key={key} value={key}>
+                      {m.icon} {m.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
@@ -179,6 +194,26 @@ export default function NewConceptModal({ onClose, onCreate, questionTaxonomy, u
               </span>
               <span className={styles.toggleText}>💬 Community Post (YouTube)</span>
             </label>
+
+            <label className={styles.toggleRow}>
+              <input type="checkbox" name="includePollQuestion" checked={form.includePollQuestion} onChange={handleChange} />
+              <span className={styles.toggleTrack}>
+                <span className={styles.toggleThumb} />
+              </span>
+              <span className={styles.toggleText}>📊 Poll Question</span>
+            </label>
+            {form.includePollQuestion && (
+              <div className={styles.bundleSubRow}>
+                <span className={styles.bundleSubLabel}>on</span>
+                <select name="pollQuestionPlatform" value={form.pollQuestionPlatform} onChange={handleChange} className={styles.platformSelect}>
+                  {Object.entries(PLATFORM_META).map(([key, m]) => (
+                    <option key={key} value={key}>
+                      {m.icon} {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className={styles.pyqBox}>
