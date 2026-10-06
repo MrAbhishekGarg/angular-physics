@@ -1,12 +1,15 @@
 import styles from './AchievementsPanel.module.css';
 
-// Every metric label passed in is a plain "-s" plural ("Classes taught",
-// "Batches taught") — the headline needs the singular when exactly one is
-// left, so "1 more batches" doesn't read as a typo.
-function singularize(word) {
-  if (/(ch|sh|ss|x)es$/i.test(word)) return word.slice(0, -2);
-  if (/s$/i.test(word)) return word.slice(0, -1);
-  return word;
+// Every metric label is "<plural noun> <verb>" ("Classes taught", "Batches
+// taught") — only the leading noun needs singularizing when exactly one is
+// left (testing the whole phrase's ending matched "taught", not "batches",
+// and left it unchanged — this operates on just the first word instead).
+function singularize(phrase) {
+  const [first, ...rest] = phrase.split(' ');
+  let singular = first;
+  if (/(ch|sh|ss|x)es$/i.test(first)) singular = first.slice(0, -2);
+  else if (/s$/i.test(first)) singular = first.slice(0, -1);
+  return [singular, ...rest].join(' ');
 }
 
 /**
@@ -73,7 +76,7 @@ export default function AchievementsPanel({ metrics }) {
                 <div key={m.key} className={`${styles.trophy} ${m.state.justCrossed ? styles.trophyNew : ''}`}>
                   <span className={styles.trophyIcon}>{m.icon}</span>
                   <span className={styles.trophyText}>
-                    <strong>{m.state.highest.toLocaleString()}</strong> {m.label.toLowerCase()}
+                    <strong>{m.state.highest.toLocaleString()}+</strong> {m.label.toLowerCase()} milestone
                   </span>
                   {m.state.justCrossed && <span className={styles.trophyBadge}>NEW</span>}
                 </div>
