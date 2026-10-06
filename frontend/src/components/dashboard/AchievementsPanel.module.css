@@ -1,0 +1,127 @@
+.panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--ap-radius);
+  background: linear-gradient(135deg, var(--ap-primary), var(--ap-primary-light));
+  margin-bottom: var(--ap-space-md);
+  box-shadow: var(--ap-shadow);
+}
+
+/* A soft moving-light feel without being distracting — one static radial
+   highlight, not an animation, so it reads as "polished" rather than "busy"
+   on a page someone checks daily. */
+.glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 15% 20%, color-mix(in srgb, var(--ap-accent) 35%, transparent), transparent 55%);
+  pointer-events: none;
+}
+
+.inner {
+  position: relative;
+  padding: 1.1rem 1.3rem 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.headline {
+  margin: 0;
+  font-family: var(--ap-font-heading);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.trophyRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.trophy {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(2px);
+}
+.trophyNew {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: var(--ap-accent);
+}
+.trophyIcon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.trophyText {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+}
+.trophyText strong {
+  font-weight: 800;
+}
+.trophyBadge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--ap-primary);
+  background: var(--ap-accent);
+  border-radius: 999px;
+  padding: 0.1rem 0.4rem;
+}
+
+.progressRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.7rem 1.2rem;
+}
+
+.progressItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.progressLabel {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+}
+.progressNums {
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 600;
+}
+
+.progressTrack {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ap-accent);
+  transition: width 0.4s ease;
+}
+
+@media (max-width: 640px) {
+  .inner {
+    padding: 1rem;
+  }
+  .headline {
+    font-size: 1.02rem;
+  }
+}

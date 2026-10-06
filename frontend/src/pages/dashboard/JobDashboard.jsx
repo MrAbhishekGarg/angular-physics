@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../../components/seo/SEO.jsx';
 import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
+import AchievementsPanel from '../../components/dashboard/AchievementsPanel.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import BatchChip from '../../components/dashboard/BatchChip.jsx';
@@ -154,6 +155,15 @@ export default function JobDashboard() {
 
           {!loading && !error && data && (
             <>
+              <AchievementsPanel
+                metrics={[
+                  { key: 'classes', icon: '🏫', value: data.counts.done, label: 'Classes taught', milestones: [10, 25, 50, 100, 200, 500, 1000] },
+                  { key: 'hours', icon: '⏱️', value: data.hours.done, label: 'Hours taught', milestones: [10, 25, 50, 100, 250, 500, 1000] },
+                  { key: 'topics', icon: '📚', value: data.topics.covered, label: 'Topics covered', milestones: [25, 50, 100, 200, 500] },
+                  { key: 'batches', icon: '🗂️', value: data.counts.batches, label: 'Batches taught', milestones: [3, 5, 10, 20] },
+                ]}
+              />
+
               <UpNextStrip classes={data.upcomingClasses} order={order} />
 
               <div className={styles.tiles}>

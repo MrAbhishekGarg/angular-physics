@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../../components/seo/SEO.jsx';
 import DashboardLayout from '../../components/dashboard/DashboardLayout.jsx';
+import AchievementsPanel from '../../components/dashboard/AchievementsPanel.jsx';
 import Button from '../../components/common/Button.jsx';
 import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
@@ -380,6 +381,16 @@ export default function ContentPlanner() {
               )}
             </form>
           </div>
+
+          {stats && (
+            <AchievementsPanel
+              metrics={[
+                { key: 'concepts', icon: '🗂️', value: stats.totalConcepts, label: 'Concepts planned', milestones: [5, 10, 25, 50, 100] },
+                { key: 'pieces', icon: '🎬', value: stats.totalPieces, label: 'Pieces created', milestones: [25, 50, 100, 250, 500] },
+                { key: 'published', icon: '✅', value: stats.counts.published ?? 0, label: 'Pieces published', milestones: [10, 25, 50, 100, 250] },
+              ]}
+            />
+          )}
 
           {stats && (
             <div className={styles.summaryStrip}>
