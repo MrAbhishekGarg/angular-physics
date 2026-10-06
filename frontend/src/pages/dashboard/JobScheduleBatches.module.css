@@ -157,6 +157,14 @@
   color: var(--ap-accent);
   border: 1px solid var(--ap-accent);
 }
+.logTag_extra {
+  color: #fff;
+  background: var(--ap-secondary-accent);
+}
+.logTag_special {
+  color: #fff;
+  background: linear-gradient(135deg, var(--ap-accent), var(--ap-secondary-accent));
+}
 .logTag_schedule {
   color: #fff;
   background: var(--ap-warning);

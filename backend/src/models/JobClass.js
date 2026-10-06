@@ -33,6 +33,10 @@ const jobClassSchema = new mongoose.Schema(
     // Aakash grid sometimes lists these under a "Doubt" column whose cell
     // still names the real batch in parentheses (see scheduleGridParser.js).
     isDoubt: { type: Boolean, default: false },
+    // An ad-hoc class outside the regular recurring schedule (a one-off
+    // makeup/bonus session) — a separate axis from isDoubt, since an extra
+    // class can itself be a doubt session or a normal teaching one.
+    isExtra: { type: Boolean, default: false },
     // Set once the mentor has done the post-class review (confirmed what
     // was actually taught). A past class that isn't reviewed yet shows as
     // "review pending".

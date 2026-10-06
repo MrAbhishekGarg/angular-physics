@@ -133,6 +133,7 @@ function NewBatchPlan({ onCreated }) {
       <select className={styles.input} value={type} onChange={(e) => setType(e.target.value)}>
         <option value="Regular">Regular</option>
         <option value="Doubt">Doubt</option>
+        <option value="Special">Special (e.g. Toppers Batch)</option>
       </select>
       <select className={styles.input} value={scheduleType} onChange={(e) => setScheduleType(e.target.value)}>
         {SCHEDULE_TYPES.map((s) => (
@@ -186,6 +187,7 @@ function BatchEditForm({ batch, onSaved, onCancel }) {
       <select className={styles.input} value={type} onChange={(e) => setType(e.target.value)}>
         <option value="Regular">Regular</option>
         <option value="Doubt">Doubt</option>
+        <option value="Special">Special (e.g. Toppers Batch)</option>
       </select>
       <select className={styles.input} value={scheduleType} onChange={(e) => setScheduleType(e.target.value)}>
         {SCHEDULE_TYPES.map((s) => (
@@ -268,6 +270,7 @@ export default function JobScheduleBatches() {
                       <span className={styles.batchDot} style={{ background: batchColor(batch.batchCode, order) }} />
                       {batch.batchCode}
                       {batch.type === 'Doubt' && <span className={`${styles.logTag} ${styles.logTag_doubt}`}>Doubt</span>}
+                      {batch.type === 'Special' && <span className={`${styles.logTag} ${styles.logTag_special}`}>⭐ Special</span>}
                       {batch.scheduleType && batch.scheduleType !== 'regular' && (
                         <span className={`${styles.logTag} ${styles.logTag_schedule}`}>{SCHEDULE_LABEL[batch.scheduleType]}</span>
                       )}
@@ -299,6 +302,7 @@ export default function JobScheduleBatches() {
                             <strong>{formatDate(c.date)}</strong> · {formatTimeRange(c.startTime, c.endTime)} · Room {c.room || '?'}
                             <span className={`${styles.logTag} ${styles[`logTag_${label.replace(' ', '')}`]}`}>{label}</span>
                             {c.isDoubt && <span className={`${styles.logTag} ${styles.logTag_doubt}`}>Doubt</span>}
+                            {c.isExtra && <span className={`${styles.logTag} ${styles.logTag_extra}`}>Extra</span>}
                             {topics && <div className={styles.logMuted}>{topics}</div>}
                           </div>
                         );

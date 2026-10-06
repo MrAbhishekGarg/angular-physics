@@ -183,6 +183,7 @@ export async function createClass(payload) {
     topicsCovered: payload.topicsCovered || '',
     notes: payload.notes || '',
     isDoubt: !!payload.isDoubt,
+    isExtra: !!payload.isExtra,
     needsReview: false,
     source: 'manual',
   });

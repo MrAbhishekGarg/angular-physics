@@ -11,7 +11,10 @@ import mongoose from 'mongoose';
 const jobBatchSchema = new mongoose.Schema(
   {
     code: { type: String, required: true, trim: true, unique: true, index: true },
-    type: { type: String, enum: ['Regular', 'Doubt'], default: 'Regular' },
+    // 'Special' covers anything outside the normal teaching rotation that
+    // still deserves its own batch — a Toppers Batch, a crash-course cohort,
+    // etc. — tagged the same lightweight way 'Doubt' already is.
+    type: { type: String, enum: ['Regular', 'Doubt', 'Special'], default: 'Regular' },
     // Which days of the week this Aakash batch actually meets — a separate
     // axis from `type` above (a batch can be a weekend batch AND a doubt
     // batch at once), same concept as CourseFeeBatch.scheduleType.

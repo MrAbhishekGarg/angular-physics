@@ -81,7 +81,16 @@ function Field({ label, wide, children }) {
 }
 
 function ManualClassForm({ defaultDate, onCreated }) {
-  const [form, setForm] = useState({ date: defaultDate || '', startTime: '', endTime: '', room: '', batchCode: '', plannedTopics: '', isDoubt: false });
+  const [form, setForm] = useState({
+    date: defaultDate || '',
+    startTime: '',
+    endTime: '',
+    room: '',
+    batchCode: '',
+    plannedTopics: '',
+    isDoubt: false,
+    isExtra: false,
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -98,7 +107,7 @@ function ManualClassForm({ defaultDate, onCreated }) {
     try {
       const created = await jobScheduleService.createClass(form);
       onCreated(created);
-      set({ startTime: '', endTime: '', room: '', batchCode: '', plannedTopics: '', isDoubt: false });
+      set({ startTime: '', endTime: '', room: '', batchCode: '', plannedTopics: '', isDoubt: false, isExtra: false });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -128,10 +137,16 @@ function ManualClassForm({ defaultDate, onCreated }) {
           <input className={styles.input} value={form.plannedTopics} onChange={(e) => set({ plannedTopics: e.target.value })} />
         </Field>
       </div>
-      <label className={styles.checkboxRow}>
-        <input type="checkbox" checked={form.isDoubt} onChange={(e) => set({ isDoubt: e.target.checked })} />
-        Doubt class
-      </label>
+      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        <label className={styles.checkboxRow}>
+          <input type="checkbox" checked={form.isDoubt} onChange={(e) => set({ isDoubt: e.target.checked })} />
+          Doubt class
+        </label>
+        <label className={styles.checkboxRow}>
+          <input type="checkbox" checked={form.isExtra} onChange={(e) => set({ isExtra: e.target.checked })} />
+          Extra class (outside regular schedule)
+        </label>
+      </div>
       <div className={styles.formActions}>
         <Button type="submit" size="sm" disabled={busy}>
           {busy ? 'Adding…' : 'Add class'}
@@ -178,6 +193,7 @@ function ClassCard({ cls, order, now, onSaved, onDeleted }) {
       endTime: cls.endTime || '',
       room: cls.room || '',
       isDoubt: !!cls.isDoubt,
+      isExtra: !!cls.isExtra,
     });
     setEditing(true);
   };
@@ -216,6 +232,7 @@ function ClassCard({ cls, order, now, onSaved, onDeleted }) {
           </span>
           <BatchChip code={cls.batchCode} order={order} />
           {cls.isDoubt && <Badge tone="default">Doubt</Badge>}
+          {cls.isExtra && <Badge tone="highlight">Extra</Badge>}
           {cls.subjectPrefix && <span className={styles.classSub}>{prettySubject(cls.subjectPrefix)}</span>}
         </div>
         <div className={styles.classTags}>
@@ -261,6 +278,16 @@ function ClassCard({ cls, order, now, onSaved, onDeleted }) {
                 onChange={(e) => setEditForm((f) => ({ ...f, isDoubt: e.target.checked }))}
               />
               Mark as a doubt class
+            </label>
+          </Field>
+          <Field label="Extra class">
+            <label className={styles.checkboxRow}>
+              <input
+                type="checkbox"
+                checked={editForm.isExtra}
+                onChange={(e) => setEditForm((f) => ({ ...f, isExtra: e.target.checked }))}
+              />
+              Outside regular schedule
             </label>
           </Field>
           <div className={styles.fieldWide} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
