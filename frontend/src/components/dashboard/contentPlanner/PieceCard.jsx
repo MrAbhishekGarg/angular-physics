@@ -119,7 +119,7 @@ export default function PieceCard({
         {piece.label || TYPE_META[piece.type].label}
       </div>
 
-      {(piece.isPYQ || (piece.status === 'scheduled' && piece.scheduledFor)) && (
+      {(piece.isPYQ || (piece.status === 'scheduled' && piece.scheduledFor) || (piece.status === 'published' && piece.publishedAt)) && (
         <div className={styles.chipsRow}>
           {piece.isPYQ && (
             <span className={styles.pyqChip}>
@@ -128,6 +128,12 @@ export default function PieceCard({
           )}
           {piece.status === 'scheduled' && piece.scheduledFor && (
             <span className={styles.scheduledChip}>📅 {new Date(piece.scheduledFor).toLocaleDateString()}</span>
+          )}
+          {piece.status === 'published' && piece.publishedAt && (
+            <span className={styles.publishedChip}>
+              ✅ Published {new Date(piece.publishedAt).toLocaleDateString()}{' '}
+              {new Date(piece.publishedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+            </span>
           )}
         </div>
       )}

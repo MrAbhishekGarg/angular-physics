@@ -3,7 +3,26 @@ import Button from '../../common/Button.jsx';
 import { PLATFORM_META, TYPE_META } from '../../../data/contentPlannerMeta.js';
 import styles from './ConceptModal.module.css';
 
-const EMPTY = { platform: 'youtube', type: 'long-video', label: '', link: '', source: '', isPYQ: false, pyqYear: '', notes: '', scheduledFor: '' };
+const EMPTY = {
+  platform: 'youtube',
+  type: 'long-video',
+  label: '',
+  link: '',
+  source: '',
+  isPYQ: false,
+  pyqYear: '',
+  notes: '',
+  scheduledFor: '',
+  publishedAt: '',
+};
+
+/** 'YYYY-MM-DDTHH:mm' for <input type="datetime-local">, in the viewer's local time. */
+function toDatetimeLocal(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 /**
  * One modal, two modes: `piece` present -> editing (platform/type are fixed,
@@ -24,6 +43,7 @@ export default function PieceFormModal({ concept, piece, onClose, onSubmit }) {
           pyqYear: piece.pyqYear || '',
           notes: piece.notes || '',
           scheduledFor: piece.scheduledFor ? String(piece.scheduledFor).slice(0, 10) : '',
+          publishedAt: toDatetimeLocal(piece.publishedAt),
         }
       : EMPTY
   );
@@ -44,6 +64,7 @@ export default function PieceFormModal({ concept, piece, onClose, onSubmit }) {
         ...form,
         pyqYear: form.isPYQ && form.pyqYear ? Number(form.pyqYear) : undefined,
         scheduledFor: form.scheduledFor || null,
+        publishedAt: form.publishedAt ? new Date(form.publishedAt).toISOString() : null,
       });
     } catch (err) {
       setError(err.message);
@@ -129,6 +150,11 @@ export default function PieceFormModal({ concept, piece, onClose, onSubmit }) {
           <label>
             Scheduled for (optional)
             <input type="date" name="scheduledFor" value={form.scheduledFor} onChange={handleChange} />
+          </label>
+
+          <label>
+            Published at (optional — set automatically when you move this to Published; edit here to correct or backdate it)
+            <input type="datetime-local" name="publishedAt" value={form.publishedAt} onChange={handleChange} />
           </label>
 
           <label>

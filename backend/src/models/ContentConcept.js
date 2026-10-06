@@ -44,6 +44,10 @@ const contentPieceSchema = new mongoose.Schema(
     // Only meaningful once status is "scheduled" — when the upload is set to
     // go live on the platform.
     scheduledFor: { type: Date, default: null },
+    // When this piece actually went live — set automatically the moment
+    // status first becomes "published" (see updatePieceStatus), editable by
+    // hand afterward for backdating/correction the same way scheduledFor is.
+    publishedAt: { type: Date, default: null },
     link: { type: String, default: '', trim: true },
     notes: { type: String, default: '' },
   },

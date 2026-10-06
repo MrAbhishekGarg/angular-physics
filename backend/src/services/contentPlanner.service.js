@@ -41,11 +41,14 @@ function validatePiece({ platform, type }) {
 
 /**
  * The "minimum effort" quick-add bundle described by the request: for one
- * concept, 1-2 long videos plus whichever of short/carousel/community-post
- * the mentor wants — built from simple flags rather than the caller having
- * to spell out each piece by hand. `shared` (source/isPYQ/pyqYear) applies
- * to every piece in the bundle, since a bundle is usually all about the
- * same underlying question/source.
+ * concept, 1-2 long videos plus whichever of short/carousel/community-post/
+ * poll-question the mentor wants — built from simple flags rather than the
+ * caller having to spell out each piece by hand. Every item's platforms is
+ * an array (tick any combination — YouTube, Instagram, WhatsApp, Telegram),
+ * not just a single choice, since e.g. a mentor commonly wants the same
+ * short cut for both YouTube and Instagram at once. `shared`
+ * (source/isPYQ/pyqYear) applies to every piece in the bundle, since a
+ * bundle is usually all about the same underlying question/source.
  */
 async function bundleFromFlags(
   {
@@ -54,30 +57,42 @@ async function bundleFromFlags(
     includeShort,
     shortPlatforms,
     includeCarousel,
+    carouselPlatforms,
     includeCommunityPost,
+    communityPostPlatforms,
     includePollQuestion,
-    pollQuestionPlatform,
+    pollQuestionPlatforms,
   },
   slugSource,
   shared = {}
 ) {
   const specs = [];
+  const platformsOrDefault = (value, fallback) => (Array.isArray(value) && value.length > 0 ? value : [fallback]);
+
   const count = Math.min(2, Math.max(0, Number(longVideoCount) || 0));
   if (count > 0) {
-    const lvPlatforms = longVideoPlatforms === 'both' ? ['youtube', 'instagram'] : [longVideoPlatforms || 'youtube'];
-    lvPlatforms.forEach((platform) => {
+    platformsOrDefault(longVideoPlatforms, 'youtube').forEach((platform) => {
       for (let i = 1; i <= count; i += 1) {
         specs.push({ platform, type: 'long-video', label: count > 1 ? `Long Video ${i}` : 'Long Video' });
       }
     });
   }
   if (includeShort) {
-    const platforms = shortPlatforms === 'both' ? ['youtube', 'instagram'] : [shortPlatforms || 'youtube'];
-    platforms.forEach((platform) => specs.push({ platform, type: 'short', label: 'Short' }));
+    platformsOrDefault(shortPlatforms, 'youtube').forEach((platform) => specs.push({ platform, type: 'short', label: 'Short' }));
   }
-  if (includeCarousel) specs.push({ platform: 'instagram', type: 'carousel', label: 'Carousel' });
-  if (includeCommunityPost) specs.push({ platform: 'youtube', type: 'community-post', label: 'Community Post' });
-  if (includePollQuestion) specs.push({ platform: pollQuestionPlatform || 'telegram', type: 'poll-question', label: 'Poll Question' });
+  if (includeCarousel) {
+    platformsOrDefault(carouselPlatforms, 'instagram').forEach((platform) => specs.push({ platform, type: 'carousel', label: 'Carousel' }));
+  }
+  if (includeCommunityPost) {
+    platformsOrDefault(communityPostPlatforms, 'youtube').forEach((platform) =>
+      specs.push({ platform, type: 'community-post', label: 'Community Post' })
+    );
+  }
+  if (includePollQuestion) {
+    platformsOrDefault(pollQuestionPlatforms, 'telegram').forEach((platform) =>
+      specs.push({ platform, type: 'poll-question', label: 'Poll Question' })
+    );
+  }
 
   const pieces = [];
   for (const spec of specs) {
@@ -186,9 +201,14 @@ export async function addPiece(conceptId, pieceData) {
 
 export async function updatePieceStatus(conceptId, pieceId, status, onHold = false) {
   if (!PIECE_STATUSES.includes(status)) throw new ApiError(400, `status must be one of: ${PIECE_STATUSES.join(', ')}`);
+  const set = { 'pieces.$.status': status, 'pieces.$.onHold': Boolean(onHold) };
+  // Stamped the moment a piece first goes live — re-set every time it lands
+  // on "published" (not just the first) so re-publishing after a revision
+  // reflects the latest go-live moment rather than the original one.
+  if (status === 'published') set['pieces.$.publishedAt'] = new Date();
   const concept = await ContentConcept.findOneAndUpdate(
     { conceptId, 'pieces._id': pieceId },
-    { $set: { 'pieces.$.status': status, 'pieces.$.onHold': Boolean(onHold) } },
+    { $set: set },
     { new: true }
   ).lean();
   if (!concept) throw new ApiError(404, 'Concept or content piece not found');
@@ -198,7 +218,7 @@ export async function updatePieceStatus(conceptId, pieceId, status, onHold = fal
 }
 
 export async function updatePiece(conceptId, pieceId, payload) {
-  const { label, link, notes, source, isPYQ, pyqYear, scheduledFor } = payload;
+  const { label, link, notes, source, isPYQ, pyqYear, scheduledFor, publishedAt } = payload;
   const set = {};
   if (label !== undefined) set['pieces.$.label'] = label;
   if (link !== undefined) set['pieces.$.link'] = link;
@@ -207,6 +227,7 @@ export async function updatePiece(conceptId, pieceId, payload) {
   if (isPYQ !== undefined) set['pieces.$.isPYQ'] = Boolean(isPYQ);
   if (pyqYear !== undefined) set['pieces.$.pyqYear'] = isPYQ ? pyqYear || null : null;
   if (scheduledFor !== undefined) set['pieces.$.scheduledFor'] = scheduledFor || null;
+  if (publishedAt !== undefined) set['pieces.$.publishedAt'] = publishedAt || null;
   const concept = await ContentConcept.findOneAndUpdate({ conceptId, 'pieces._id': pieceId }, { $set: set }, { new: true, runValidators: true }).lean();
   if (!concept) throw new ApiError(404, 'Concept or content piece not found');
   const piece = concept.pieces.find((p) => String(p._id) === String(pieceId));
@@ -310,6 +331,7 @@ export async function listPiecesFlat({ status, platform, type, search } = {}) {
         isPYQ: piece.isPYQ,
         pyqYear: piece.pyqYear || null,
         scheduledFor: piece.scheduledFor || null,
+        publishedAt: piece.publishedAt || null,
         link: piece.link || '',
         notes: piece.notes || '',
         createdAt: piece.createdAt,
@@ -345,6 +367,7 @@ export async function exportToExcelBuffer() {
     { header: 'Status', key: 'status', width: 12 },
     { header: 'On Hold', key: 'onHold', width: 10 },
     { header: 'Scheduled For', key: 'scheduledFor', width: 20 },
+    { header: 'Published At', key: 'publishedAt', width: 20 },
     { header: 'Source', key: 'source', width: 18 },
     { header: 'PYQ', key: 'pyq', width: 8 },
     { header: 'PYQ Year', key: 'pyqYear', width: 10 },
@@ -369,6 +392,7 @@ export async function exportToExcelBuffer() {
         status: piece.status,
         onHold: piece.onHold ? 'Yes' : 'No',
         scheduledFor: piece.scheduledFor ? new Date(piece.scheduledFor).toISOString() : '',
+        publishedAt: piece.publishedAt ? new Date(piece.publishedAt).toISOString() : '',
         source: piece.source || '',
         pyq: piece.isPYQ ? 'Yes' : 'No',
         pyqYear: piece.pyqYear || '',

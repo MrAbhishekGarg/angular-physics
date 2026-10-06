@@ -3,7 +3,7 @@ import { env } from '../config/env.js';
 
 const HEADER = [
   'Piece ID', 'Concept ID', 'Concept Title', 'Chapter', 'Topic', 'Platform', 'Type', 'Label',
-  'Status', 'On Hold', 'Scheduled For', 'Source', 'PYQ', 'PYQ Year', 'Link', 'Notes', 'Created At', 'Updated At',
+  'Status', 'On Hold', 'Scheduled For', 'Published At', 'Source', 'PYQ', 'PYQ Year', 'Link', 'Notes', 'Created At', 'Updated At',
 ];
 
 /** One row per content piece — a piece is the actual unit of "a post", the concept is just its grouping. */
@@ -20,6 +20,7 @@ function rowFromPiece({ concept, piece }) {
     piece.status,
     piece.onHold ? 'Yes' : 'No',
     piece.scheduledFor ? new Date(piece.scheduledFor).toISOString() : '',
+    piece.publishedAt ? new Date(piece.publishedAt).toISOString() : '',
     piece.source || '',
     piece.isPYQ ? 'Yes' : 'No',
     piece.pyqYear || '',
