@@ -185,30 +185,33 @@
   font-weight: 600;
   min-width: 130px;
 }
-.bundleSubRow {
+/* Tick any combination of platforms for one bundle item — replaced the old
+   single-select dropdown (and Carousel/Community Post's total lack of a
+   choice) so every item picks platforms the same, more general way. */
+.platformTicks {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 0.4rem;
-  margin: -0.3rem 0 0 1.7rem;
+  margin: -0.15rem 0 0.2rem 1.7rem;
 }
-.bundleSubLabel {
+.platformTick {
   font-size: 0.78rem;
-  color: var(--ap-text-muted);
-}
-.platformSelect {
-  flex: 1;
-  min-width: 0;
-  max-width: 200px;
-  font-size: 0.8rem;
-  padding: 0.3rem 0.5rem;
+  font-weight: 700;
+  padding: 0.3rem 0.65rem;
   border: 1.5px solid var(--ap-border);
-  border-radius: 7px;
+  border-radius: 999px;
   background: var(--ap-bg);
-  color: var(--ap-text);
+  color: var(--ap-text-muted);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
 }
-.platformSelect:focus {
-  outline: none;
+.platformTick:hover {
   border-color: var(--ap-accent);
+}
+.platformTickActive {
+  background: var(--ap-accent);
+  border-color: var(--ap-accent);
+  color: #fff;
 }
 
 .toggleRow {

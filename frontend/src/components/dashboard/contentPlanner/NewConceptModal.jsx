@@ -10,21 +10,46 @@ const EMPTY_FORM = {
   topic: '',
   notes: '',
   longVideoCount: 1,
-  longVideoPlatforms: 'youtube',
+  longVideoPlatforms: ['youtube'],
   includeShort: true,
-  shortPlatforms: 'both',
+  shortPlatforms: ['youtube', 'instagram'],
   includeCarousel: false,
+  carouselPlatforms: ['instagram'],
   includeCommunityPost: false,
-  // Unlike Carousel (Instagram-only) and Community Post (YouTube-only), a
-  // poll isn't tied to one platform — Instagram, YouTube, Telegram and
-  // WhatsApp all support some form of it — so this is the one bundle item
-  // with its own platform picker rather than a fixed home.
+  communityPostPlatforms: ['youtube'],
   includePollQuestion: false,
-  pollQuestionPlatform: 'telegram',
+  pollQuestionPlatforms: ['telegram'],
   isPYQ: false,
   source: '',
   pyqYear: '',
 };
+
+/**
+ * Every bundle item used to be stuck on one platform (a single <select>, or
+ * no choice at all for Carousel/Community Post) — this is the one piece of
+ * UI for ticking any combination instead, shared by all five so a long
+ * video and a poll question pick platforms the same way.
+ */
+function PlatformTicks({ value, onToggle }) {
+  return (
+    <div className={styles.platformTicks}>
+      {Object.entries(PLATFORM_META).map(([key, m]) => {
+        const active = value.includes(key);
+        return (
+          <button
+            type="button"
+            key={key}
+            className={`${styles.platformTick} ${active ? styles.platformTickActive : ''}`}
+            onClick={() => onToggle(key)}
+            aria-pressed={active}
+          >
+            {m.icon} {m.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function NewConceptModal({ onClose, onCreate, questionTaxonomy, usedTopics }) {
   const [form, setForm] = useState(EMPTY_FORM);
@@ -43,6 +68,17 @@ export default function NewConceptModal({ onClose, onCreate, questionTaxonomy, u
   const handleChange = (e) => {
     const { name, type, value, checked } = e.target;
     setForm((f) => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
+  };
+
+  // Ticking the last-remaining platform off would leave that bundle item
+  // with nowhere to go, so it's left with at least one — the mentor turns
+  // the whole item off with its own toggle instead of emptying this out.
+  const togglePlatform = (field, key) => {
+    setForm((f) => {
+      const current = f[field];
+      const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+      return next.length === 0 ? f : { ...f, [field]: next };
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -64,9 +100,11 @@ export default function NewConceptModal({ onClose, onCreate, questionTaxonomy, u
           includeShort: form.includeShort,
           shortPlatforms: form.shortPlatforms,
           includeCarousel: form.includeCarousel,
+          carouselPlatforms: form.carouselPlatforms,
           includeCommunityPost: form.includeCommunityPost,
+          communityPostPlatforms: form.communityPostPlatforms,
           includePollQuestion: form.includePollQuestion,
-          pollQuestionPlatform: form.pollQuestionPlatform,
+          pollQuestionPlatforms: form.pollQuestionPlatforms,
         },
       });
     } catch (err) {
@@ -145,17 +183,7 @@ export default function NewConceptModal({ onClose, onCreate, questionTaxonomy, u
               </div>
             </div>
             {Number(form.longVideoCount) > 0 && (
-              <div className={styles.bundleSubRow}>
-                <span className={styles.bundleSubLabel}>on</span>
-                <select name="longVideoPlatforms" value={form.longVideoPlatforms} onChange={handleChange} className={styles.platformSelect}>
-                  {Object.entries(PLATFORM_META).map(([key, m]) => (
-                    <option key={key} value={key}>
-                      {m.icon} {m.label}
-                    </option>
-                  ))}
-                  <option value="both">Both YouTube & Instagram</option>
-                </select>
-              </div>
+              <PlatformTicks value={form.longVideoPlatforms} onToggle={(key) => togglePlatform('longVideoPlatforms', key)} />
             )}
 
             <label className={styles.toggleRow}>
@@ -165,35 +193,29 @@ export default function NewConceptModal({ onClose, onCreate, questionTaxonomy, u
               </span>
               <span className={styles.toggleText}>⚡ Short</span>
             </label>
-            {form.includeShort && (
-              <div className={styles.bundleSubRow}>
-                <span className={styles.bundleSubLabel}>on</span>
-                <select name="shortPlatforms" value={form.shortPlatforms} onChange={handleChange} className={styles.platformSelect}>
-                  <option value="both">Both YouTube & Instagram</option>
-                  {Object.entries(PLATFORM_META).map(([key, m]) => (
-                    <option key={key} value={key}>
-                      {m.icon} {m.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {form.includeShort && <PlatformTicks value={form.shortPlatforms} onToggle={(key) => togglePlatform('shortPlatforms', key)} />}
 
             <label className={styles.toggleRow}>
               <input type="checkbox" name="includeCarousel" checked={form.includeCarousel} onChange={handleChange} />
               <span className={styles.toggleTrack}>
                 <span className={styles.toggleThumb} />
               </span>
-              <span className={styles.toggleText}>🖼️ Carousel (Instagram)</span>
+              <span className={styles.toggleText}>🖼️ Carousel</span>
             </label>
+            {form.includeCarousel && (
+              <PlatformTicks value={form.carouselPlatforms} onToggle={(key) => togglePlatform('carouselPlatforms', key)} />
+            )}
 
             <label className={styles.toggleRow}>
               <input type="checkbox" name="includeCommunityPost" checked={form.includeCommunityPost} onChange={handleChange} />
               <span className={styles.toggleTrack}>
                 <span className={styles.toggleThumb} />
               </span>
-              <span className={styles.toggleText}>💬 Community Post (YouTube)</span>
+              <span className={styles.toggleText}>💬 Community Post</span>
             </label>
+            {form.includeCommunityPost && (
+              <PlatformTicks value={form.communityPostPlatforms} onToggle={(key) => togglePlatform('communityPostPlatforms', key)} />
+            )}
 
             <label className={styles.toggleRow}>
               <input type="checkbox" name="includePollQuestion" checked={form.includePollQuestion} onChange={handleChange} />
@@ -203,16 +225,7 @@ export default function NewConceptModal({ onClose, onCreate, questionTaxonomy, u
               <span className={styles.toggleText}>📊 Poll Question</span>
             </label>
             {form.includePollQuestion && (
-              <div className={styles.bundleSubRow}>
-                <span className={styles.bundleSubLabel}>on</span>
-                <select name="pollQuestionPlatform" value={form.pollQuestionPlatform} onChange={handleChange} className={styles.platformSelect}>
-                  {Object.entries(PLATFORM_META).map(([key, m]) => (
-                    <option key={key} value={key}>
-                      {m.icon} {m.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <PlatformTicks value={form.pollQuestionPlatforms} onToggle={(key) => togglePlatform('pollQuestionPlatforms', key)} />
             )}
           </div>
 
