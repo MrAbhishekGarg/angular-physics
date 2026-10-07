@@ -5,9 +5,12 @@ import { ApiError } from '../utils/ApiError.js';
 import { parseYoutubePlaylistId } from '../utils/youtube.js';
 
 const API_BASE = 'https://www.googleapis.com/youtube/v3';
-const MAX_PAGES = 4; // 4 x 50 = 200 videos per playlist — plenty for a coaching channel, bounds API quota use
+// No page cap: playlistItems.list costs 1 quota unit per call regardless of
+// maxResults, so even a large channel is cheap to paginate fully — and a
+// cap here would make sync's prune step (below) wrongly delete real videos
+// past the cut-off, since anything not in `allVideos` gets removed.
 
-function isYoutubeConfigured() {
+export function isYoutubeConfigured() {
   return Boolean(env.youtubeApiKey && env.youtubeChannelId);
 }
 
@@ -35,7 +38,7 @@ function mapPlaylistItem(item) {
 async function fetchAllPlaylistItems(playlistId) {
   const items = [];
   let pageToken = '';
-  for (let page = 0; page < MAX_PAGES; page += 1) {
+  for (;;) {
     const url = `${API_BASE}/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${env.youtubeApiKey}${pageToken ? `&pageToken=${pageToken}` : ''}`;
     const res = await fetch(url);
     const data = await res.json();
@@ -174,6 +177,12 @@ export async function removeVideoFromPlaylist(playlistId, videoId) {
  * then rebuilds every YouTube-linked playlist's membership from scratch to
  * exactly match YouTube, discarding any manual add/remove overrides on
  * those playlists. Custom playlists (no youtubePlaylistId) are untouched.
+ *
+ * Every video in the library originates from this channel-uploads fetch (or
+ * a synced playlist's membership, which is itself a subset of the channel's
+ * uploads) — there's no manual "add video by id" path — so anything no
+ * longer present here was deleted/privated on YouTube and gets pruned too;
+ * upsert alone would otherwise leave deleted videos in the library forever.
  */
 export async function syncFromYoutube() {
   assertYoutubeConfigured();
@@ -182,11 +191,19 @@ export async function syncFromYoutube() {
   const allVideos = await fetchAllPlaylistItems(uploadsPlaylistId);
   await upsertVideos(allVideos);
 
+  // Guard against a suspiciously empty fetch (quota exceeded mid-page,
+  // transient API hiccup) wiping the entire library via the $nin prune below.
+  let videosRemoved = 0;
+  if (allVideos.length > 0) {
+    const liveVideoIds = allVideos.map((v) => v.videoId);
+    ({ deletedCount: videosRemoved } = await YoutubeVideo.deleteMany({ videoId: { $nin: liveVideoIds } }));
+  }
+
   const syncedPlaylists = await Playlist.find({ youtubePlaylistId: { $ne: null } }).lean();
   let playlistVideoTotal = 0;
   for (const playlist of syncedPlaylists) {
     playlistVideoTotal += await resyncPlaylistMembership(playlist);
   }
 
-  return { videosSynced: allVideos.length, playlistsSynced: syncedPlaylists.length, playlistVideoTotal };
+  return { videosSynced: allVideos.length, videosRemoved, playlistsSynced: syncedPlaylists.length, playlistVideoTotal };
 }

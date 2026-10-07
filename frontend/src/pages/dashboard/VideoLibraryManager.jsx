@@ -209,6 +209,8 @@ export default function VideoLibraryManager() {
             <p style={{ color: 'var(--ap-success)', fontSize: '0.85rem' }}>
               Synced {syncResult.videosSynced} video{syncResult.videosSynced === 1 ? '' : 's'} across {syncResult.playlistsSynced} playlist
               {syncResult.playlistsSynced === 1 ? '' : 's'}.
+              {syncResult.videosRemoved > 0 &&
+                ` Removed ${syncResult.videosRemoved} video${syncResult.videosRemoved === 1 ? '' : 's'} no longer on YouTube.`}
             </p>
           )}
           {syncError && <p className={formStyles.errorMsg}>{syncError}</p>}
