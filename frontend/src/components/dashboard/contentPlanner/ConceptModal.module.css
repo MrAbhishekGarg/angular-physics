@@ -214,6 +214,44 @@
   color: #fff;
 }
 
+/* One row per piece being added in a batch (PieceFormModal, add mode) —
+   platform + type + label inline, with a remove button once there's more
+   than one row. */
+.pieceRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+@media (max-width: 480px) {
+  .pieceRow {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.pieceRowLabel {
+  min-width: 0;
+}
+.pieceRowRemove {
+  border: 1.5px solid var(--ap-border);
+  background: var(--ap-bg);
+  color: var(--ap-text-muted);
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pieceRowRemove:hover:not(:disabled) {
+  border-color: var(--ap-danger);
+  color: var(--ap-danger);
+}
+.pieceRowRemove:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .toggleRow {
   display: flex !important;
   flex-direction: row !important;

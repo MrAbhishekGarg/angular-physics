@@ -71,6 +71,19 @@ export default function ContentPlanner() {
 
   const loadUsedTopics = () => contentPlannerService.topics().then(setUsedTopics).catch(() => {});
 
+  // Every mutation endpoint returns the full, freshly-updated concept — so a
+  // piece-level change (status, add/edit/remove) can patch just that one
+  // concept into local state instead of calling `load()`, which flips
+  // `loading` and unmounts/remounts the entire board (including scroll
+  // position) on every single click. Stats are refreshed quietly in the
+  // background since they're not gated behind `loading` either.
+  const mergeConcept = (updatedConcept) => {
+    setConcepts((prev) => (prev ? prev.map((c) => (c.conceptId === updatedConcept.conceptId ? updatedConcept : c)) : prev));
+  };
+  const refreshStats = () => {
+    contentPlannerService.stats().then(setStats).catch(() => {});
+  };
+
   useEffect(() => {
     questionService.getTaxonomy().then(setQuestionTaxonomy).catch(() => {});
     contentPlannerService.sheetsStatus().then(setSheetsStatus).catch(() => {});
@@ -95,7 +108,9 @@ export default function ContentPlanner() {
         ? `✨ Created "${concept.title}" (${concept.conceptId}) — ${concept.pieces.length} piece(s) added.`
         : `✨ Created "${concept.title}" (${concept.conceptId}) — use "+ Add piece" to start adding content.`
     );
-    await Promise.all([load(), loadUsedTopics()]);
+    setConcepts((prev) => (prev ? [concept, ...prev] : [concept]));
+    loadUsedTopics();
+    refreshStats();
   };
 
   const handleDeleteConcept = async (concept) => {
@@ -103,7 +118,8 @@ export default function ContentPlanner() {
     setBusyKey(concept.conceptId);
     try {
       await contentPlannerService.remove(concept.conceptId);
-      await load();
+      setConcepts((prev) => (prev ? prev.filter((c) => c.conceptId !== concept.conceptId) : prev));
+      refreshStats();
     } catch (err) {
       window.alert(err.message);
     } finally {
@@ -112,9 +128,10 @@ export default function ContentPlanner() {
   };
 
   const handleEditConcept = async (payload) => {
-    await contentPlannerService.update(editingConcept.conceptId, payload);
+    const updated = await contentPlannerService.update(editingConcept.conceptId, payload);
     setEditingConcept(null);
-    await Promise.all([load(), loadUsedTopics()]);
+    mergeConcept(updated);
+    loadUsedTopics();
   };
 
   const handleAdvancePiece = async (concept, piece) => {
@@ -123,8 +140,9 @@ export default function ContentPlanner() {
     const key = pieceKey(concept.conceptId, piece._id);
     setBusyKey(key);
     try {
-      await contentPlannerService.updatePieceStatus(concept.conceptId, piece._id, next);
-      await load();
+      const updated = await contentPlannerService.updatePieceStatus(concept.conceptId, piece._id, next);
+      mergeConcept(updated);
+      refreshStats();
     } catch (err) {
       window.alert(err.message);
     } finally {
@@ -145,8 +163,9 @@ export default function ContentPlanner() {
       // Picking a real status directly (including on an on-hold piece) both
       // sets the stage and takes it off hold — no confirmation needed for
       // that direction, only for entering the basket (see handleConfirmHold).
-      await contentPlannerService.updatePieceStatus(concept.conceptId, piece._id, status, false);
-      await load();
+      const updated = await contentPlannerService.updatePieceStatus(concept.conceptId, piece._id, status, false);
+      mergeConcept(updated);
+      refreshStats();
     } catch (err) {
       window.alert(err.message);
     } finally {
@@ -159,9 +178,10 @@ export default function ContentPlanner() {
     const key = pieceKey(concept.conceptId, piece._id);
     setBusyKey(key);
     try {
-      await contentPlannerService.updatePieceStatus(concept.conceptId, piece._id, realStatus, true);
+      const updated = await contentPlannerService.updatePieceStatus(concept.conceptId, piece._id, realStatus, true);
       setHoldModal(null);
-      await load();
+      mergeConcept(updated);
+      refreshStats();
     } finally {
       setBusyKey('');
     }
@@ -172,8 +192,9 @@ export default function ContentPlanner() {
     const key = pieceKey(concept.conceptId, piece._id);
     setBusyKey(key);
     try {
-      await contentPlannerService.removePiece(concept.conceptId, piece._id);
-      await load();
+      const updated = await contentPlannerService.removePiece(concept.conceptId, piece._id);
+      mergeConcept(updated);
+      refreshStats();
     } catch (err) {
       window.alert(err.message);
     } finally {
@@ -184,12 +205,22 @@ export default function ContentPlanner() {
   const handlePieceFormSubmit = async (payload) => {
     const { concept, piece } = pieceModal;
     if (piece) {
-      await contentPlannerService.updatePiece(concept.conceptId, piece._id, payload);
+      const updated = await contentPlannerService.updatePiece(concept.conceptId, piece._id, payload);
+      mergeConcept(updated);
     } else {
-      await contentPlannerService.addPiece(concept.conceptId, payload);
+      // Adding (not editing) submits an array of piece specs — lets several
+      // pieces of the same topic (e.g. a YouTube community post + an
+      // Instagram carousel) get added in one go. Sequential, not parallel,
+      // so each response's concept already reflects everything added so
+      // far and the last one is the authoritative final state to merge.
+      let updated;
+      for (const piecePayload of payload) {
+        updated = await contentPlannerService.addPiece(concept.conceptId, piecePayload);
+      }
+      mergeConcept(updated);
     }
     setPieceModal(null);
-    await load();
+    refreshStats();
   };
 
   const handleResyncAll = async () => {
@@ -231,8 +262,9 @@ export default function ContentPlanner() {
     }
     setBusyKey(pieceKey(payload.conceptId, payload.pieceId));
     try {
-      await contentPlannerService.updatePieceStatus(payload.conceptId, payload.pieceId, status, false);
-      await load();
+      const updated = await contentPlannerService.updatePieceStatus(payload.conceptId, payload.pieceId, status, false);
+      mergeConcept(updated);
+      refreshStats();
     } catch (err) {
       window.alert(err.message);
     } finally {
