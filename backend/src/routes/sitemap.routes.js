@@ -1,16 +1,19 @@
 import { Router } from 'express';
 import { getAllCourses } from '../services/course.service.js';
+import { getPublishedArticles } from '../services/article.service.js';
 import { env } from '../config/env.js';
 
 const router = Router();
 
 /**
- * Dynamically generated sitemap so every new course is automatically
+ * Dynamically generated sitemap so every new course/article is automatically
  * discoverable by search engines / AI crawlers without a manual rebuild.
+ * Served at www.angularphysics.com/sitemap.xml via an nginx proxy to this
+ * API route — robots.txt points here, not at api.angularphysics.com.
  */
 router.get('/sitemap.xml', async (req, res) => {
-  const courses = await getAllCourses();
-  const staticRoutes = ['', '/courses', '/mentor', '/about', '/contact'];
+  const [courses, articles] = await Promise.all([getAllCourses(), getPublishedArticles()]);
+  const staticRoutes = ['', '/courses', '/videos', '/blog', '/mentor', '/about', '/contact'];
 
   const urls = [
     ...staticRoutes.map(
@@ -19,6 +22,10 @@ router.get('/sitemap.xml', async (req, res) => {
     ...courses.map(
       (c) =>
         `<url><loc>${env.siteUrl}/courses/${c.slug}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`
+    ),
+    ...articles.map(
+      (a) =>
+        `<url><loc>${env.siteUrl}/blog/${a.slug}</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>`
     ),
   ].join('');
 

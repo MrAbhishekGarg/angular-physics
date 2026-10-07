@@ -20,6 +20,7 @@ export const authService = {
 
   // Admin-only student login directory
   listStudents: () => api.get('/auth/students'),
+  createStudent: (payload) => api.post('/auth/students', payload),
   removeStudent: (id) => api.delete(`/auth/students/${id}`),
   updateStudentAccess: (id, restrictedStudentAccess) => api.patch(`/auth/students/${id}/access`, { restrictedStudentAccess }),
   updateStudentStatus: (id, status) => api.patch(`/auth/students/${id}/status`, { status }),

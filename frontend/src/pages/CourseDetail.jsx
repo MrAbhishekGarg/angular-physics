@@ -12,6 +12,7 @@ import { useAuth, isMentorRole } from '../hooks/useAuth.js';
 import { enrollmentService } from '../services/enrollmentService.js';
 import { formatPrice, formatDuration } from '../data/courseFormat.js';
 import { getTrackMeta } from '../data/examTracks.js';
+import WhatsAppButton from '../components/common/WhatsAppButton.jsx';
 import styles from './CourseDetail.module.css';
 
 export default function CourseDetail() {
@@ -80,20 +81,29 @@ export default function CourseDetail() {
                 >
                   Edit This Course
                 </Button>
-              ) : !user ? (
-                <Button as={Link} to="/login" size="lg">
-                  Login to Enroll
-                </Button>
-              ) : enrollState === 'requested' ? (
-                <Badge tone="accent">Enrollment Pending Approval</Badge>
               ) : (
-                <Button size="lg" disabled={enrollState === 'submitting'} onClick={handleEnroll}>
-                  {enrollState === 'submitting'
-                    ? 'Sending…'
-                    : course.status === 'launching-soon'
-                      ? 'Notify Me'
-                      : 'Enroll Now'}
-                </Button>
+                <div className={styles.enrollActions}>
+                  <WhatsAppButton
+                    message={`Hi! I'd like to enroll in "${course.title}" (${formatPrice(course.price, course.currency)}). Please share the payment details.`}
+                  >
+                    Contact on WhatsApp to Pay
+                  </WhatsAppButton>
+                  {!user ? (
+                    <Button as={Link} to="/login" size="lg" variant="ghost">
+                      Login to Track Enrollment
+                    </Button>
+                  ) : enrollState === 'requested' ? (
+                    <Badge tone="accent">Enrollment Pending Approval</Badge>
+                  ) : (
+                    <Button size="lg" variant="ghost" disabled={enrollState === 'submitting'} onClick={handleEnroll}>
+                      {enrollState === 'submitting'
+                        ? 'Sending…'
+                        : course.status === 'launching-soon'
+                          ? 'Notify Me'
+                          : 'Request Enrollment'}
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
             {enrollState === 'error' && <p className={styles.errorMsg}>{enrollError}</p>}

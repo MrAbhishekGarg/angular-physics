@@ -29,6 +29,47 @@ export const organizationSchema = {
   },
 };
 
+export function videoListSchema(videos) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListElement: videos.slice(0, 30).map((v, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      item: {
+        '@type': 'VideoObject',
+        name: v.title,
+        thumbnailUrl: v.thumbnailUrl,
+        uploadDate: v.publishedAt,
+        embedUrl: `https://www.youtube.com/embed/${v.id}`,
+        url: `https://www.youtube.com/watch?v=${v.id}`,
+      },
+    })),
+  };
+}
+
+export function articleSchema(article) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: article.title,
+    description: article.excerpt,
+    image: article.coverImageUrl || undefined,
+    datePublished: article.publishedAt,
+    dateModified: article.updatedAt || article.publishedAt,
+    author: {
+      '@type': 'Person',
+      name: article.author || 'Abhishek Garg',
+    },
+    publisher: {
+      '@type': 'EducationalOrganization',
+      name: 'Angular Physics',
+      logo: { '@type': 'ImageObject', url: 'https://www.angularphysics.com/logo-social.png' },
+    },
+    mainEntityOfPage: `https://www.angularphysics.com/blog/${article.slug}`,
+  };
+}
+
 export function courseSchema(course) {
   return {
     '@context': 'https://schema.org',

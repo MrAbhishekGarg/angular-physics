@@ -8,6 +8,7 @@ import Spinner from '../../components/common/Spinner.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import { useAdminStudents } from '../../hooks/useAdmin.js';
 import { authService } from '../../services/authService.js';
+import { EXAM_TRACKS } from '../../data/examTracks.js';
 import formStyles from './DashboardForm.module.css';
 
 function initials(name) {
@@ -67,10 +68,75 @@ function ResetPasswordForm({ student, onDone }) {
   );
 }
 
+function CreateStudentForm({ onDone, onCreated }) {
+  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', track: '' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      const payload = { ...form, track: form.track || undefined };
+      await authService.createStudent(payload);
+      onCreated();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className={formStyles.form} style={{ marginBottom: 'var(--ap-space-md)' }}>
+      <label>
+        Full name
+        <input name="name" required value={form.name} onChange={handleChange} placeholder="Student's name" />
+      </label>
+      <label>
+        Email
+        <input type="email" name="email" required value={form.email} onChange={handleChange} placeholder="student@example.com" />
+      </label>
+      <label>
+        Phone
+        <input name="phone" required value={form.phone} onChange={handleChange} placeholder="10-digit mobile" />
+      </label>
+      <label>
+        Password
+        <input type="password" name="password" required minLength={8} value={form.password} onChange={handleChange} placeholder="At least 8 characters" />
+      </label>
+      <label>
+        Exam track (optional)
+        <select name="track" value={form.track} onChange={handleChange}>
+          <option value="">Not set</option>
+          {EXAM_TRACKS.map((t) => (
+            <option key={t.key} value={t.key}>
+              {t.icon} {t.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <Button type="submit" disabled={busy}>
+          {busy ? 'Creating…' : 'Create Student'}
+        </Button>
+        <Button type="button" variant="ghost" onClick={onDone}>
+          Cancel
+        </Button>
+      </div>
+      {error && <p className={formStyles.errorMsg}>{error}</p>}
+    </form>
+  );
+}
+
 export default function AdminStudents() {
   const { data: students, loading, error, refetch } = useAdminStudents();
   const [resetOpenId, setResetOpenId] = useState(null);
   const [search, setSearch] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
 
   const filtered = (students || []).filter((s) => {
     const q = search.trim().toLowerCase();
@@ -86,11 +152,24 @@ export default function AdminStudents() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
             <h1 style={{ marginBottom: 0 }}>Student Login Directory</h1>
             {students && <Badge>{students.length} student{students.length === 1 ? '' : 's'}</Badge>}
+            <Button size="sm" onClick={() => setCreateOpen((v) => !v)} style={{ marginLeft: 'auto' }}>
+              {createOpen ? 'Close' : '+ Create Student'}
+            </Button>
           </div>
           <p style={{ color: 'var(--ap-text-muted)' }}>
             Every student account's login details, with password reset one click away. Looking for enrollment/test
             analytics instead? See <Link to="/dashboard/mentor/students">All Students</Link>.
           </p>
+
+          {createOpen && (
+            <CreateStudentForm
+              onDone={() => setCreateOpen(false)}
+              onCreated={() => {
+                setCreateOpen(false);
+                refetch();
+              }}
+            />
+          )}
 
           <div className={formStyles.form} style={{ marginBottom: 'var(--ap-space-md)' }}>
             <label style={{ maxWidth: 320 }}>

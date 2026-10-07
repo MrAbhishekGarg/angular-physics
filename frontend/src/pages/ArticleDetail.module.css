@@ -1,0 +1,70 @@
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--ap-space-xl) 0;
+}
+
+.back {
+  display: inline-block;
+  color: var(--ap-text-muted);
+  font-size: 0.85rem;
+  margin-bottom: var(--ap-space-md);
+}
+
+.title {
+  color: var(--ap-primary);
+  line-height: 1.2;
+  margin-bottom: 0.4rem;
+}
+
+.meta {
+  color: var(--ap-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: var(--ap-space-md);
+}
+
+.cover {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--ap-radius, 10px);
+  margin-bottom: var(--ap-space-lg);
+}
+
+.content {
+  font-size: 1.02rem;
+  line-height: 1.75;
+  color: var(--ap-text);
+}
+
+.content p {
+  margin-bottom: var(--ap-space-md);
+}
+
+.ctaBanner {
+  margin-top: var(--ap-space-xl);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ap-space-md);
+  background: var(--ap-bg-muted);
+  padding: var(--ap-space-md) var(--ap-space-lg);
+  clip-path: polygon(
+    var(--ap-chamfer-md) 0, 100% 0,
+    100% calc(100% - var(--ap-chamfer-md)), calc(100% - var(--ap-chamfer-md)) 100%,
+    0 100%, 0 var(--ap-chamfer-md)
+  );
+}
+
+.ctaTitle {
+  margin-bottom: 0.2rem;
+  color: var(--ap-primary);
+}
+
+.ctaText {
+  color: var(--ap-text-muted);
+  font-size: 0.92rem;
+  margin: 0;
+}

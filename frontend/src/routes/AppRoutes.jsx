@@ -1,5 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import Home from '../pages/Home.jsx';
+import Courses from '../pages/Courses.jsx';
+import CourseDetail from '../pages/CourseDetail.jsx';
 import Videos from '../pages/Videos.jsx';
 import Blog from '../pages/Blog.jsx';
 import ArticleDetail from '../pages/ArticleDetail.jsx';
@@ -55,6 +57,8 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/courses" element={<Courses />} />
+      <Route path="/courses/:slug" element={<CourseDetail />} />
       <Route path="/videos" element={<Videos />} />
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:slug" element={<ArticleDetail />} />

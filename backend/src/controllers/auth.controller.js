@@ -39,6 +39,12 @@ export const createMentor = asyncHandler(async (req, res) => {
   return ApiResponse(res, 201, mentor);
 });
 
+export const createStudent = asyncHandler(async (req, res) => {
+  const { name, email, password, phone, track } = req.body;
+  const student = await authService.registerStudent({ name, email, password, phone, track });
+  return ApiResponse(res, 201, student);
+});
+
 export const listMentors = asyncHandler(async (req, res) => {
   const mentors = await authService.listMentors();
   return ApiResponse(res, 200, mentors, { count: mentors.length });

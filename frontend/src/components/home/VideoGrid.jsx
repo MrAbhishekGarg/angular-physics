@@ -29,7 +29,14 @@ export default function VideoGrid({ videos }) {
               </span>
             </button>
           )}
-          <p className={styles.title}>{v.title}</p>
+          <div className={styles.body}>
+            <p className={styles.title}>{v.title}</p>
+            {v.publishedAt && (
+              <p className={styles.date}>
+                {new Date(v.publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+              </p>
+            )}
+          </div>
         </div>
       ))}
     </div>

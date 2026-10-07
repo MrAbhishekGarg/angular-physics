@@ -6,6 +6,7 @@ import {
   me,
   signup,
   createMentor,
+  createStudent,
   listMentors,
   resetMentorPassword,
   removeMentor,
@@ -58,6 +59,7 @@ router.post(
 // mentor directory above — a raw account list, distinct from AllStudents.jsx
 // (which is enrollment-centric and mentor-facing).
 router.get('/students', authenticate, authorize('admin'), listStudents);
+router.post('/students', authenticate, authorize('admin'), validateBody(['name', 'email', 'password', 'phone']), createStudent);
 router.delete('/students/:id', authenticate, authorize('admin'), removeStudent);
 router.patch('/students/:id/access', authenticate, authorize('admin'), updateStudentAccess);
 router.patch('/students/:id/status', authenticate, authorize('admin'), updateStudentStatus);

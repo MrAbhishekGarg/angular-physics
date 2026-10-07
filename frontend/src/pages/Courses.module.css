@@ -1,0 +1,30 @@
+.body {
+  padding: var(--ap-space-lg) 0 var(--ap-space-xl);
+}
+
+.helpBanner {
+  margin-top: var(--ap-space-xl);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ap-space-md);
+  background: var(--ap-bg-muted);
+  padding: var(--ap-space-md) var(--ap-space-lg);
+  clip-path: polygon(
+    var(--ap-chamfer-md) 0, 100% 0,
+    100% calc(100% - var(--ap-chamfer-md)), calc(100% - var(--ap-chamfer-md)) 100%,
+    0 100%, 0 var(--ap-chamfer-md)
+  );
+}
+
+.helpTitle {
+  margin-bottom: 0.2rem;
+  color: var(--ap-primary);
+}
+
+.helpText {
+  color: var(--ap-text-muted);
+  font-size: 0.92rem;
+  margin: 0;
+}
